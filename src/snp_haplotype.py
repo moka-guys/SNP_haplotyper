@@ -1,10 +1,7 @@
 import argparse
 import pandas as pd
 import numpy as np
-import jinja2
-
-# from pandas_profiling import ProfileReport
-# from IPython.display import display
+import jinja2  # TODO remove if not used
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(description="SNP Haplotying from SNP Array data")
@@ -162,12 +159,27 @@ df = pd.read_csv(
     args.input_file,
     delimiter="\t",
 )
-# Remove space from column titles
+# Remove space from column titles and make lower case
 df = df.rename(
     columns={
-        "Probeset ID": "Probeset_ID",
+        "Probeset ID": "probeset_id",
     }
 )
+
+
+# Import mapping of Affy IDs to dbSNP rs IDs
+affy_2_rs_ids_df = pd.read_csv(
+    "test_data/AffyID2rsid.txt",
+    delimiter="\t",
+)
+
+# Add column
+df = pd.merge(
+    df, affy_2_rs_ids_df[["probeset_id", "rsID"]], on="probeset_id", how="left"
+)
+df.insert(
+    1, "rsID", df.pop("rsID")
+)  # Rearrange columns so that rsID is next to Affy Id
 
 
 def annotate_distance_from_gene(df, chr, start, end):
@@ -198,6 +210,7 @@ def filter_out_nocalls(df, male_partner, female_partner, reference):
         & (df[female_partner] != "NoCall")
         & (df[reference] != "NoCall")
     ]
+    # TODO add logger - how many NoCalls filtered
     return filtered_df
 
 
@@ -252,7 +265,7 @@ def autosomal_dominant_analysis(
                 "high_risk",  # Criteria 4
             ]
         df["snp_risk_category"] = np.select(
-            conditions, values, default="not_categorised"
+            conditions, values, default="non_informative"
         )
     elif args.reference_relationship in [
         "child",
@@ -294,10 +307,8 @@ def autosomal_dominant_analysis(
                 "high_risk",  # Criteria 4
             ]
         df["snp_risk_category"] = np.select(
-            conditions, values, default="not_categorised"
+            conditions, values, default="non_informative"
         )
-
-    # Process embryo columns
     return df
 
 
@@ -333,12 +344,27 @@ def calculate_qc_metrics(df, female_partner, male_partner, reference, embryo_ids
             df[df[embryo] == "AB"].shape[0],
             df[df[embryo] == "NoCall"].shape[0],
         ]
+    # Clean up dataframe
     qc_df = qc_df.reset_index()
     qc_df = qc_df.rename(
         columns={"index": "call_type"},
     )
-
     return qc_df
+
+
+def calculate_nocall_percentages(df):
+    # Calculate NoCalls as percentages
+    # TODO Add back column 1 from df
+    nocall = df[df["call_type"] == "NoCall"]
+    if nocall.shape[0] > 0:
+        trimmed_nocall = nocall.iloc[:, 1:]  # Trim first column
+        trimmed_df = df.iloc[:, 1:]
+        nocall_percentage = trimmed_nocall / trimmed_df.sum(axis=0)
+        # TODO add formatting for %
+        return nocall_percentage
+    else:
+        # TODO add formatting for % and populate empty table
+        pass
 
 
 def calculate_miscalls(df, male_partner, female_partner, embryo_ids):
@@ -383,7 +409,12 @@ def calculate_miscalls(df, male_partner, female_partner, embryo_ids):
     return miscall_df
 
 
-def summarise_snps_by_region(df):
+def summarise_miscalls():
+    # TODO
+    pass
+
+
+def snps_by_region(df):
     snps_by_region = df.value_counts(["gene_distance", "snp_risk_category"]).to_frame()
     # Extract data from index into columns
     snps_by_region = snps_by_region.reset_index()
@@ -397,8 +428,8 @@ def summarise_snps_by_region(df):
 
 
 def summarised_snps_by_region(df):
-    # Filter out "not_categorised" from summary
-    categorised_snps_by_region = df[df["snp_risk_category"] != "not_categorised"]
+    # Filter out "non_informative" from summary
+    categorised_snps_by_region = df[df["snp_risk_category"] != "non_informative"]
     # Group informative 'low_risk' and 'high_risk' SNPs together per region
     summary_categorised_snps_by_region = categorised_snps_by_region.groupby(
         by=["gene_distance"]
@@ -428,39 +459,42 @@ def summarised_snps_by_region(df):
     return summary_categorised_snps_by_region
 
 
-def categorise_embryo_alleles(df, reference, reference_status, embryo_ids):
+def categorise_embryo_alleles(df, embryo_ids):
     embryo_category_df = pd.DataFrame()
     for embryo in embryo_ids:
         # Initiate empty database for results
-
         conditions = [
-            (df[embryo] != df[reference]),
-            (df[embryo] == df[reference]),
+            (df["snp_risk_category"] == "high_risk") & (df[embryo] == "AB"),
+            (df["snp_risk_category"] == "low_risk") & (df[embryo] == "AB"),
+            (df["snp_risk_category"] != "non_informative") & (df[embryo] == "NoCall"),
         ]
-        # TODO check these are the right way around
-        if reference_status == "affected":
-            # Values if reference is affected
-            values = [
-                "low_risk",
-                "high_risk",
-            ]
-        elif reference_status == "unaffected":
-            # Values if reference is unaffected
-            values = [
-                "high_risk",
-                "low_risk",
-            ]
-        embryo_category_df[f"{embryo}_risk_category"] = np.select(conditions, values)
-
+        values = [
+            "high_risk",
+            "low_risk",
+            "NoCall",
+        ]
+        embryo_category_df[f"{embryo}_risk_category"] = np.select(
+            conditions, values, default="non_informative"
+        )
     return embryo_category_df
 
 
-def embryo_summary_stats(df, embryo_ids):
-    # Initiate dictionary for output
-    embryo_summary = {}
+def summarise_embryo_results(df, embryo_ids):
+    summary_embryo_results = pd.DataFrame()
     for embryo in embryo_ids:
-        embryo_summary[embryo] = df[embryo].value_counts()
-    return embryo_summary
+        new_column = df[f"{embryo}_risk_category"].value_counts()
+        summary_embryo_results = pd.concat([summary_embryo_results, new_column], axis=1)
+    summary_embryo_results = (
+        summary_embryo_results.fillna("0").astype(int).reset_index()
+    )
+    # Ensure same ordering of table accross samples TODO check it doesnt break if index not present
+    summary_embryo_results = summary_embryo_results.sort_values(
+        [
+            "index",
+        ],
+        ascending=False,
+    )
+    return summary_embryo_results
 
 
 def highlight_risk(category):
@@ -478,6 +512,10 @@ def produce_html_table(
     # styled_df = df.style.apply(highlight_risk)
     html_table = df.to_html(table_id=table_identifier, index=False, classes="display")
     return html_table
+
+
+def plot_results():
+    pass
 
 
 # TODO fill out functions below
@@ -504,6 +542,10 @@ qc_df = calculate_qc_metrics(
     df, args.female_partner, args.male_partner, args.reference, args.embryo_ids
 )
 
+# Calculate NoCall percentages
+
+nocall_percentages = calculate_nocall_percentages(qc_df)
+
 # Filter out any rows where the partners or reference have a NoCall
 filtered_df = filter_out_nocalls(
     df, args.male_partner, args.female_partner, args.reference
@@ -519,7 +561,7 @@ results_df = autosomal_dominant_analysis(
 )
 
 # Informative SNPs
-informative_snps_by_region = summarise_snps_by_region(results_df)
+informative_snps_by_region = snps_by_region(results_df)
 
 # Get total of informative SNPs
 summary_snps_by_region = summarised_snps_by_region(informative_snps_by_region)
@@ -528,10 +570,14 @@ print(summary_snps_by_region)
 
 # Categorise embryo alleles
 embryo_category_df = categorise_embryo_alleles(
-    results_df, args.reference, args.reference_status, args.embryo_ids
+    results_df,
+    args.embryo_ids,
 )
 
-# Produce summary of
+# Summarise embryo results
+summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
+
+# Produce summary of miscalled SNPs
 miscall_df = calculate_miscalls(
     df, args.male_partner, args.female_partner, args.embryo_ids
 )
@@ -553,6 +599,16 @@ nocall_table = produce_html_table(
     "nocall_table",
 )
 
+nocall_percentages_table = produce_html_table(
+    nocall_percentages,
+    "nocall_percentages_table",
+)
+
+summary_embryo_table = produce_html_table(
+    summary_embryo_df,
+    "summary_embryo_table",
+)
+summary_embryo_df
 
 html_string = (
     """
@@ -582,7 +638,16 @@ html_string = (
       """
     + nocall_table
     + """
+      """
+    + nocall_percentages_table
+    + """
         <h2>Embryo Alleles</h2>
+      """
+    + summary_embryo_table
+    + """
+        <h2>Plot Informative SNPs</h2>
+        <h2>Plot Embryo Results</h2>
+    
 
     </body>
 
@@ -666,13 +731,28 @@ html_string = (
     } );
     </script>
 
+    <script>
+    $(document).ready( function () {
+    $('#nocall_percentages_table').DataTable({
+        "paging":   false,
+        "ordering": false,
+        "info":     false
+    } );
+    } );
+    </script>
+
+    <script>
+    $(document).ready( function () {
+    $('#summary_embryo_table').DataTable({
+        "paging":   false,
+        "ordering": false,
+        "info":     false
+    } );
+    } );
+    </script>
+
 </html>"""
 )
 
-# # html = results_df.to_html()
-# # profile = ProfileReport(results_df)
-# # profile.to_file("test_report.html")
-
-
-with open("output.html", "w") as f:
+with open(f"{args.output_prefix}.html", "w") as f:
     f.write(html_string)
