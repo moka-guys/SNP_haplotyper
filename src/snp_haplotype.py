@@ -1,7 +1,15 @@
 import argparse
 import pandas as pd
 import numpy as np
-import jinja2  # TODO remove if not used
+import plotly.express as px
+
+# TODO Add split of calls by region to plot & table
+# TODO Add full coordinates to the plot
+# TODO Add support for ADOs in plots
+# TODO Move Informatives SNPs by region to embryo alleles
+# TODO Check telomeri/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
+# TODO Add support for no embryos (just TRIOs being run to check if enough informative SNPs)
+# TODO Autosomal Recessive
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(description="SNP Haplotying from SNP Array data")
@@ -151,9 +159,6 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-# init progress reporter for pandas operations
-import os
-
 # import haplotype data from text file
 df = pd.read_csv(
     args.input_file,
@@ -173,13 +178,15 @@ affy_2_rs_ids_df = pd.read_csv(
     delimiter="\t",
 )
 
-# Add column
-df = pd.merge(
-    df, affy_2_rs_ids_df[["probeset_id", "rsID"]], on="probeset_id", how="left"
-)
-df.insert(
-    1, "rsID", df.pop("rsID")
-)  # Rearrange columns so that rsID is next to Affy Id
+
+def add_rsid_column(df, affy_2_rs_ids_df):
+    # Add column with dbSNP rsIDs
+    df = pd.merge(
+        df, affy_2_rs_ids_df[["probeset_id", "rsID"]], on="probeset_id", how="left"
+    )
+    # Rearrange columns so that rsID is next to Affy Id
+    df.insert(1, "rsID", df.pop("rsID"))
+    return df
 
 
 def annotate_distance_from_gene(df, chr, start, end):
@@ -226,7 +233,7 @@ def autosomal_dominant_analysis(
 ):
 
     if args.reference_relationship in [
-        "grandparent",
+        "grandparent",  # TODO populate with all appropriate relationships
     ]:
         # Label alleles as high or low risk
         conditions = [
@@ -264,11 +271,9 @@ def autosomal_dominant_analysis(
                 "high_risk",  # Criteria 3
                 "high_risk",  # Criteria 4
             ]
-        df["snp_risk_category"] = np.select(
-            conditions, values, default="non_informative"
-        )
+        df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
     elif args.reference_relationship in [
-        "child",
+        "child",  # TODO populate with all appropriate relationships
     ]:
         # Label alleles as high or low risk
         conditions = [
@@ -306,9 +311,7 @@ def autosomal_dominant_analysis(
                 "high_risk",  # Criteria 3
                 "high_risk",  # Criteria 4
             ]
-        df["snp_risk_category"] = np.select(
-            conditions, values, default="non_informative"
-        )
+        df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
     return df
 
 
@@ -353,17 +356,17 @@ def calculate_qc_metrics(df, female_partner, male_partner, reference, embryo_ids
 
 
 def calculate_nocall_percentages(df):
-    # Calculate NoCalls as percentages
-    # TODO Add back column 1 from df
     nocall = df[df["call_type"] == "NoCall"]
     if nocall.shape[0] > 0:
         trimmed_nocall = nocall.iloc[:, 1:]  # Trim first column
-        trimmed_df = df.iloc[:, 1:]
-        nocall_percentage = trimmed_nocall / trimmed_df.sum(axis=0)
+        trimmed_df = df.iloc[:, 1:]  # Trim first column
+        nocall_percentage = trimmed_nocall / trimmed_df.sum(axis=0) * 100
+        # Add descriptive column
+        nocall_percentage.insert(0, "call_type", "NoCall(%)")
         # TODO add formatting for %
         return nocall_percentage
     else:
-        # TODO add formatting for % and populate empty table
+        # TODO add logger message
         pass
 
 
@@ -371,40 +374,64 @@ def calculate_miscalls(df, male_partner, female_partner, embryo_ids):
     """
     QC identify miscalls
     """
-    miscall_df = pd.DataFrame()
+    miscall_df = df[
+        [
+            "probeset_id",
+            "rsID",
+            "Position",
+        ]
+    ].copy()
     for embryo in embryo_ids:
         mis_list = []
         for row in df.iterrows():
             parent_alleles = [row[1][male_partner], row[1][female_partner]]
-            match parent_alleles:
-                case ["AA", "AA"]:
-                    mis_list.append("miscall") if row[1][
-                        embryo
-                    ] != "AA" else mis_list.append("call")
-                case ["BB", "BB"]:
-                    mis_list.append("miscall") if row[1][
-                        embryo
-                    ] != "BB" else mis_list.append("call")
-                case ["AA", "BB"]:
-                    mis_list.append("miscall") if row[1][
-                        embryo
-                    ] != "AB" else mis_list.append("call")
-                case ["AA", "AB"]:
-                    mis_list.append("miscall") if row[1][embryo] not in [
-                        "AA",
-                        "AB",
-                    ] else mis_list.append("call")
-                case ["BB", "AB"]:
-                    mis_list.append("miscall") if row[1][embryo] not in [
-                        "BB",
-                        "AB",
-                    ] else mis_list.append("call")
-                case ["AB", "AB"]:
-                    mis_list.append("miscall") if row[1][embryo] not in [
-                        "AA",
-                        "BB",
-                        "AB",
-                    ] else mis_list.append("call")
+            if row[1][embryo] == "NoCall":
+                mis_list.append("NoCall")
+            else:
+                match parent_alleles:
+                    case ["AA", "AA"]:
+                        mis_list.append("miscall") if row[1][
+                            embryo
+                        ] != "AA" else mis_list.append("call")
+                    case ["BB", "BB"]:
+                        mis_list.append("miscall") if row[1][
+                            embryo
+                        ] != "BB" else mis_list.append("call")
+                    case ["AA", "BB"]:
+                        mis_list.append("ADO") if row[1][
+                            embryo
+                        ] != "AB" else mis_list.append("call")
+                    case ["BB", "AA"]:
+                        mis_list.append("ADO") if row[1][
+                            embryo
+                        ] != "AB" else mis_list.append("call")
+                    case ["AA", "AB"]:
+                        mis_list.append("ADO") if row[1][embryo] not in [
+                            "AA",
+                            "AB",
+                        ] else mis_list.append("ADO")
+                    case ["AB", "AA"]:
+                        mis_list.append("ADO") if row[1][embryo] not in [
+                            "AA",
+                            "AB",
+                        ] else mis_list.append("call")
+                    case ["BB", "AB"]:
+                        mis_list.append("ADO") if row[1][embryo] not in [
+                            "BB",
+                            "AB",
+                        ] else mis_list.append("call")
+                    case ["AB", "BB"]:
+                        mis_list.append("ADO") if row[1][embryo] not in [
+                            "BB",
+                            "AB",
+                        ] else mis_list.append("call")
+                    # TODO chcek that AB AB are all filtered out
+                    case ["AB", "AB"]:
+                        mis_list.append("placeholder") if row[1][embryo] not in [
+                            "AA",
+                            "BB",
+                            "AB",
+                        ] else mis_list.append("call")
         miscall_df[embryo] = mis_list
     return miscall_df
 
@@ -428,8 +455,8 @@ def snps_by_region(df):
 
 
 def summarised_snps_by_region(df):
-    # Filter out "non_informative" from summary
-    categorised_snps_by_region = df[df["snp_risk_category"] != "non_informative"]
+    # Filter out "uninformative" from summary
+    categorised_snps_by_region = df[df["snp_risk_category"] != "uninformative"]
     # Group informative 'low_risk' and 'high_risk' SNPs together per region
     summary_categorised_snps_by_region = categorised_snps_by_region.groupby(
         by=["gene_distance"]
@@ -459,14 +486,20 @@ def summarised_snps_by_region(df):
     return summary_categorised_snps_by_region
 
 
-def categorise_embryo_alleles(df, embryo_ids):
-    embryo_category_df = pd.DataFrame()
+def categorise_embryo_alleles(df, miscall_df, embryo_ids):
+    embryo_category_df = df[
+        [
+            "probeset_id",
+            "rsID",
+            "Position",
+        ]
+    ].copy()
     for embryo in embryo_ids:
         # Initiate empty database for results
         conditions = [
             (df["snp_risk_category"] == "high_risk") & (df[embryo] == "AB"),
             (df["snp_risk_category"] == "low_risk") & (df[embryo] == "AB"),
-            (df["snp_risk_category"] != "non_informative") & (df[embryo] == "NoCall"),
+            (df["snp_risk_category"] != "uninformative") & (df[embryo] == "NoCall"),
         ]
         values = [
             "high_risk",
@@ -474,8 +507,13 @@ def categorise_embryo_alleles(df, embryo_ids):
             "NoCall",
         ]
         embryo_category_df[f"{embryo}_risk_category"] = np.select(
-            conditions, values, default="non_informative"
+            conditions, values, default="uninformative"
         )
+    # Populate embryo_category_df with data from miscall_df
+    for embryo in embryo_ids:
+        embryo_category_df.loc[
+            miscall_df[embryo] == "miscall", f"{embryo}_risk_category"
+        ] = "miscall"
     return embryo_category_df
 
 
@@ -514,8 +552,96 @@ def produce_html_table(
     return html_table
 
 
-def plot_results():
-    pass
+def plot_results(
+    df,
+    embryo_ids,
+    gene_start,
+    gene_end,
+):
+    plots_as_html = []
+    for embryo in embryo_ids:
+        fig = px.scatter(
+            df,
+            x="Position",
+            y=df[f"{embryo}_risk_category"]
+            .str.replace("high_risk", "2")
+            .str.replace("low_risk", "-2")
+            .str.replace("NoCall", "-1")
+            .str.replace("uninformative", "0")
+            .str.replace("miscall", "1")
+            .astype(int),
+            color=f"{embryo}_risk_category",
+            color_discrete_map={
+                "high_risk": "#e60e0e",
+                "low_risk": "#0ee60e",
+                "NoCall": "#0818a6",
+                "miscall": "#f0690a",
+                "uninformative": "#52555e",
+            },
+            symbol=f"{embryo}_risk_category",
+            symbol_map={
+                "high_risk": "line-ns-open",
+                "low_risk": "line-ns-open",
+                "NoCall": "x",
+                "miscall": "diamond-tall-open",
+                "uninformative": "line-ns-open",
+            },
+            category_orders={
+                f"{embryo}_risk_category": [
+                    "high_risk",
+                    "low_risk",
+                    "miscall",
+                    "NoCall",
+                    "uniformative",
+                ],
+            },
+            labels={
+                "y": "SNP Category",
+                "Position": "Genomic coordinates",
+            },
+            size=df[f"{embryo}_risk_category"]
+            .str.replace("high_risk", "8")
+            .str.replace("low_risk", "8")
+            .str.replace("NoCall", "8")
+            .str.replace("uninformative", "1")
+            .str.replace("miscall", "8")
+            .astype(int),
+            hover_data=[
+                "Position",
+                "probeset_id",
+                "rsID",
+            ],
+        )
+        fig.add_vrect(
+            x0=gene_start,
+            x1=gene_end,
+            annotation_text="Gene",
+            annotation_position="outside top",
+        )
+        fig.add_vline(
+            x=gene_start - 2000000,
+            line_width=3,
+            line_dash="dash",
+            line_color="green",
+            annotation_text="2Mb from Gene Start",
+            annotation_position="left top",
+            annotation_textangle=90,
+        )
+        fig.add_vline(
+            x=gene_end + 2000000,
+            line_width=3,
+            line_dash="dash",
+            line_color="green",
+            annotation_text="2Mb from Gene End",
+            annotation_position="right top",
+            annotation_textangle=90,
+        )
+        fig.update_xaxes(range=[gene_start - 2000000, gene_end + 2000000])
+        fig.update_yaxes(range=[-2.2, 2.2], showticklabels=False)
+        fig.update_layout(height=250, width=1800, title_text=f"Results for {embryo}")
+
+        plots_as_html.append(fig.to_html(full_html=False, include_plotlyjs="cdn"))
+    return plots_as_html
 
 
 # TODO fill out functions below
@@ -537,6 +663,9 @@ elif args.female_partner_status == "affected":
 # Add column describing how far the SNP is from the gene of interest
 df = annotate_distance_from_gene(df, args.chr, args.gene_start, args.gene_end)
 
+# Add column of dbSNP rsIDs
+df = add_rsid_column(df, affy_2_rs_ids_df)
+
 # Calculate qc metrics before filtering out Nocalls
 qc_df = calculate_qc_metrics(
     df, args.female_partner, args.male_partner, args.reference, args.embryo_ids
@@ -546,7 +675,7 @@ qc_df = calculate_qc_metrics(
 
 nocall_percentages = calculate_nocall_percentages(qc_df)
 
-# Filter out any rows where the partners or reference have a NoCall
+# Filter out any rows where the partners or reference have a NoCall as these cannot be used in the analysis
 filtered_df = filter_out_nocalls(
     df, args.male_partner, args.female_partner, args.reference
 )
@@ -566,24 +695,28 @@ informative_snps_by_region = snps_by_region(results_df)
 # Get total of informative SNPs
 summary_snps_by_region = summarised_snps_by_region(informative_snps_by_region)
 
-print(summary_snps_by_region)
+# Produce summary of miscalled SNPs
+miscall_df = calculate_miscalls(
+    results_df, args.male_partner, args.female_partner, args.embryo_ids
+)
 
 # Categorise embryo alleles
 embryo_category_df = categorise_embryo_alleles(
     results_df,
+    miscall_df,
     args.embryo_ids,
 )
+
 
 # Summarise embryo results
 summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
 
-# Produce summary of miscalled SNPs
-miscall_df = calculate_miscalls(
-    df, args.male_partner, args.female_partner, args.embryo_ids
-)
+
+# Filter out any rows which are noninformative across all embryos (produces less cluttered plots)
+"_risk_category"
+
 
 # Produce report
-
 results_table_1 = produce_html_table(
     results_df,
     "results_table_1",
@@ -608,8 +741,33 @@ summary_embryo_table = produce_html_table(
     summary_embryo_df,
     "summary_embryo_table",
 )
-summary_embryo_df
 
+# Filter out uninformative
+# embryo_category_df[embryo_category_df[""]]
+
+embryo_columns = list(
+    embryo_category_df.columns[
+        embryo_category_df.columns.str.endswith("_risk_category")
+    ]
+)
+embryo_category_df[embryo_columns] != "uninformative"
+mask = ~(embryo_category_df[embryo_columns] == "uninformative").all(axis=1)
+uncluttered_df_for_plotting = embryo_category_df[mask]
+
+mask = ~(embryo_category_df[embryo_columns] == "uninformative").all(axis=1)
+
+uncluttered_df_for_plotting = embryo_category_df
+
+html_list_of_plots = plot_results(
+    uncluttered_df_for_plotting,
+    args.embryo_ids,
+    args.gene_start,
+    args.gene_end,
+)
+
+html_text_for_plots = "<br>".join(html_list_of_plots)
+
+# TODO Place html into separate folder
 html_string = (
     """
 <html>
@@ -645,9 +803,10 @@ html_string = (
       """
     + summary_embryo_table
     + """
-        <h2>Plot Informative SNPs</h2>
         <h2>Plot Embryo Results</h2>
-    
+    """
+    + html_text_for_plots
+    + """
 
     </body>
 
