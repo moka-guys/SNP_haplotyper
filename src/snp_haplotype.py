@@ -4,9 +4,7 @@ import numpy as np
 import plotly.express as px
 
 # TODO Add split of calls by region to plot & table
-# TODO Add full coordinates to the plot
 # TODO Add support for ADOs in plots
-# TODO Move Informatives SNPs by region to embryo alleles
 # TODO Check telomeri/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
 # TODO Add support for no embryos (just TRIOs being run to check if enough informative SNPs)
 # TODO Autosomal Recessive
@@ -636,7 +634,9 @@ def plot_results(
             annotation_position="right top",
             annotation_textangle=90,
         )
-        fig.update_xaxes(range=[gene_start - 2000000, gene_end + 2000000])
+        fig.update_xaxes(
+            range=[gene_start - 2000000, gene_end + 2000000], exponentformat="none"
+        )
         fig.update_yaxes(range=[-2.2, 2.2], showticklabels=False)
         fig.update_layout(height=250, width=1800, title_text=f"Results for {embryo}")
 
@@ -788,16 +788,16 @@ html_string = (
         """
     + results_table_1
     + """
-        <h2>Informative SNPs by region</h2>
-      """
-    + summary_snps_table
-    + """
         <h2>NoCalls per Sample</h2>
       """
     + nocall_table
     + """
       """
     + nocall_percentages_table
+    + """
+    <h2>Informative SNPs by region</h2>
+      """
+    + summary_snps_table
     + """
         <h2>Embryo Alleles</h2>
       """
