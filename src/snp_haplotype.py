@@ -2,6 +2,7 @@ import argparse
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 
 # TODO Add split of calls by region to plot & table
 # TODO Add support for ADOs in plots
@@ -358,10 +359,9 @@ def calculate_nocall_percentages(df):
     if nocall.shape[0] > 0:
         trimmed_nocall = nocall.iloc[:, 1:]  # Trim first column
         trimmed_df = df.iloc[:, 1:]  # Trim first column
-        nocall_percentage = trimmed_nocall / trimmed_df.sum(axis=0) * 100
+        nocall_percentage = trimmed_nocall / trimmed_df.sum(axis=0)
         # Add descriptive column
-        nocall_percentage.insert(0, "call_type", "NoCall(%)")
-        # TODO add formatting for %
+        nocall_percentage.insert(0, "call_type", "NoCall")
         return nocall_percentage
     else:
         # TODO add logger message
@@ -512,6 +512,9 @@ def categorise_embryo_alleles(df, miscall_df, embryo_ids):
         embryo_category_df.loc[
             miscall_df[embryo] == "miscall", f"{embryo}_risk_category"
         ] = "miscall"
+        embryo_category_df.loc[
+            miscall_df[embryo] == "ADO", f"{embryo}_risk_category"
+        ] = "ADO"
     return embryo_category_df
 
 
@@ -558,6 +561,58 @@ def plot_results(
 ):
     plots_as_html = []
     for embryo in embryo_ids:
+        if (
+            "high_risk"
+            in (df[df["Position"] >= gene_end][f"{embryo}_risk_category"]).unique()
+        ):
+            num_downstream_high_risk = df.loc[
+                (df["Position"] >= gene_end),
+                [
+                    f"{embryo}_risk_category",
+                ],
+            ].value_counts()["high_risk"]
+        else:
+            num_downstream_high_risk = 0
+
+        if (
+            "high_risk"
+            in (df[df["Position"] <= gene_start][f"{embryo}_risk_category"]).unique()
+        ):
+            num_upstream_high_risk = df.loc[
+                (df["Position"] <= gene_start),
+                [
+                    f"{embryo}_risk_category",
+                ],
+            ].value_counts()["high_risk"]
+        else:
+            num_upstream_high_risk = 0
+
+        if (
+            "low_risk"
+            in (df[df["Position"] >= gene_end][f"{embryo}_risk_category"]).unique()
+        ):
+            num_downstream_low_risk = df.loc[
+                (df["Position"] >= gene_end),
+                [
+                    f"{embryo}_risk_category",
+                ],
+            ].value_counts()["low_risk"]
+        else:
+            num_downstream_low_risk = 0
+
+        if (
+            "low_risk"
+            in (df[df["Position"] <= gene_start][f"{embryo}_risk_category"]).unique()
+        ):
+            num_upstream_low_risk = df.loc[
+                (df["Position"] <= gene_start),
+                [
+                    f"{embryo}_risk_category",
+                ],
+            ].value_counts()["low_risk"]
+        else:
+            num_upstream_low_risk = 0
+
         fig = px.scatter(
             df,
             x="Position",
@@ -567,6 +622,7 @@ def plot_results(
             .str.replace("NoCall", "-1")
             .str.replace("uninformative", "0")
             .str.replace("miscall", "1")
+            .str.replace("ADO", "1")
             .astype(int),
             color=f"{embryo}_risk_category",
             color_discrete_map={
@@ -575,13 +631,15 @@ def plot_results(
                 "NoCall": "#0818a6",
                 "miscall": "#f0690a",
                 "uninformative": "#52555e",
+                "ADO": "#00ccff",
             },
             symbol=f"{embryo}_risk_category",
             symbol_map={
                 "high_risk": "line-ns-open",
                 "low_risk": "line-ns-open",
                 "NoCall": "x",
-                "miscall": "diamond-tall-open",
+                "miscall": "line-ns-open",
+                "ADO": "line-ns-open",
                 "uninformative": "line-ns-open",
             },
             category_orders={
@@ -589,6 +647,7 @@ def plot_results(
                     "high_risk",
                     "low_risk",
                     "miscall",
+                    "ADO",
                     "NoCall",
                     "uniformative",
                 ],
@@ -600,15 +659,16 @@ def plot_results(
             size=df[f"{embryo}_risk_category"]
             .str.replace("high_risk", "8")
             .str.replace("low_risk", "8")
-            .str.replace("NoCall", "8")
+            .str.replace("NoCall", "4")
             .str.replace("uninformative", "1")
-            .str.replace("miscall", "8")
+            .str.replace("miscall", "1")
+            .str.replace("ADO", "1")
             .astype(int),
-            hover_data=[
-                "Position",
-                "probeset_id",
-                "rsID",
-            ],
+            hover_data={
+                "Position": ":.0f",
+                "probeset_id": True,
+                "rsID": True,
+            },
         )
         fig.add_vrect(
             x0=gene_start,
@@ -637,8 +697,48 @@ def plot_results(
         fig.update_xaxes(
             range=[gene_start - 2000000, gene_end + 2000000], exponentformat="none"
         )
-        fig.update_yaxes(range=[-2.2, 2.2], showticklabels=False)
-        fig.update_layout(height=250, width=1800, title_text=f"Results for {embryo}")
+
+        fig.add_trace(
+            go.Scatter(
+                name="High_risk count",
+                x=[
+                    gene_start - 1900000,
+                    gene_end + 1900000,
+                ],
+                y=[
+                    2,
+                    2,
+                ],
+                mode="text",
+                textfont_color="#e60e0e",
+                text=[
+                    num_upstream_high_risk,
+                    num_downstream_high_risk,
+                ],
+                textposition="top center",
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                name="Low_risk count",
+                x=[
+                    gene_start - 1900000,
+                    gene_end + 1900000,
+                ],
+                y=[-2, -2],
+                mode="text",
+                textfont_color="#0ee60e",
+                text=[
+                    num_upstream_low_risk,
+                    num_downstream_low_risk,
+                ],
+                textposition="bottom center",
+            )
+        )
+
+        fig.update_yaxes(range=[-3, 3], showticklabels=False)
+        fig.update_layout(height=340, width=1800, title_text=f"Results for {embryo}")
 
         plots_as_html.append(fig.to_html(full_html=False, include_plotlyjs="cdn"))
     return plots_as_html
@@ -712,10 +812,6 @@ embryo_category_df = categorise_embryo_alleles(
 summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
 
 
-# Filter out any rows which are noninformative across all embryos (produces less cluttered plots)
-"_risk_category"
-
-
 # Produce report
 results_table_1 = produce_html_table(
     results_df,
@@ -742,24 +838,8 @@ summary_embryo_table = produce_html_table(
     "summary_embryo_table",
 )
 
-# Filter out uninformative
-# embryo_category_df[embryo_category_df[""]]
-
-embryo_columns = list(
-    embryo_category_df.columns[
-        embryo_category_df.columns.str.endswith("_risk_category")
-    ]
-)
-embryo_category_df[embryo_columns] != "uninformative"
-mask = ~(embryo_category_df[embryo_columns] == "uninformative").all(axis=1)
-uncluttered_df_for_plotting = embryo_category_df[mask]
-
-mask = ~(embryo_category_df[embryo_columns] == "uninformative").all(axis=1)
-
-uncluttered_df_for_plotting = embryo_category_df
-
 html_list_of_plots = plot_results(
-    uncluttered_df_for_plotting,
+    embryo_category_df,
     args.embryo_ids,
     args.gene_start,
     args.gene_end,
@@ -777,6 +857,7 @@ html_string = (
     <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
   </head>
 
@@ -785,6 +866,14 @@ html_string = (
 
         <!-- *** Section 1 *** --->
         <h2>Probe Classification Table</h2>
+            <tbody><tr>
+            <td>Minimum Genomic Coordinate:</td>
+            <td><input type="text" id="min" name="min"></td>
+        </tr>
+        <tr>
+            <td>Maximum Genomic Coordinate:</td>
+            <td><input type="text" id="max" name="max"></td>
+        </tr>
         """
     + results_table_1
     + """
@@ -792,6 +881,7 @@ html_string = (
       """
     + nocall_table
     + """
+    <h2>NoCalls Proportion per Sample</h2>
       """
     + nocall_percentages_table
     + """
@@ -907,6 +997,35 @@ html_string = (
         "ordering": false,
         "info":     false
     } );
+    } );
+    </script>
+
+    <script>
+        /* Custom filtering function which will search data in column four between two values */
+    $.fn.dataTable.ext.search.push(
+        function( settings, data, dataIndex ) {
+            var min = parseInt( $('#min').val(), 10 );
+            var max = parseInt( $('#max').val(), 10 );
+            var Position = parseFloat( data[3] ) || 0; // use data for the Position column
+    
+            if ( ( isNaN( min ) && isNaN( max ) ) ||
+                ( isNaN( min ) && Position <= max ) ||
+                ( min <= Position   && isNaN( max ) ) ||
+                ( min <= Position   && Position <= max ) )
+            {
+                return true;
+            }
+            return false;
+        }
+    );
+    
+    $(document).ready(function() {
+        var table = $('#results_table_1').DataTable();
+        
+        // Event listener to the two range filtering inputs to redraw on input
+        $('#min, #max').keyup( function() {
+            table.draw();
+        } );
     } );
     </script>
 
