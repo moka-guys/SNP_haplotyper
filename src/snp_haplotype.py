@@ -1,17 +1,23 @@
 import argparse
+import json
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import sys
 
-# TODO Add split of calls by region to plot & table
-# TODO Add support for ADOs in plots
-# TODO Check telomeri/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
+# TODO Copy rsID from hover tap
+# TODO Add shared_high_risk for AR
+# TODO Add in gene count to plot
+# TODO Check telomeric/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
 # TODO Add support for no embryos (just TRIOs being run to check if enough informative SNPs)
 # TODO Autosomal Recessive
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(description="SNP Haplotying from SNP Array data")
+
+# Prevents HTML reports being written for testing
+parser.add_argument("--testing", action=argparse.BooleanOptionalAction)
 
 # File input/output data
 parser.add_argument(
@@ -158,25 +164,6 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-# import haplotype data from text file
-df = pd.read_csv(
-    args.input_file,
-    delimiter="\t",
-)
-# Remove space from column titles and make lower case
-df = df.rename(
-    columns={
-        "Probeset ID": "probeset_id",
-    }
-)
-
-
-# Import mapping of Affy IDs to dbSNP rs IDs
-affy_2_rs_ids_df = pd.read_csv(
-    "test_data/AffyID2rsid.txt",
-    delimiter="\t",
-)
-
 
 def add_rsid_column(df, affy_2_rs_ids_df):
     # Add column with dbSNP rsIDs
@@ -218,9 +205,6 @@ def filter_out_nocalls(df, male_partner, female_partner, reference):
     ]
     # TODO add logger - how many NoCalls filtered
     return filtered_df
-
-
-number_snps_imported = df.shape[0]
 
 
 def autosomal_dominant_analysis(
@@ -752,285 +736,385 @@ def plot_results(
 # def x_chromosome_linked_analysis(carrier_female, unaffected_male_partner, reference):
 #     pass
 
-# Assign the correct partner to 'affected' and 'unaffected'
-if args.male_partner_status == "affected":
-    affected_partner = args.male_partner
-    unaffected_partner = args.female_partner
-elif args.female_partner_status == "affected":
-    affected_partner = args.female_partner
-    unaffected_partner = args.male_partner
 
-# Add column describing how far the SNP is from the gene of interest
-df = annotate_distance_from_gene(df, args.chr, args.gene_start, args.gene_end)
-
-# Add column of dbSNP rsIDs
-df = add_rsid_column(df, affy_2_rs_ids_df)
-
-# Calculate qc metrics before filtering out Nocalls
-qc_df = calculate_qc_metrics(
-    df, args.female_partner, args.male_partner, args.reference, args.embryo_ids
-)
-
-# Calculate NoCall percentages
-
-nocall_percentages = calculate_nocall_percentages(qc_df)
-
-# Filter out any rows where the partners or reference have a NoCall as these cannot be used in the analysis
-filtered_df = filter_out_nocalls(
-    df, args.male_partner, args.female_partner, args.reference
-)
-
-# TODO add if statement for mode of inheritance
-results_df = autosomal_dominant_analysis(
-    filtered_df,
-    affected_partner,
-    unaffected_partner,
-    args.reference,
-    args.reference_status,
-)
-
-# Informative SNPs
-informative_snps_by_region = snps_by_region(results_df)
-
-# Get total of informative SNPs
-summary_snps_by_region = summarised_snps_by_region(informative_snps_by_region)
-
-# Produce summary of miscalled SNPs
-miscall_df = calculate_miscalls(
-    results_df, args.male_partner, args.female_partner, args.embryo_ids
-)
-
-# Categorise embryo alleles
-embryo_category_df = categorise_embryo_alleles(
-    results_df,
-    miscall_df,
-    args.embryo_ids,
-)
-
-
-# Summarise embryo results
-summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
-
-
-# Produce report
-results_table_1 = produce_html_table(
-    results_df,
-    "results_table_1",
-)
-
-summary_snps_table = produce_html_table(
-    summary_snps_by_region,
-    "summary_snps_table",
-)
-
-nocall_table = produce_html_table(
-    qc_df,
-    "nocall_table",
-)
-
-nocall_percentages_table = produce_html_table(
-    nocall_percentages,
-    "nocall_percentages_table",
-)
-
-summary_embryo_table = produce_html_table(
-    summary_embryo_df,
-    "summary_embryo_table",
-)
-
-html_list_of_plots = plot_results(
-    embryo_category_df,
-    args.embryo_ids,
-    args.gene_start,
-    args.gene_end,
-)
-
-html_text_for_plots = "<br>".join(html_list_of_plots)
-
-# TODO Place html into separate folder
-html_string = (
-    """
-<html>
-<head>
-    <meta charset="utf-8" />
-    <title></title>
-    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-   <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-  </head>
-
-    <body>
-        <h1>Placeholder 1</h1>
-
-        <!-- *** Section 1 *** --->
-        <h2>Probe Classification Table</h2>
-            <tbody><tr>
-            <td>Minimum Genomic Coordinate:</td>
-            <td><input type="text" id="min" name="min"></td>
-        </tr>
-        <tr>
-            <td>Maximum Genomic Coordinate:</td>
-            <td><input type="text" id="max" name="max"></td>
-        </tr>
-        """
-    + results_table_1
-    + """
-        <h2>NoCalls per Sample</h2>
-      """
-    + nocall_table
-    + """
-    <h2>NoCalls Proportion per Sample</h2>
-      """
-    + nocall_percentages_table
-    + """
-    <h2>Informative SNPs by region</h2>
-      """
-    + summary_snps_table
-    + """
-        <h2>Embryo Alleles</h2>
-      """
-    + summary_embryo_table
-    + """
-        <h2>Plot Embryo Results</h2>
-    """
-    + html_text_for_plots
-    + """
-
-    </body>
-
-    <script>
-    $(document).ready( function () {
-    $('#results_table_1 thead tr')
-        .clone(true)
-        .addClass('filters')
-        .appendTo('#results_table_1 thead');
-        var table = $('#results_table_1').DataTable({
-        orderCellsTop: true,
-        fixedHeader: true,
-        initComplete: function () {
-            var api = this.api();
- 
-            // For each column
-            api
-                .columns()
-                .eq(0)
-                .each(function (colIdx) {
-                    // Set the header cell to contain the input element
-                    var cell = $('.filters th').eq(
-                        $(api.column(colIdx).header()).index()
-                    );
-                    var title = $(cell).text();
-                    $(cell).html('<input type="text" placeholder="' + title + '" />');
- 
-                    // On every keypress in this input
-                    $(
-                        'input',
-                        $('.filters th').eq($(api.column(colIdx).header()).index())
-                    )
-                        .off('keyup change')
-                        .on('keyup change', function (e) {
-                            e.stopPropagation();
- 
-                            // Get the search value
-                            $(this).attr('title', $(this).val());
-                            var regexr = '({search})'; //$(this).parents('th').find('select').val();
- 
-                            var cursorPosition = this.selectionStart;
-                            // Search the column for that value
-                            api
-                                .column(colIdx)
-                                .search(
-                                    this.value != ''
-                                        ? regexr.replace('{search}', '(((' + this.value + ')))')
-                                        : '',
-                                    this.value != '',
-                                    this.value == ''
-                                )
-                                .draw();
- 
-                            $(this)
-                                .focus()[0]
-                                .setSelectionRange(cursorPosition, cursorPosition);
-                        });
-                });
-        },
-    });
-});
-    </script>
-
-    <script>
-    $(document).ready( function () {
-    $('#summary_snps_table').DataTable({
-        "paging":   false,
-        "ordering": false,
-        "info":     false
-    } );
-    } );
-    </script>
-
-    <script>
-    $(document).ready( function () {
-    $('#nocall_table').DataTable({
-        "paging":   false,
-        "ordering": false,
-        "info":     false
-    } );
-    } );
-    </script>
-
-    <script>
-    $(document).ready( function () {
-    $('#nocall_percentages_table').DataTable({
-        "paging":   false,
-        "ordering": false,
-        "info":     false
-    } );
-    } );
-    </script>
-
-    <script>
-    $(document).ready( function () {
-    $('#summary_embryo_table').DataTable({
-        "paging":   false,
-        "ordering": false,
-        "info":     false
-    } );
-    } );
-    </script>
-
-    <script>
-        /* Custom filtering function which will search data in column four between two values */
-    $.fn.dataTable.ext.search.push(
-        function( settings, data, dataIndex ) {
-            var min = parseInt( $('#min').val(), 10 );
-            var max = parseInt( $('#max').val(), 10 );
-            var Position = parseFloat( data[3] ) || 0; // use data for the Position column
-    
-            if ( ( isNaN( min ) && isNaN( max ) ) ||
-                ( isNaN( min ) && Position <= max ) ||
-                ( min <= Position   && isNaN( max ) ) ||
-                ( min <= Position   && Position <= max ) )
-            {
-                return true;
-            }
-            return false;
+def main():
+    # import haplotype data from text file
+    df = pd.read_csv(
+        args.input_file,
+        delimiter="\t",
+    )
+    # Remove space from column titles and make lower case
+    df = df.rename(
+        columns={
+            "Probeset ID": "probeset_id",
         }
-    );
+    )
+
+    number_snps_imported = df.shape[0]
+
+    # Import mapping of Affy IDs to dbSNP rs IDs
+    affy_2_rs_ids_df = pd.read_csv(
+        "test_data/AffyID2rsid.txt",
+        delimiter="\t",
+    )
+
+    # Assign the correct partner to 'affected' and 'unaffected'
+    if args.male_partner_status == "affected":
+        affected_partner = args.male_partner
+        unaffected_partner = args.female_partner
+    elif args.female_partner_status == "affected":
+        affected_partner = args.female_partner
+        unaffected_partner = args.male_partner
+
+    # Add column describing how far the SNP is from the gene of interest
+    df = annotate_distance_from_gene(df, args.chr, args.gene_start, args.gene_end)
+
+    # Add column of dbSNP rsIDs
+    df = add_rsid_column(df, affy_2_rs_ids_df)
+
+    # Calculate qc metrics before filtering out Nocalls
+    qc_df = calculate_qc_metrics(
+        df, args.female_partner, args.male_partner, args.reference, args.embryo_ids
+    )
+
+    # Calculate NoCall percentages
+
+    nocall_percentages = calculate_nocall_percentages(qc_df)
+
+    # Filter out any rows where the partners or reference have a NoCall as these cannot be used in the analysis
+    filtered_df = filter_out_nocalls(
+        df, args.male_partner, args.female_partner, args.reference
+    )
+
+    # TODO add if statement for mode of inheritance
+    results_df = autosomal_dominant_analysis(
+        filtered_df,
+        affected_partner,
+        unaffected_partner,
+        args.reference,
+        args.reference_status,
+    )
+
+    # Informative SNPs
+    informative_snps_by_region = snps_by_region(results_df)
+
+    # Get total of informative SNPs
+    summary_snps_by_region = summarised_snps_by_region(informative_snps_by_region)
+
+    # Produce summary of miscalled SNPs
+    miscall_df = calculate_miscalls(
+        results_df, args.male_partner, args.female_partner, args.embryo_ids
+    )
+
+    # Categorise embryo alleles
+    embryo_category_df = categorise_embryo_alleles(
+        results_df,
+        miscall_df,
+        args.embryo_ids,
+    )
+
+    # Summarise embryo results
+    summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
+
+    # Produce report
+    results_table_1 = produce_html_table(
+        results_df,
+        "results_table_1",
+    )
+
+    summary_snps_table = produce_html_table(
+        summary_snps_by_region,
+        "summary_snps_table",
+    )
+
+    nocall_table = produce_html_table(
+        qc_df,
+        "nocall_table",
+    )
+
+    nocall_percentages_table = produce_html_table(
+        nocall_percentages,
+        "nocall_percentages_table",
+    )
+
+    summary_embryo_table = produce_html_table(
+        summary_embryo_df,
+        "summary_embryo_table",
+    )
+
+    html_list_of_plots = plot_results(
+        embryo_category_df,
+        args.embryo_ids,
+        args.gene_start,
+        args.gene_end,
+    )
+
+    html_text_for_plots = "<br>".join(html_list_of_plots)
+
+    # TODO Place html into separate folder
+    html_string = (
+        """
+    <html>
+    <head>
+        <meta charset="utf-8" />
+        <title></title>
+        <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+        <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+        <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    </head>
+
+        <body>
+            <h1>Placeholder 1</h1>
+
+            <!-- *** Section 1 *** --->
+            <h2>Probe Classification Table</h2>
+                <tbody><tr>
+                <td>Minimum Genomic Coordinate:</td>
+                <td><input type="text" id="min" name="min"></td>
+            </tr>
+            <tr>
+                <td>Maximum Genomic Coordinate:</td>
+                <td><input type="text" id="max" name="max"></td>
+            </tr>
+            """
+        + results_table_1
+        + """
+            <h2>NoCalls per Sample</h2>
+        """
+        + nocall_table
+        + """
+        <h2>NoCalls Proportion per Sample</h2>
+        """
+        + nocall_percentages_table
+        + """
+        <h2>Informative SNPs by region</h2>
+        """
+        + summary_snps_table
+        + """
+            <h2>Embryo Alleles</h2>
+        """
+        + summary_embryo_table
+        + """
+            <h2>Plot Embryo Results</h2>
+        """
+        + html_text_for_plots
+        + """
+
+        </body>
+
+        <script>
+        $(document).ready( function () {
+        $('#results_table_1 thead tr')
+            .clone(true)
+            .addClass('filters')
+            .appendTo('#results_table_1 thead');
+            var table = $('#results_table_1').DataTable({
+            orderCellsTop: true,
+            fixedHeader: true,
+            initComplete: function () {
+                var api = this.api();
     
-    $(document).ready(function() {
-        var table = $('#results_table_1').DataTable();
-        
-        // Event listener to the two range filtering inputs to redraw on input
-        $('#min, #max').keyup( function() {
-            table.draw();
+                // For each column
+                api
+                    .columns()
+                    .eq(0)
+                    .each(function (colIdx) {
+                        // Set the header cell to contain the input element
+                        var cell = $('.filters th').eq(
+                            $(api.column(colIdx).header()).index()
+                        );
+                        var title = $(cell).text();
+                        $(cell).html('<input type="text" placeholder="' + title + '" />');
+    
+                        // On every keypress in this input
+                        $(
+                            'input',
+                            $('.filters th').eq($(api.column(colIdx).header()).index())
+                        )
+                            .off('keyup change')
+                            .on('keyup change', function (e) {
+                                e.stopPropagation();
+    
+                                // Get the search value
+                                $(this).attr('title', $(this).val());
+                                var regexr = '({search})'; //$(this).parents('th').find('select').val();
+    
+                                var cursorPosition = this.selectionStart;
+                                // Search the column for that value
+                                api
+                                    .column(colIdx)
+                                    .search(
+                                        this.value != ''
+                                            ? regexr.replace('{search}', '(((' + this.value + ')))')
+                                            : '',
+                                        this.value != '',
+                                        this.value == ''
+                                    )
+                                    .draw();
+    
+                                $(this)
+                                    .focus()[0]
+                                    .setSelectionRange(cursorPosition, cursorPosition);
+                            });
+                    });
+            },
+        });
+    });
+        </script>
+
+        <script>
+        $(document).ready( function () {
+        $('#summary_snps_table').DataTable({
+            "paging":   false,
+            "ordering": false,
+            "info":     false
         } );
-    } );
-    </script>
+        } );
+        </script>
 
-</html>"""
-)
+        <script>
+        $(document).ready( function () {
+        $('#nocall_table').DataTable({
+            "paging":   false,
+            "ordering": false,
+            "info":     false
+        } );
+        } );
+        </script>
 
-with open(f"{args.output_prefix}.html", "w") as f:
-    f.write(html_string)
+        <script>
+        $(document).ready( function () {
+        $('#nocall_percentages_table').DataTable({
+            "paging":   false,
+            "ordering": false,
+            "info":     false
+        } );
+        } );
+        </script>
+
+        <script>
+        $(document).ready( function () {
+        $('#summary_embryo_table').DataTable({
+            "paging":   false,
+            "ordering": false,
+            "info":     false
+        } );
+        } );
+        </script>
+
+        <script>
+            /* Custom filtering function which will search data in column four between two values */
+        $.fn.dataTable.ext.search.push(
+            function( settings, data, dataIndex ) {
+                var min = parseInt( $('#min').val(), 10 );
+                var max = parseInt( $('#max').val(), 10 );
+                var Position = parseFloat( data[3] ) || 0; // use data for the Position column
+        
+                if ( ( isNaN( min ) && isNaN( max ) ) ||
+                    ( isNaN( min ) && Position <= max ) ||
+                    ( min <= Position   && isNaN( max ) ) ||
+                    ( min <= Position   && Position <= max ) )
+                {
+                    return true;
+                }
+                return false;
+            }
+        );
+        
+        $(document).ready(function() {
+            var table = $('#results_table_1').DataTable();
+            
+            // Event listener to the two range filtering inputs to redraw on input
+            $('#min, #max').keyup( function() {
+                table.draw();
+            } );
+        } );
+        </script>
+
+    </html>"""
+    )
+    if args.testing:
+        # Stream machine readable output to stdout for testing purposes
+        informative_snp_data = {
+            "mode": args.mode_of_inheritance,
+            "sample_id": args.output_prefix,
+            "num_snps": number_snps_imported,
+            "info_snps_upstream_2mb": int(
+                informative_snps_by_region[
+                    (informative_snps_by_region["gene_distance"].str.endswith("_start"))
+                    & (
+                        informative_snps_by_region["snp_risk_category"]
+                        != "uninformative"
+                    )
+                ].snp_count.sum()
+            ),
+            "info_snps_in_gene": int(
+                informative_snps_by_region[
+                    (informative_snps_by_region["gene_distance"] == "within_gene")
+                    & (
+                        informative_snps_by_region["snp_risk_category"]
+                        != "uninformative"
+                    )
+                ].snp_count.sum()
+            ),
+            "info_snps_downstream_2mb": int(
+                informative_snps_by_region[
+                    (informative_snps_by_region["gene_distance"].str.endswith("_end"))
+                    & (
+                        informative_snps_by_region["snp_risk_category"]
+                        != "uninformative"
+                    )
+                ].snp_count.sum()
+            ),
+            "total_info_snps": int(
+                informative_snps_by_region[
+                    informative_snps_by_region["snp_risk_category"] != "uninformative"
+                ].snp_count.sum()
+            ),
+            # TODO included within gene
+            "high_risk_snps_upstream_2mb": int(
+                informative_snps_by_region[
+                    (
+                        informative_snps_by_region["gene_distance"].str.endswith(
+                            "_start"
+                        )
+                        | (informative_snps_by_region["gene_distance"] == "within_gene")
+                    )
+                    & (informative_snps_by_region["snp_risk_category"] == "high_risk")
+                ].snp_count.sum()
+            ),
+            # TODO included within gene
+            "high_risk_snps_downstream_2mb": int(
+                informative_snps_by_region[
+                    (
+                        informative_snps_by_region["gene_distance"].str.endswith("_end")
+                        | (informative_snps_by_region["gene_distance"] == "within_gene")
+                    )
+                    & (informative_snps_by_region["snp_risk_category"] == "high_risk")
+                ].snp_count.sum()
+            ),
+            "low_risk_snps_upstream_2mb": int(
+                informative_snps_by_region[
+                    (informative_snps_by_region["gene_distance"].str.endswith("_start"))
+                    & (informative_snps_by_region["snp_risk_category"] == "low_risk")
+                ].snp_count.sum()
+            ),
+            "low_risk_snps_downstream_2mb": int(
+                informative_snps_by_region[
+                    (informative_snps_by_region["gene_distance"].str.endswith("_end"))
+                    & (informative_snps_by_region["snp_risk_category"] == "low_risk")
+                ].snp_count.sum()
+            ),
+        }
+        json.dump(informative_snp_data, sys.stdout, indent=4)
+
+    else:
+        # Produce human readable HTML report
+        with open(f"{args.output_prefix}.html", "w") as f:
+            f.write(html_string)
+
+
+if __name__ == "__main__":
+    main()
