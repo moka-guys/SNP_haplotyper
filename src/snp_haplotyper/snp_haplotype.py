@@ -6,6 +6,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 import sys
 
+# Import mode of inheritance specific code
+from autosomal_dominant_logic import autosomal_dominant_analysis
+import autosomal_recessive_logic
+import x_linked_logic
+
 # TODO Copy rsID from hover tap
 # TODO Add shared_high_risk for AR
 # TODO Add in gene count to plot
@@ -15,9 +20,6 @@ import sys
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(description="SNP Haplotying from SNP Array data")
-
-# Prevents HTML reports being written for testing
-parser.add_argument("--testing", action=argparse.BooleanOptionalAction)
 
 # File input/output data
 parser.add_argument(
@@ -71,6 +73,13 @@ parser.add_argument(
     choices=["affected", "unaffected", "carrier"],
     type=str,
     help="ID in input table for female_partner",
+)
+
+parser.add_argument(
+    "-cos",
+    "--consanguineous",
+    action=argparse.BooleanOptionalAction,
+    help="Flag to indicate that partners are consanguineous",
 )
 
 parser.add_argument(
@@ -162,7 +171,12 @@ parser.add_argument(
     help="Chromosome of ROI/gene",
 )
 
-args = parser.parse_args()
+
+parser.add_argument(
+    "--testing",
+    action=argparse.BooleanOptionalAction,
+    help="Flag to produce JSON output easily parsed by pytest and prevent HTML reports being produced",
+)
 
 
 def add_rsid_column(df, affy_2_rs_ids_df):
@@ -205,97 +219,6 @@ def filter_out_nocalls(df, male_partner, female_partner, reference):
     ]
     # TODO add logger - how many NoCalls filtered
     return filtered_df
-
-
-def autosomal_dominant_analysis(
-    df,
-    affected_partner,
-    unaffected_partner,
-    reference,
-    reference_status,
-):
-
-    if args.reference_relationship in [
-        "grandparent",  # TODO populate with all appropriate relationships
-    ]:
-        # Label alleles as high or low risk
-        conditions = [
-            # Criteria to label high Risk SNPs if reference affected, or low risk SNPs if reference unaffected
-            # Criteria 1
-            (df[reference] == "AA")
-            & (df[unaffected_partner] == "BB")
-            & (df[affected_partner] == "AB"),
-            # Criteria 2
-            (df[reference] == "BB")
-            & (df[unaffected_partner] == "AA")
-            & (df[affected_partner] == "AB"),
-            # Criteria to label low Risk SNPs if reference affected, or high risk SNPs if reference unaffected
-            # Criteria 3
-            (df[reference] == "AA")
-            & (df[unaffected_partner] == "AA")
-            & (df[affected_partner] == "AB"),
-            # Criteria 4
-            (df[reference] == "BB")
-            & (df[unaffected_partner] == "BB")
-            & (df[affected_partner] == "AB"),
-        ]
-        # Assign the correct labels depending upon reference status
-        if reference_status == "affected":
-            values = [
-                "high_risk",  # Criteria 1
-                "high_risk",  # Criteria 2
-                "low_risk",  # Criteria 3
-                "low_risk",  # Criteria 4
-            ]
-        elif reference_status == "unaffected":
-            values = [
-                "low_risk",  # Criteria 1
-                "low_risk",  # Criteria 2
-                "high_risk",  # Criteria 3
-                "high_risk",  # Criteria 4
-            ]
-        df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
-    elif args.reference_relationship in [
-        "child",  # TODO populate with all appropriate relationships
-    ]:
-        # Label alleles as high or low risk
-        conditions = [
-            # Criteria to label high Risk SNPs if reference affected, or low risk SNPs if reference unaffected
-            # Criteria 1
-            (df[reference] == "AB")
-            & (df[unaffected_partner] == "AA")
-            & (df[affected_partner] == "AB"),
-            # Criteria 2
-            (df[reference] == "AB")
-            & (df[unaffected_partner] == "BB")
-            & (df[affected_partner] == "AB"),
-            # Criteria to label low Risk SNPs if reference affected, or high risk SNPs if reference unaffected
-            # Criteria 3
-            (df[reference] == "AA")
-            & (df[unaffected_partner] == "AA")
-            & (df[affected_partner] == "AB"),
-            # Criteria 4
-            (df[reference] == "BB")
-            & (df[unaffected_partner] == "BB")
-            & (df[affected_partner] == "AB"),
-        ]
-        # Assign the correct labels depending upon reference status
-        if reference_status == "affected":
-            values = [
-                "high_risk",  # Criteria 1
-                "high_risk",  # Criteria 2
-                "low_risk",  # Criteria 3
-                "low_risk",  # Criteria 4
-            ]
-        elif reference_status == "unaffected":
-            values = [
-                "low_risk",  # Criteria 1
-                "low_risk",  # Criteria 2
-                "high_risk",  # Criteria 3
-                "high_risk",  # Criteria 4
-            ]
-        df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
-    return df
 
 
 def calculate_qc_metrics(df, female_partner, male_partner, reference, embryo_ids):
@@ -737,7 +660,10 @@ def plot_results(
 #     pass
 
 
-def main():
+def main(args=None):  # default argument allows pytest to override argparse for testing
+    if args is None:
+        args = parser.parse_args()
+
     # import haplotype data from text file
     df = pd.read_csv(
         args.input_file,
@@ -754,8 +680,7 @@ def main():
 
     # Import mapping of Affy IDs to dbSNP rs IDs
     affy_2_rs_ids_df = pd.read_csv(
-        "test_data/AffyID2rsid.txt",
-        delimiter="\t",
+        "test_data/AffyID2rsid.txt", delimiter="\t", low_memory=False
     )
 
     # Assign the correct partner to 'affected' and 'unaffected'
@@ -793,6 +718,7 @@ def main():
         unaffected_partner,
         args.reference,
         args.reference_status,
+        args.reference_relationship,
     )
 
     # Informative SNPs
