@@ -14,25 +14,25 @@ def autosomal_recessive_analysis(
     """
     TODO: Add docstring
     """
-    if consanguineous & reference_status == "affected":
+    if consanguineous and reference_status == "affected":
         # Label alleles as high or low risk
         conditions = [
             # Criteria to label low Risk SNPs if reference affected, or low risk SNPs if reference unaffected
             # Criteria 1
-            (df[reference] == "AA" | df[reference] == "BB")
+            ((df[reference] == "AA") | (df[reference] == "BB"))
             & (df[male_partner] == "AB")
-            & (df[female_partner] == "AA" | df[female_partner] == "BB"),
+            & ((df[female_partner] == "AA") | (df[female_partner] == "BB")),
             # Criteria 2
-            (df[reference] == "AA" | df[reference] == "BB")
-            & (df[male_partner] == "AA" | df[male_partner] == "BB")
+            ((df[reference] == "AA") | (df[reference] == "BB"))
+            & ((df[male_partner] == "AA") | (df[male_partner] == "BB"))
             & (df[female_partner] == "AB"),
             # Criteria 3
-            (df[reference] == "AA" | df[reference] == "BB")
+            ((df[reference] == "AA") | (df[reference] == "BB"))
             & (df[male_partner] == "AB")
             & (df[female_partner] == "AB"),
         ]
         # Assign the correct labels depending upon reference status
-        if consanguineous & reference_status == "affected":
+        if consanguineous and reference_status == "affected":
             values = [
                 "male_partner_low_risk",  # Criteria 1
                 "female_partner_low_risk",  # Criteria 2
@@ -78,7 +78,7 @@ def autosomal_recessive_analysis(
             & (df[male_partner] == "BB")
             & (df[female_partner] == "AB"),
             # Criteria 9
-            (df[reference] == "AA" | df[reference] == "BB")
+            ((df[reference] == "AA") | (df[reference] == "BB"))
             & (df[male_partner] == "AB")
             & (df[female_partner] == "AB"),
         ]
@@ -93,7 +93,7 @@ def autosomal_recessive_analysis(
                 "male_partner_high_risk",  # Criteria 6
                 "female_partner_high_risk",  # Criteria 7
                 "female_partner_high_risk",  # Criteria 8
-                "low_&_high_risk",  # Criteria 9
+                "low_&_high_risk",  # Criteria 9 TODO check if this should be split into low/high high/low?
             ]
 
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
@@ -103,28 +103,36 @@ def autosomal_recessive_analysis(
         conditions = [
             # Criteria to label low Risk SNPs if reference affected, or low risk SNPs if reference unaffected
             # Criteria 1
-            (df[reference] == "AA" | df[reference] == "BB")
+            ((df[reference] == "AA") | (df[reference] == "BB"))
             & (df[male_partner] == "AB")
-            & (df[female_partner] == "AA" | df[female_partner] == "BB"),
+            & ((df[female_partner] == "AA") | (df[female_partner] == "BB")),
             # Criteria 2
-            (df[reference] == "AB")
+            ((df[reference] == "AB"))
             & (df[male_partner] == "AB")
-            & (df[female_partner] == "AA" | df[female_partner] == "BB"),
+            & ((df[female_partner] == "AA") | (df[female_partner] == "BB")),
             # Criteria 3
-            (df[reference] == "AA")
+            ((df[reference] == "AA"))
             & (df[male_partner] == "AA")
             & (df[female_partner] == "AB"),
             # Criteria 4
-            (df[reference] == "BB")
+            ((df[reference] == "BB"))
             & (df[male_partner] == "BB")
             & (df[female_partner] == "AB"),
             # Criteria 5
-            (df[reference] == "AB" | df[reference] == "AA" | df[reference] == "BB")
+            (
+                (df[reference] == "AB")
+                | (df[reference] == "AA")
+                | (df[reference] == "BB")
+            )
             & (df[male_partner] == "AB")
-            & (df[female_partner] == "AA" | df[female_partner] == "AA"),
+            & ((df[female_partner] == "AA") | (df[female_partner] == "AA")),
             # Criteria 6
-            (df[reference] == "AB" | df[reference] == "AA" | df[reference] == "BB")
-            & (df[male_partner] == "AA" | df[reference] == "BB")
+            (
+                (df[reference] == "AB")
+                | (df[reference] == "AA")
+                | (df[reference] == "BB")
+            )
+            & ((df[male_partner] == "AA") | (df[reference] == "BB"))
             & (df[female_partner] == "AB"),
         ]
         # Assign the correct labels depending upon reference status
@@ -134,8 +142,8 @@ def autosomal_recessive_analysis(
                 "male_parther_low_risk",  # Criteria 2
                 "female_parther_high_risk",  # Criteria 3
                 "female_parther_low_risk",  # Criteria 4
-                "high_&_low_risk",  # Criteria 5
-                "high_&_low_risk",  # Criteria 6
+                "low_and_high_risk",  # Criteria 5 TODO check if this should be split into low/high high/low?
+                "low_and_high_risk",  # Criteria 6 TODO check if this should be split into low/high high/low?
             ]
 
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")

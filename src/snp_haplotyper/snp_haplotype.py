@@ -6,16 +6,20 @@ import sys
 
 # Import mode of inheritance specific code
 from autosomal_dominant_logic import autosomal_dominant_analysis
-import autosomal_recessive_logic
-import x_linked_logic
-from snp_plot import plot_results
+from autosomal_recessive_logic import autosomal_recessive_analysis
+from x_linked_logic import x_linked_analysis
+from autosomal_dominant_snp_plot import plot_autosomal_dominant_results
+from autosomal_recessive_snp_plot import plot_autosomal_recessive_results
+from x_linked_snp_plot import plot_x_linked_results
+
 
 # TODO Copy rsID from hover tap
 # TODO Add shared_high_risk for AR
 # TODO Add in gene count to plot
 # TODO Check telomeric/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
 # TODO Add support for no embryos (just TRIOs being run to check if enough informative SNPs)
-# TODO Autosomal Recessive
+# TODO Add ADO % to table
+# TODO Add X-linked analysis
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(description="SNP Haplotying from SNP Array data")
@@ -75,9 +79,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-cos",
+    "-consang",
     "--consanguineous",
     action=argparse.BooleanOptionalAction,
+    default=False,
     help="Flag to indicate that partners are consanguineous",
 )
 
@@ -113,6 +118,19 @@ parser.add_argument(
     nargs="+",
     type=str,
     help="IDs of embryos in the input table",
+)
+
+parser.add_argument(
+    "-es",
+    "--embryo_sex",
+    nargs="*",
+    type=str,
+    choices=[
+        "male",
+        "female",
+        "unknown",
+    ],
+    help="Embryo sex - must be in same order as embryo_ids (required for X-linked diseases)",
 )
 
 # Gene/ROI data
@@ -347,7 +365,7 @@ def summarise_miscalls():
 
 def snps_by_region(df):
     snps_by_region = df.value_counts(["gene_distance", "snp_risk_category"]).to_frame()
-    # Extract data from index into columns
+    # Extracsnps_by_regiot data from index into columns
     snps_by_region = snps_by_region.reset_index()
     # Rename columns
     snps_by_region.columns = [
@@ -390,7 +408,7 @@ def summarised_snps_by_region(df):
     return summary_categorised_snps_by_region
 
 
-def categorise_embryo_alleles(df, miscall_df, embryo_ids):
+def categorise_embryo_alleles(df, miscall_df, embryo_ids, mode_of_inheritance):
     embryo_category_df = df[
         [
             "probeset_id",
@@ -400,19 +418,63 @@ def categorise_embryo_alleles(df, miscall_df, embryo_ids):
     ].copy()
     for embryo in embryo_ids:
         # Initiate empty database for results
-        conditions = [
-            (df["snp_risk_category"] == "high_risk") & (df[embryo] == "AB"),
-            (df["snp_risk_category"] == "low_risk") & (df[embryo] == "AB"),
-            (df["snp_risk_category"] != "uninformative") & (df[embryo] == "NoCall"),
-        ]
-        values = [
-            "high_risk",
-            "low_risk",
-            "NoCall",
-        ]
-        embryo_category_df[f"{embryo}_risk_category"] = np.select(
-            conditions, values, default="uninformative"
-        )
+        if mode_of_inheritance == "autosomal_dominant":
+            conditions = [
+                (df["snp_risk_category"] == "high_risk") & (df[embryo] == "AB"),
+                (df["snp_risk_category"] == "low_risk") & (df[embryo] == "AB"),
+                (df["snp_risk_category"] != "uninformative") & (df[embryo] == "NoCall"),
+            ]
+            values = [
+                "high_risk",
+                "low_risk",
+                "NoCall",
+            ]
+            embryo_category_df[f"{embryo}_risk_category"] = np.select(
+                conditions, values, default="uninformative"
+            )
+        elif mode_of_inheritance == "autosomal_recessive":
+            conditions = [
+                (df["snp_risk_category"] == "male_partner_low_risk")
+                & (df[embryo] == "AA"),
+                (df["snp_risk_category"] == "male_partner_low_risk")
+                & (df[embryo] == "BB"),
+                (df["snp_risk_category"] == "male_partner_high_risk")
+                & (df[embryo] == "AB"),
+                (df["snp_risk_category"] == "male_partner_high_risk")
+                & (df[embryo] == "AB"),
+                (df["snp_risk_category"] == "male_partner_low_and_high_risk")
+                & ((df[embryo] == "AA") | (df[embryo] == "BB")),
+                (df["snp_risk_category"] == "female_partner_low_risk")
+                & (df[embryo] == "AA"),
+                (df["snp_risk_category"] == "female_partner_low_risk")
+                & (df[embryo] == "BB"),
+                (df["snp_risk_category"] == "female_partner_high_risk")
+                & (df[embryo] == "AB"),
+                (df["snp_risk_category"] == "female_partner_high_risk")
+                & (df[embryo] == "AB"),
+                (df["snp_risk_category"] == "female_partner_low_and_high_risk")
+                & ((df[embryo] == "AA") | (df[embryo] == "BB")),
+                (df["snp_risk_category"] != "uninformative") & (df[embryo] == "NoCall"),
+            ]
+            values = [
+                "male_partner_low_risk",
+                "male_partner_low_risk",
+                "male_partner_high_risk",
+                "male_partner_high_risk",
+                "male_partner_low_and_high_risk",
+                "female_partner_low_risk",
+                "female_partner_low_risk",
+                "female_partner_high_risk",
+                "female_partner_high_risk",
+                "female_partner_low_and_high_risk",
+                "uninformative",
+            ]
+            embryo_category_df[f"{embryo}_risk_category"] = np.select(
+                conditions, values, default="uninformative"
+            )
+        elif mode_of_inheritance == "x_linked":
+            pass
+
     # Populate embryo_category_df with data from miscall_df
     for embryo in embryo_ids:
         embryo_category_df.loc[
@@ -432,7 +494,7 @@ def summarise_embryo_results(df, embryo_ids):
     summary_embryo_results = (
         summary_embryo_results.fillna("0").astype(int).reset_index()
     )
-    # Ensure same ordering of table accross samples TODO check it doesnt break if index not present
+    # Ensure same ordering of table accross samples TODO check it doesn't break if index not present
     summary_embryo_results = summary_embryo_results.sort_values(
         [
             "index",
@@ -492,12 +554,13 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     )
 
     # Assign the correct partner to 'affected' and 'unaffected'
-    if args.male_partner_status == "affected":
-        affected_partner = args.male_partner
-        unaffected_partner = args.female_partner
-    elif args.female_partner_status == "affected":
-        affected_partner = args.female_partner
-        unaffected_partner = args.male_partner
+    if args.mode_of_inheritance == "autosomal_dominant":
+        if args.male_partner_status == "affected":
+            affected_partner = args.male_partner
+            unaffected_partner = args.female_partner
+        elif args.female_partner_status == "affected":
+            affected_partner = args.female_partner
+            unaffected_partner = args.male_partner
 
     # Add column describing how far the SNP is from the gene of interest
     df = annotate_distance_from_gene(df, args.chr, args.gene_start, args.gene_end)
@@ -519,15 +582,34 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         df, args.male_partner, args.female_partner, args.reference
     )
 
-    # TODO add if statement for mode of inheritance
-    results_df = autosomal_dominant_analysis(
-        filtered_df,
-        affected_partner,
-        unaffected_partner,
-        args.reference,
-        args.reference_status,
-        args.reference_relationship,
-    )
+    if args.mode_of_inheritance == "autosomal_dominant":
+        results_df = autosomal_dominant_analysis(
+            filtered_df,
+            affected_partner,
+            unaffected_partner,
+            args.reference,
+            args.reference_status,
+            args.reference_relationship,
+        )
+    elif args.mode_of_inheritance == "autosomal_recessive":
+        results_df = autosomal_recessive_analysis(
+            filtered_df,
+            args.male_partner,
+            args.female_partner,
+            args.reference,
+            args.reference_status,
+            args.reference_relationship,
+            args.consanguineous,
+        )
+    elif args.mode_of_inheritance == "x_linked":
+        results_df = x_linked_analysis(
+            filtered_df,
+            affected_partner,
+            unaffected_partner,
+            args.reference,
+            args.reference_status,
+            args.reference_relationship,
+        )
 
     # Informative SNPs
     informative_snps_by_region = snps_by_region(results_df)
@@ -545,6 +627,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         results_df,
         miscall_df,
         args.embryo_ids,
+        args.mode_of_inheritance,
     )
 
     # Summarise embryo results
@@ -576,12 +659,27 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         "summary_embryo_table",
     )
 
-    html_list_of_plots = plot_results(
-        embryo_category_df,
-        args.embryo_ids,
-        args.gene_start,
-        args.gene_end,
-    )
+    if args.mode_of_inheritance == "autosomal_dominant":
+        html_list_of_plots = plot_autosomal_dominant_results(
+            embryo_category_df,
+            args.embryo_ids,
+            args.gene_start,
+            args.gene_end,
+        )
+    elif args.mode_of_inheritance == "autosomal_recessive":
+        html_list_of_plots = plot_autosomal_recessive_results(
+            embryo_category_df,
+            args.embryo_ids,
+            args.gene_start,
+            args.gene_end,
+        )
+    elif args.mode_of_inheritance == "x_linked":
+        html_list_of_plots = plot_x_linked_results(
+            embryo_category_df,
+            args.embryo_ids,
+            args.gene_start,
+            args.gene_end,
+        )
 
     html_text_for_plots = "<br>".join(html_list_of_plots)
 
