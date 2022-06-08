@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from exceptions import ArgumentInputError
 
 
 def autosomal_recessive_analysis(
@@ -14,70 +15,98 @@ def autosomal_recessive_analysis(
     """
     TODO: Add docstring
     """
+    # Process consanguineus with an affected reference (would not be unaffected) TODO add condition to catch that and issue warning
     if consanguineous and reference_status == "affected":
         # Label alleles as high or low risk
         conditions = [
-            # Criteria to label low Risk SNPs if reference affected, or low risk SNPs if reference unaffected
-            # Criteria 1
+            # Criteria ARto label low Risk SNPs if reference affected, or low risk SNPs if reference unaffected
+            # Criteria AR1
             ((df[reference] == "AA") | (df[reference] == "BB"))
             & (df[male_partner] == "AB")
             & ((df[female_partner] == "AA") | (df[female_partner] == "BB")),
-            # Criteria 2
+            # Criteria AR2
             ((df[reference] == "AA") | (df[reference] == "BB"))
             & ((df[male_partner] == "AA") | (df[male_partner] == "BB"))
             & (df[female_partner] == "AB"),
-            # Criteria 3
+            # Criteria AR3
             ((df[reference] == "AA") | (df[reference] == "BB"))
             & (df[male_partner] == "AB")
             & (df[female_partner] == "AB"),
+            # Criteria AR4
+            (df[reference] == "AB")
+            & ((df[male_partner] == "AA") | (df[male_partner] == "BB"))
+            & (df[female_partner] == "AB"),
+            # Criteria AR5
+            (df[reference] == "AB")
+            & (df[male_partner] == "AB")
+            & ((df[female_partner] == "AA") | (df[female_partner] == "BB")),
         ]
         # Assign the correct labels depending upon reference status
         if consanguineous and reference_status == "affected":
             values = [
-                "male_partner_low_risk",  # Criteria 1
-                "female_partner_low_risk",  # Criteria 2
-                "shared_high_risk",  # Criteria 3
+                "low_risk",  # Criteria AR1
+                "low_risk",  # Criteria AR2
+                "high_risk",  # Criteria AR3
+                "unique_high_risk",  # Criteria AR4
+                "unique_high_risk",  # Criteria AR5
+            ]
+
+            snp_inherited_from = [
+                "male_partner",  # Criteria AR1
+                "female_partner",  # Criteria AR2
+                "shared",  # Criteria AR3
+                "female_partner",  # Criteria AR4
+                "male_partner",  # Criteria AR5
             ]
 
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
+        df["snp_inherited_from"] = np.select(
+            conditions, snp_inherited_from, default="uninformative"
+        )
 
+    elif consanguineous and reference_status == "unaffected":
+        raise ArgumentInputError(
+            "Unexpected Input: unaffected reference status should not be used if Cosanguineous = true, check input parameters"
+        )
+
+    # process non-consanguineous with affected reference
     elif reference_status == "affected":
         # Label alleles as high or low risk
         conditions = [
-            # Criteria to label low Risk SNPs if reference affected, or low risk SNPs if reference unaffected
-            # Criteria 1
+            # Criteria ARto label low Risk SNPs if reference affected, or low risk SNPs if reference unaffected
+            # Criteria AR7
             (df[reference] == "AA")
             & (df[male_partner] == "AB")
             & (df[female_partner] == "AA"),
-            # Criteria 2
+            # Criteria AR8
             (df[reference] == "BB")
             & (df[male_partner] == "AB")
             & (df[female_partner] == "BB"),
-            # Criteria 3
+            # Criteria AR9
             (df[reference] == "AA")
             & (df[male_partner] == "AA")
             & (df[female_partner] == "AB"),
-            # Criteria 4
+            # Criteria AR10
             (df[reference] == "BB")
             & (df[male_partner] == "BB")
             & (df[female_partner] == "AB"),
-            # Criteria 5
+            # Criteria AR11
             (df[reference] == "AB")
             & (df[male_partner] == "AB")
             & (df[female_partner] == "AA"),
-            # Criteria 6
+            # Criteria AR12
             (df[reference] == "AB")
             & (df[male_partner] == "AB")
             & (df[female_partner] == "BB"),
-            # Criteria 7
+            # Criteria AR13
             (df[reference] == "AB")
             & (df[male_partner] == "AA")
             & (df[female_partner] == "AB"),
-            # Criteria 8
+            # Criteria AR14
             (df[reference] == "AB")
             & (df[male_partner] == "BB")
             & (df[female_partner] == "AB"),
-            # Criteria 9
+            # Criteria AR15
             ((df[reference] == "AA") | (df[reference] == "BB"))
             & (df[male_partner] == "AB")
             & (df[female_partner] == "AB"),
@@ -85,40 +114,55 @@ def autosomal_recessive_analysis(
         # Assign the correct labels depending upon reference status
         if reference_status == "affected":
             values = [
-                "male_partner_low_risk",  # Criteria 1
-                "male_partner_low_risk",  # Criteria 2
-                "female_partner_low_risk",  # Criteria 3
-                "female_partner_low_risk",  # Criteria 4
-                "male_partner_high_risk",  # Criteria 5
-                "male_partner_high_risk",  # Criteria 6
-                "female_partner_high_risk",  # Criteria 7
-                "female_partner_high_risk",  # Criteria 8
-                "low_&_high_risk",  # Criteria 9 TODO check if this should be split into low/high high/low?
+                "low_risk",  # Criteria AR7
+                "low_risk",  # Criteria AR8
+                "low_risk",  # Criteria AR9
+                "low_risk",  # Criteria AR10
+                "high_risk",  # Criteria AR11
+                "high_risk",  # Criteria AR12
+                "high_risk",  # Criteria AR13
+                "high_risk",  # Criteria AR14
+                "low_&_high_risk",  # Criteria AR15
+            ]
+
+            snp_inherited_from = [
+                "male_partner",  # Criteria AR7
+                "male_partner",  # Criteria AR8
+                "female_partner",  # Criteria AR9
+                "female_partner",  # Criteria AR10
+                "male_partner",  # Criteria AR11
+                "male_partner",  # Criteria AR12
+                "female_partner",  # Criteria AR13
+                "female_partner",  # Criteria AR14
+                "shared",  # Criteria AR15 TODO check that shared is correct
             ]
 
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
-
+        df["snp_inherited_from"] = np.select(
+            conditions, snp_inherited_from, default="uninformative"
+        )
+    # process non-consanguineous with unaffected reference
     elif reference_status == "unaffected":
         # Label alleles as high or low risk
         conditions = [
-            # Criteria to label low Risk SNPs if reference affected, or low risk SNPs if reference unaffected
-            # Criteria 1
+            # Criteria ARto label low Risk SNPs if reference affected, or low risk SNPs if reference unaffected
+            # Criteria AR16
             ((df[reference] == "AA") | (df[reference] == "BB"))
             & (df[male_partner] == "AB")
             & ((df[female_partner] == "AA") | (df[female_partner] == "BB")),
-            # Criteria 2
+            # Criteria AR17
             ((df[reference] == "AB"))
             & (df[male_partner] == "AB")
             & ((df[female_partner] == "AA") | (df[female_partner] == "BB")),
-            # Criteria 3
+            # Criteria AR18
             ((df[reference] == "AA"))
             & (df[male_partner] == "AA")
             & (df[female_partner] == "AB"),
-            # Criteria 4
+            # Criteria AR19
             ((df[reference] == "BB"))
             & (df[male_partner] == "BB")
             & (df[female_partner] == "AB"),
-            # Criteria 5
+            # Criteria AR20
             (
                 (df[reference] == "AB")
                 | (df[reference] == "AA")
@@ -126,7 +170,7 @@ def autosomal_recessive_analysis(
             )
             & (df[male_partner] == "AB")
             & ((df[female_partner] == "AA") | (df[female_partner] == "AA")),
-            # Criteria 6
+            # Criteria AR21
             (
                 (df[reference] == "AB")
                 | (df[reference] == "AA")
@@ -138,14 +182,25 @@ def autosomal_recessive_analysis(
         # Assign the correct labels depending upon reference status
         if reference_status == "unaffected":
             values = [
-                "male_parther_high_risk",  # Criteria 1
-                "male_parther_low_risk",  # Criteria 2
-                "female_parther_high_risk",  # Criteria 3
-                "female_parther_low_risk",  # Criteria 4
-                "low_and_high_risk",  # Criteria 5 TODO check if this should be split into low/high high/low?
-                "low_and_high_risk",  # Criteria 6 TODO check if this should be split into low/high high/low?
+                "high_risk",  # Criteria AR16
+                "low_risk",  # Criteria AR17
+                "high_risk",  # Criteria AR18
+                "low_risk",  # Criteria AR19
+                "low_and_high_risk",  # Criteria AR20 TODO check if this should be split into low/high high/low?
+                "low_and_high_risk",  # Criteria AR21 TODO check if this should be split into low/high high/low?
+            ]
+
+            snp_inherited_from = [
+                "male_parther",  # Criteria AR16
+                "male_parther",  # Criteria AR17
+                "female_parther",  # Criteria AR18
+                "female_parther",  # Criteria AR19
+                "shared",  # Criteria AR20 TODO check if this is correct
+                "shared",  # Criteria AR21 TODO check if this is correct
             ]
 
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
-
+        df["snp_inherited_from"] = np.select(
+            conditions, snp_inherited_from, default="uninformative"
+        )
     return df

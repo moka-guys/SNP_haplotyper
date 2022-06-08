@@ -221,7 +221,7 @@ def add_rsid_column(df, affy_2_rs_ids_df):
 def annotate_distance_from_gene(df, chr, start, end):
     """Annotates the probeset based on the provided genomic co-ordinates
 
-    Adds a column, "gene_distance", to the dataframe, df, annotating the region the probeset is in:
+    Creates a column, "gene_distance", in the dataframe, df, annotating the region the SNP is in:
         "within_gene",
         "0-1MB_from_start",
         "1-2MB_from_start",
@@ -284,7 +284,7 @@ def filter_out_nocalls(df, male_partner, female_partner, reference):
 
 
 # TODO standardise the order of fp/mp args across functions
-def calculate_qc_metrics(df, female_partner, male_partner, reference, embryo_ids):
+def calculate_qc_metrics(df, male_partner, female_partner, reference, embryo_ids):
     """Calculate QC metrics based on the number of NoCalls per sample (measure of DNA quality)
 
     Calculate QC metrics based on the number of NoCalls per sample which can be used as a metric of DNA quality.
@@ -646,7 +646,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     # Calculate qc metrics before filtering out Nocalls
     qc_df = calculate_qc_metrics(
-        df, args.female_partner, args.male_partner, args.reference, args.embryo_ids
+        df, args.male_partner, args.female_partner, args.reference, args.embryo_ids
     )
 
     # Calculate NoCall percentages
