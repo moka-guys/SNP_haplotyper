@@ -14,7 +14,6 @@ from x_linked_snp_plot import plot_x_linked_results
 
 
 # TODO Copy rsID from hover tap
-# TODO Add shared_high_risk for AR
 # TODO Add in gene count to plot
 # TODO Check telomeric/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
 # TODO Add support for no embryos (just TRIOs being run to check if enough informative SNPs)
@@ -197,16 +196,48 @@ parser.add_argument(
 
 
 def add_rsid_column(df, affy_2_rs_ids_df):
-    # Add column with dbSNP rsIDs
+
+    """Provides dbsnp rsIDs
+
+    Adds a column to the dataframe, df, matching the probes_set IDs to dbSNP rsIDs.
+
+    Args:
+        df (dataframe): A dataframe with a "probeset_id" column
+        affy_2_rs_ids_df (dataframe): A dataframe with columns "probeset_id" & "rsID" used to map between the 2 identifiers
+
+    Returns:
+        dataframe: Original dataframe, df, with columns for "rsID" added next to the "probeset_id" column (these columns are now the 1st columns of the dataframe)
+
+    """
     df = pd.merge(
         df, affy_2_rs_ids_df[["probeset_id", "rsID"]], on="probeset_id", how="left"
     )
     # Rearrange columns so that rsID is next to Affy Id
+    df.insert(0, "probeset_id", df.pop("probeset_id"))
     df.insert(1, "rsID", df.pop("rsID"))
     return df
 
 
 def annotate_distance_from_gene(df, chr, start, end):
+    """Annotates the probeset based on the provided genomic co-ordinates
+
+    Adds a column, "gene_distance", to the dataframe, df, annotating the region the probeset is in:
+        "within_gene",
+        "0-1MB_from_start",
+        "1-2MB_from_start",
+        "0-1MB_from_end",
+        "1-2MB_from_end",
+
+    Args:
+        df (dataframe): A dataframe with a "probeset_id" column and the feature's genomic co-ordinates,  "Position"
+        chr (string):  The chromsome the gene of interest is on
+        start (int): The start coordinate of the gene (1-based)
+        end (int): The end coordinate of the gene (1-based)
+
+    Returns:
+        dataframe: Original dataframe, df, with "gene_distance" column added characterising the probeset in relation to the gene of interest
+
+    """
     conditions = [
         (df["Position"] > start) & (df["Position"] < end),
         (df["Position"] < start) & (df["Position"] > start - 1000000),
@@ -229,6 +260,20 @@ def annotate_distance_from_gene(df, chr, start, end):
 
 
 def filter_out_nocalls(df, male_partner, female_partner, reference):
+    """Filters out no calls
+
+    If the male partner, female partner, or reference has "NoCall" for a probeset then this probeset should be filtered out.
+
+    Args:
+        df (dataframe): A dataframe with the SNP array data
+        male_partner (string):  Column name representing the data for the male partner
+        female_partner (string):  Column name representing the data for the female partner
+        reference (string):  Column name representing the data for the reference
+
+    Returns:
+        dataframe: Original dataframe, df, with any rows where the male partner, female partner or reference has a "NoCall" filtered out
+
+    """
     filtered_df = df[
         (df[male_partner] != "NoCall")
         & (df[female_partner] != "NoCall")
@@ -238,9 +283,22 @@ def filter_out_nocalls(df, male_partner, female_partner, reference):
     return filtered_df
 
 
+# TODO standardise the order of fp/mp args across functions
 def calculate_qc_metrics(df, female_partner, male_partner, reference, embryo_ids):
-    """
-    Calculate QC metrics such as number of NoCalls per sample (measure of DNA quality)
+    """Calculate QC metrics based on the number of NoCalls per sample (measure of DNA quality)
+
+    Calculate QC metrics based on the number of NoCalls per sample which can be used as a metric of DNA quality.
+
+    Args:
+        df (dataframe): A dataframe with the SNP array data
+        male_partner (string):  Column name representing the data for the male partner
+        female_partner (string):  Column name representing the data for the female partner
+        reference (string):  Column name representing the data for the reference
+        embryo_ids (list): List of column names representing the data for 1>n embryo samples
+
+    Returns:
+        dataframe: Dataframe summarising the number of NoCalls per sample
+
     """
     # Initiate dataframe
     qc_df = pd.DataFrame(index=["AA", "BB", "AB", "NoCall"])
@@ -279,6 +337,7 @@ def calculate_qc_metrics(df, female_partner, male_partner, reference, embryo_ids
 
 
 def calculate_nocall_percentages(df):
+
     nocall = df[df["call_type"] == "NoCall"]
     if nocall.shape[0] > 0:
         trimmed_nocall = nocall.iloc[:, 1:]  # Trim first column
@@ -515,6 +574,19 @@ def produce_html_table(
     df,
     table_identifier,
 ):
+    """HTML table for pandas dataframe
+
+    Converts a pandas dataframe into an HTML table ready for inclusion in an HTML report
+
+    Args:
+        df (dataframe): A dataframe which requires rendering as HTML for inclusion in the HTML report
+        table_identifier (): A
+
+    Returns:
+        String: HTML formated table with the provide table_id used to set the HTML table id attribute.
+
+    """
+
     # styled_df = df.style.highlight_null(null_color='red').hide_columns(['hap1_risk_category','hap2_risk_category'])
     # styled_df = df.style.apply(highlight_risk)
     html_table = df.to_html(table_id=table_identifier, index=False, classes="display")
@@ -557,10 +629,14 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     if args.mode_of_inheritance == "autosomal_dominant":
         if args.male_partner_status == "affected":
             affected_partner = args.male_partner
+            affected_partner_sex = "male_partner"
             unaffected_partner = args.female_partner
+            unaffected_partner_sex = "female_partner"
         elif args.female_partner_status == "affected":
             affected_partner = args.female_partner
+            affected_partner_sex = "female_partner"
             unaffected_partner = args.male_partner
+            unaffected_partner_sex = "male_partner"
 
     # Add column describing how far the SNP is from the gene of interest
     df = annotate_distance_from_gene(df, args.chr, args.gene_start, args.gene_end)
@@ -586,7 +662,9 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         results_df = autosomal_dominant_analysis(
             filtered_df,
             affected_partner,
+            affected_partner_sex,
             unaffected_partner,
+            unaffected_partner_sex,
             args.reference,
             args.reference_status,
             args.reference_relationship,
