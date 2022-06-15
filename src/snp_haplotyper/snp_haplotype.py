@@ -8,9 +8,7 @@ import sys
 from autosomal_dominant_logic import autosomal_dominant_analysis
 from autosomal_recessive_logic import autosomal_recessive_analysis
 from x_linked_logic import x_linked_analysis
-from autosomal_dominant_snp_plot import plot_autosomal_dominant_results
-from autosomal_recessive_snp_plot import plot_autosomal_recessive_results
-from x_linked_snp_plot import plot_x_linked_results
+from snp_plot import plot_results, summarise_snps_per_embryo
 
 
 # TODO Copy rsID from hover tap
@@ -199,7 +197,7 @@ def add_rsid_column(df, affy_2_rs_ids_df):
 
     """Provides dbsnp rsIDs
 
-    Adds a column to the dataframe, df, matching the probes_set IDs to dbSNP rsIDs.
+    Creats a column in the dataframe, df, matching the probes_set IDs to dbSNP rsIDs.
 
     Args:
         df (dataframe): A dataframe with a "probeset_id" column
@@ -424,7 +422,7 @@ def summarise_miscalls():
 
 def snps_by_region(df):
     snps_by_region = df.value_counts(["gene_distance", "snp_risk_category"]).to_frame()
-    # Extracsnps_by_regiot data from index into columns
+    # Extract snps_by_region data from index into columns
     snps_by_region = snps_by_region.reset_index()
     # Rename columns
     snps_by_region.columns = [
@@ -469,11 +467,7 @@ def summarised_snps_by_region(df):
 
 def categorise_embryo_alleles(df, miscall_df, embryo_ids, mode_of_inheritance):
     embryo_category_df = df[
-        [
-            "probeset_id",
-            "rsID",
-            "Position",
-        ]
+        ["probeset_id", "rsID", "Position", "snp_inherited_from", "gene_distance"]
     ].copy()
     for embryo in embryo_ids:
         # Initiate empty database for results
@@ -709,6 +703,10 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     )
 
     # Summarise embryo results
+    embryo_snps_summary_df = summarise_snps_per_embryo(
+        embryo_category_df, args.embryo_ids
+    )
+
     summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
 
     # Produce report
@@ -737,23 +735,27 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         "summary_embryo_table",
     )
 
+    # TODO remove flow control
     if args.mode_of_inheritance == "autosomal_dominant":
-        html_list_of_plots = plot_autosomal_dominant_results(
+        html_list_of_plots = plot_results(
             embryo_category_df,
+            embryo_snps_summary_df,
             args.embryo_ids,
             args.gene_start,
             args.gene_end,
         )
     elif args.mode_of_inheritance == "autosomal_recessive":
-        html_list_of_plots = plot_autosomal_recessive_results(
+        html_list_of_plots = plot_results(
             embryo_category_df,
+            embryo_snps_summary_df,
             args.embryo_ids,
             args.gene_start,
             args.gene_end,
         )
     elif args.mode_of_inheritance == "x_linked":
-        html_list_of_plots = plot_x_linked_results(
+        html_list_of_plots = plot_results(
             embryo_category_df,
+            embryo_snps_summary_df,
             args.embryo_ids,
             args.gene_start,
             args.gene_end,

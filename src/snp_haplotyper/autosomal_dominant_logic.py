@@ -98,12 +98,12 @@ def autosomal_dominant_analysis(
             ]
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
 
-        # Add snp_inherited_from column to record the sex the SNP is inherited from
-        df["snp_inherited_from"] = df["snp_risk_category"]
-        df.loc[
-            df["snp_inherited_from"] == "low_risk", "snp_inherited_from"
-        ] = affected_partner_sex
-        df.loc[
-            df["snp_inherited_from"] == "high_risk", "snp_inherited_from"
-        ] = unaffected_partner_sex
+        # Add snp_inherited_from column to record the sex the SNP is inherited from TODO Check this logic below
+    df["snp_inherited_from"] = df["snp_risk_category"]
+    df.loc[
+        df["snp_inherited_from"] == "low_risk", "snp_inherited_from"
+    ] = affected_partner_sex
+    df.loc[
+        df["snp_inherited_from"] == "high_risk", "snp_inherited_from"
+    ] = unaffected_partner_sex
     return df
