@@ -16,7 +16,6 @@ from snp_plot import plot_results, summarise_snps_per_embryo
 # TODO Check telomeric/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
 # TODO Add support for no embryos (just TRIOs being run to check if enough informative SNPs)
 # TODO Add ADO % to table
-# TODO Add X-linked analysis
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(description="SNP Haplotying from SNP Array data")
@@ -197,7 +196,7 @@ def add_rsid_column(df, affy_2_rs_ids_df):
 
     """Provides dbsnp rsIDs
 
-    Creats a column in the dataframe, df, matching the probes_set IDs to dbSNP rsIDs.
+    New column created in the dataframe, df, matching the probes_set IDs to dbSNP rsIDs.
 
     Args:
         df (dataframe): A dataframe with a "probeset_id" column
@@ -219,12 +218,7 @@ def add_rsid_column(df, affy_2_rs_ids_df):
 def annotate_distance_from_gene(df, chr, start, end):
     """Annotates the probeset based on the provided genomic co-ordinates
 
-    Creates a column, "gene_distance", in the dataframe, df, annotating the region the SNP is in:
-        "within_gene",
-        "0-1MB_from_start",
-        "1-2MB_from_start",
-        "0-1MB_from_end",
-        "1-2MB_from_end",
+    New column created, "gene_distance", in the dataframe, df, annotating the region the SNP is in. SNPs allocated to "within_gene", "0-1MB_from_start", "1-2MB_from_start", "0-1MB_from_end", and "1-2MB_from_end",
 
     Args:
         df (dataframe): A dataframe with a "probeset_id" column and the feature's genomic co-ordinates,  "Position"

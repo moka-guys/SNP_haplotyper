@@ -252,6 +252,8 @@ def plot_results(
                     "ADO": 1,
                 }
             ),
+            facet_col="snp_inherited_from",
+            facet_col_wrap=1,
             color=f"{embryo}_risk_category",
             color_discrete_map={
                 "high_risk": "#e60e0e",
@@ -279,6 +281,12 @@ def plot_results(
                     "NoCall",
                     "uniformative",
                 ],
+                # TODO Update with future categories
+                "snp_inherited_from": [
+                    "male_partner",
+                    "unassigned",
+                    "female_partner",
+                ],
             },
             labels={
                 "y": "SNP Category",
@@ -300,6 +308,11 @@ def plot_results(
                 "rsID": True,
             },
         )
+
+        # Format facet plot labels
+        fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+        fig.for_each_annotation(lambda a: a.update(xshift=-680))
+
         fig.add_vrect(
             x0=gene_start,
             x1=gene_end,
@@ -328,57 +341,97 @@ def plot_results(
             range=[gene_start - 2000000, gene_end + 2000000], exponentformat="none"
         )
 
-        fig.add_trace(
-            go.Scatter(
-                name="High_risk count",
-                x=[
-                    gene_start - 1900000,
-                    gene_end + 1900000,
-                ],
-                y=[
-                    2,
-                    2,
-                ],
-                mode="text",
-                textfont_color="#e60e0e",
-                text=[
-                    summary_df.loc[
-                        summary_df["embryo_id"] == embryo, "upstream_2mb_high_risk_snps"
-                    ].item(),
-                    summary_df.loc[
-                        summary_df["embryo_id"] == embryo,
-                        "downstream_2mb_high_risk_snps",
-                    ].item(),
-                ],
-                textposition="top center",
-            )
-        )
+        def get_counts(summary_df, embryo, multi_category):
+            count = summary_df.loc[
+                summary_df["embryo_id"] == embryo,
+                multi_category,
+            ].item()
+            return count
 
-        fig.add_trace(
-            go.Scatter(
-                name="Low_risk count",
-                x=[
-                    gene_start - 1900000,
-                    gene_end + 1900000,
-                ],
-                y=[-2, -2],
-                mode="text",
-                textfont_color="#0ee60e",
-                text=[
-                    summary_df.loc[
-                        summary_df["embryo_id"] == embryo, "upstream_2mb_low_risk_snps"
-                    ].item(),
-                    summary_df.loc[
-                        summary_df["embryo_id"] == embryo,
-                        "downstream_2mb_low_risk_snps",
-                    ].item(),
-                ],
-                textposition="bottom center",
+        def add_snp_count_annotation(
+            facet_row,
+            embryo,
+            summary_df,
+            annotation_name_high_risk,
+            annotation_name_low_risk,
+            upstream_high_sum,
+            upstream_low_sum,
+            downstream_high_sum,
+            downstream_low_sum,
+        ):
+            fig.add_trace(
+                go.Scatter(
+                    name=annotation_name_high_risk,
+                    x=[
+                        gene_start - 1900000,
+                        gene_end + 1900000,
+                    ],
+                    y=[
+                        2,
+                        2,
+                    ],
+                    mode="text",
+                    textfont_color="#e60e0e",
+                    text=[
+                        get_counts(summary_df, embryo, upstream_high_sum),
+                        get_counts(summary_df, embryo, downstream_high_sum),
+                    ],
+                    textposition="top center",
+                ),
+                row=facet_row,  # The facet plot to anotate (1=bottom, 2=middle, 3=top)
+                col=1,
             )
-        )
 
+            fig.add_trace(
+                go.Scatter(
+                    name=annotation_name_low_risk,
+                    x=[
+                        gene_start - 1900000,
+                        gene_end + 1900000,
+                    ],
+                    y=[-2, -2],
+                    mode="text",
+                    textfont_color="#0ee60e",
+                    text=[
+                        get_counts(summary_df, embryo, upstream_low_sum),
+                        get_counts(summary_df, embryo, downstream_low_sum),
+                    ],
+                    textposition="bottom center",
+                ),
+                row=facet_row,  # The facet plot to anotate (1=bottom, 2=middle, 3=top)
+                col=1,
+            )
+
+        add_snp_count_annotation(
+            3,
+            embryo,
+            summary_df,
+            "High_risk count male",
+            "Low_risk count male",
+            "upstream_2mb_male_high_risk_snps",
+            "upstream_2mb_male_low_risk_snps",
+            "downstream_2mb_male_high_risk_snps",
+            "downstream_2mb_male_low_risk_snps",
+        )
+        # add_snp_count_annotation(
+        #     2,
+        #     embryo,
+        #     "High_risk count unassigned",
+        #     "Low_risk count unassigned",
+        # )
+        add_snp_count_annotation(
+            1,
+            embryo,
+            summary_df,
+            "High_risk count female",
+            "Low_risk count female",
+            "upstream_2mb_female_high_risk_snps",
+            "upstream_2mb_female_low_risk_snps",
+            "downstream_2mb_female_high_risk_snps",
+            "downstream_2mb_female_low_risk_snps",
+        )
         fig.update_yaxes(range=[-3, 3], showticklabels=False)
-        fig.update_layout(height=340, width=1800, title_text=f"Results for {embryo}")
+        fig.update_layout(height=540, width=1800, title_text=f"Results for {embryo}")
 
         plots_as_html.append(fig.to_html(full_html=False, include_plotlyjs="cdn"))
     return plots_as_html
