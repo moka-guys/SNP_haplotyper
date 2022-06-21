@@ -1,4 +1,5 @@
 import argparse
+from jinja2 import Environment, PackageLoader
 import json
 import pandas as pd
 import numpy as np
@@ -758,189 +759,20 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     html_text_for_plots = "<br>".join(html_list_of_plots)
 
     # TODO Place html into separate folder
-    html_string = (
-        """
-    <html>
-    <head>
-        <meta charset="utf-8" />
-        <title></title>
-        <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
-        <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-        <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-        <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-    </head>
+    env = Environment(loader=PackageLoader("snp_haplotype", "templates"))
 
-        <body>
-            <h1>Placeholder 1</h1>
+    template = env.get_template("report_template.html")
+    place_holder_values = {
+        "results_table_1": results_table_1,
+        "nocall_table": nocall_table,
+        "nocall_percentages_table": nocall_percentages_table,
+        "summary_snps_table": summary_snps_table,
+        "summary_embryo_table": summary_embryo_table,
+        "html_text_for_plots": html_text_for_plots,
+    }
 
-            <!-- *** Section 1 *** --->
-            <h2>Probe Classification Table</h2>
-                <tbody><tr>
-                <td>Minimum Genomic Coordinate:</td>
-                <td><input type="text" id="min" name="min"></td>
-            </tr>
-            <tr>
-                <td>Maximum Genomic Coordinate:</td>
-                <td><input type="text" id="max" name="max"></td>
-            </tr>
-            """
-        + results_table_1
-        + """
-            <h2>NoCalls per Sample</h2>
-        """
-        + nocall_table
-        + """
-        <h2>NoCalls Proportion per Sample</h2>
-        """
-        + nocall_percentages_table
-        + """
-        <h2>Informative SNPs by region</h2>
-        """
-        + summary_snps_table
-        + """
-            <h2>Embryo Alleles</h2>
-        """
-        + summary_embryo_table
-        + """
-            <h2>Plot Embryo Results</h2>
-        """
-        + html_text_for_plots
-        + """
+    html_string = template.render(place_holder_values)
 
-        </body>
-
-        <script>
-        $(document).ready( function () {
-        $('#results_table_1 thead tr')
-            .clone(true)
-            .addClass('filters')
-            .appendTo('#results_table_1 thead');
-            var table = $('#results_table_1').DataTable({
-            orderCellsTop: true,
-            fixedHeader: true,
-            initComplete: function () {
-                var api = this.api();
-    
-                // For each column
-                api
-                    .columns()
-                    .eq(0)
-                    .each(function (colIdx) {
-                        // Set the header cell to contain the input element
-                        var cell = $('.filters th').eq(
-                            $(api.column(colIdx).header()).index()
-                        );
-                        var title = $(cell).text();
-                        $(cell).html('<input type="text" placeholder="' + title + '" />');
-    
-                        // On every keypress in this input
-                        $(
-                            'input',
-                            $('.filters th').eq($(api.column(colIdx).header()).index())
-                        )
-                            .off('keyup change')
-                            .on('keyup change', function (e) {
-                                e.stopPropagation();
-    
-                                // Get the search value
-                                $(this).attr('title', $(this).val());
-                                var regexr = '({search})'; //$(this).parents('th').find('select').val();
-    
-                                var cursorPosition = this.selectionStart;
-                                // Search the column for that value
-                                api
-                                    .column(colIdx)
-                                    .search(
-                                        this.value != ''
-                                            ? regexr.replace('{search}', '(((' + this.value + ')))')
-                                            : '',
-                                        this.value != '',
-                                        this.value == ''
-                                    )
-                                    .draw();
-    
-                                $(this)
-                                    .focus()[0]
-                                    .setSelectionRange(cursorPosition, cursorPosition);
-                            });
-                    });
-            },
-        });
-    });
-        </script>
-
-        <script>
-        $(document).ready( function () {
-        $('#summary_snps_table').DataTable({
-            "paging":   false,
-            "ordering": false,
-            "info":     false
-        } );
-        } );
-        </script>
-
-        <script>
-        $(document).ready( function () {
-        $('#nocall_table').DataTable({
-            "paging":   false,
-            "ordering": false,
-            "info":     false
-        } );
-        } );
-        </script>
-
-        <script>
-        $(document).ready( function () {
-        $('#nocall_percentages_table').DataTable({
-            "paging":   false,
-            "ordering": false,
-            "info":     false
-        } );
-        } );
-        </script>
-
-        <script>
-        $(document).ready( function () {
-        $('#summary_embryo_table').DataTable({
-            "paging":   false,
-            "ordering": false,
-            "info":     false
-        } );
-        } );
-        </script>
-
-        <script>
-            /* Custom filtering function which will search data in column four between two values */
-        $.fn.dataTable.ext.search.push(
-            function( settings, data, dataIndex ) {
-                var min = parseInt( $('#min').val(), 10 );
-                var max = parseInt( $('#max').val(), 10 );
-                var Position = parseFloat( data[3] ) || 0; // use data for the Position column
-        
-                if ( ( isNaN( min ) && isNaN( max ) ) ||
-                    ( isNaN( min ) && Position <= max ) ||
-                    ( min <= Position   && isNaN( max ) ) ||
-                    ( min <= Position   && Position <= max ) )
-                {
-                    return true;
-                }
-                return false;
-            }
-        );
-        
-        $(document).ready(function() {
-            var table = $('#results_table_1').DataTable();
-            
-            // Event listener to the two range filtering inputs to redraw on input
-            $('#min, #max').keyup( function() {
-                table.draw();
-            } );
-        } );
-        </script>
-
-    </html>"""
-    )
     if args.testing:
         # Stream machine readable output to stdout for testing purposes
         informative_snp_data = {
