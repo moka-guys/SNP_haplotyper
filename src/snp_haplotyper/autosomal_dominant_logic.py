@@ -23,20 +23,20 @@ def autosomal_dominant_analysis(
         # Label alleles as high or low risk
         conditions = [
             # Criteria to label high Risk SNPs if reference affected, or low risk SNPs if reference unaffected
-            # Criteria 1
+            # Criteria AD1
             (df[reference] == "AA")
             & (df[unaffected_partner] == "BB")
             & (df[affected_partner] == "AB"),
-            # Criteria 2
+            # Criteria AD2
             (df[reference] == "BB")
             & (df[unaffected_partner] == "AA")
             & (df[affected_partner] == "AB"),
             # Criteria to label low Risk SNPs if reference affected, or high risk SNPs if reference unaffected
-            # Criteria 3
+            # Criteria AD3
             (df[reference] == "AA")
             & (df[unaffected_partner] == "AA")
             & (df[affected_partner] == "AB"),
-            # Criteria 4
+            # Criteria AD4
             (df[reference] == "BB")
             & (df[unaffected_partner] == "BB")
             & (df[affected_partner] == "AB"),
@@ -44,17 +44,17 @@ def autosomal_dominant_analysis(
         # Assign the correct labels depending upon reference status
         if reference_status == "affected":
             values = [
-                "high_risk",  # Criteria 1
-                "high_risk",  # Criteria 2
-                "low_risk",  # Criteria 3
-                "low_risk",  # Criteria 4
+                "high_risk",  # Criteria AD1
+                "high_risk",  # Criteria AD2
+                "low_risk",  # Criteria AD3
+                "low_risk",  # Criteria AD4
             ]
         elif reference_status == "unaffected":
             values = [
-                "low_risk",  # Criteria 1
-                "low_risk",  # Criteria 2
-                "high_risk",  # Criteria 3
-                "high_risk",  # Criteria 4
+                "low_risk",  # Criteria AD1
+                "low_risk",  # Criteria AD2
+                "high_risk",  # Criteria AD3
+                "high_risk",  # Criteria AD4
             ]
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
     elif reference_relationship in [
@@ -63,20 +63,20 @@ def autosomal_dominant_analysis(
         # Label alleles as high or low risk
         conditions = [
             # Criteria to label high Risk SNPs if reference affected, or low risk SNPs if reference unaffected
-            # Criteria 1
+            # Criteria AD1
             (df[reference] == "AB")
             & (df[unaffected_partner] == "AA")
             & (df[affected_partner] == "AB"),
-            # Criteria 2
+            # Criteria AD2
             (df[reference] == "AB")
             & (df[unaffected_partner] == "BB")
             & (df[affected_partner] == "AB"),
             # Criteria to label low Risk SNPs if reference affected, or high risk SNPs if reference unaffected
-            # Criteria 3
+            # Criteria AD3
             (df[reference] == "AA")
             & (df[unaffected_partner] == "AA")
             & (df[affected_partner] == "AB"),
-            # Criteria 4
+            # Criteria AD4
             (df[reference] == "BB")
             & (df[unaffected_partner] == "BB")
             & (df[affected_partner] == "AB"),
@@ -84,26 +84,18 @@ def autosomal_dominant_analysis(
         # Assign the correct labels depending upon reference status
         if reference_status == "affected":
             values = [
-                "high_risk",  # Criteria 1
-                "high_risk",  # Criteria 2
-                "low_risk",  # Criteria 3
-                "low_risk",  # Criteria 4
+                "high_risk",  # Criteria AD1
+                "high_risk",  # Criteria AD2
+                "low_risk",  # Criteria AD3
+                "low_risk",  # Criteria AD4
             ]
         elif reference_status == "unaffected":
             values = [
-                "low_risk",  # Criteria 1
-                "low_risk",  # Criteria 2
-                "high_risk",  # Criteria 3
-                "high_risk",  # Criteria 4
+                "low_risk",  # Criteria AD1
+                "low_risk",  # Criteria AD2
+                "high_risk",  # Criteria AD3
+                "high_risk",  # Criteria AD4
             ]
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
 
-    # Add snp_inherited_from column to record the sex the SNP is inherited from TODO Check this logic below
-    df["snp_inherited_from"] = df["snp_risk_category"].map(
-        {
-            "high_risk": affected_partner_sex,
-            "low_risk": unaffected_partner_sex,
-            "uninformative": "unassigned",
-        }
-    )
     return df
