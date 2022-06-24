@@ -461,9 +461,16 @@ def summarised_snps_by_region(df):
 
 
 def categorise_embryo_alleles(df, miscall_df, embryo_ids, mode_of_inheritance):
-    embryo_category_df = df[
-        ["probeset_id", "rsID", "Position", "snp_inherited_from", "gene_distance"]
-    ].copy()
+    if mode_of_inheritance == "autosomal_recessive":
+        embryo_category_df = df[
+            ["probeset_id", "rsID", "Position", "snp_inherited_from", "gene_distance"]
+        ].copy()
+    elif (
+        mode_of_inheritance == "autosomal_dominant" or mode_of_inheritance == "x_linked"
+    ):
+        embryo_category_df = df[
+            ["probeset_id", "rsID", "Position", "gene_distance"]
+        ].copy()
     for embryo in embryo_ids:
         # Initiate empty database for results
         if mode_of_inheritance == "autosomal_dominant":
@@ -582,15 +589,6 @@ def produce_html_table(
     return html_table
 
 
-# TODO fill out functions below
-
-# def autosomal_recessive_analysis(carrier_female, carrier_male, reference):
-#     pass
-
-# def x_chromosome_linked_analysis(carrier_female, unaffected_male_partner, reference):
-#     pass
-
-
 def main(args=None):  # default argument allows pytest to override argparse for testing
     if args is None:
         args = parser.parse_args()
@@ -699,7 +697,9 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     # Summarise embryo results
     embryo_snps_summary_df = summarise_snps_per_embryo(
-        embryo_category_df, args.embryo_ids
+        embryo_category_df,
+        args.embryo_ids,
+        args.mode_of_inheritance,
     )
 
     summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
@@ -738,6 +738,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
             args.embryo_ids,
             args.gene_start,
             args.gene_end,
+            args.mode_of_inheritance,
         )
     elif args.mode_of_inheritance == "autosomal_recessive":
         html_list_of_plots = plot_results(
@@ -758,7 +759,6 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     html_text_for_plots = "<br>".join(html_list_of_plots)
 
-    # TODO Place html into separate folder
     env = Environment(loader=PackageLoader("snp_haplotype", "templates"))
 
     template = env.get_template("report_template.html")
@@ -773,8 +773,8 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     html_string = template.render(place_holder_values)
 
+    # Stream machine readable JSON output to stdout for testing purposes
     if args.testing:
-        # Stream machine readable output to stdout for testing purposes
         informative_snp_data = {
             "mode": args.mode_of_inheritance,
             "sample_id": args.output_prefix,
@@ -811,19 +811,18 @@ def main(args=None):  # default argument allows pytest to override argparse for 
                     informative_snps_by_region["snp_risk_category"] != "uninformative"
                 ].snp_count.sum()
             ),
-            # TODO included within gene
             "high_risk_snps_upstream_2mb": int(
                 informative_snps_by_region[
-                    (
-                        informative_snps_by_region["gene_distance"].str.endswith(
-                            "_start"
-                        )
-                        | (informative_snps_by_region["gene_distance"] == "within_gene")
-                    )
+                    (informative_snps_by_region["gene_distance"].str.endswith("_start"))
                     & (informative_snps_by_region["snp_risk_category"] == "high_risk")
                 ].snp_count.sum()
             ),
-            # TODO included within gene
+            "high_risk_snps_within_gene": int(
+                informative_snps_by_region[
+                    (informative_snps_by_region["gene_distance"] == "within_gene")
+                    & (informative_snps_by_region["snp_risk_category"] == "high_risk")
+                ].snp_count.sum()
+            ),
             "high_risk_snps_downstream_2mb": int(
                 informative_snps_by_region[
                     (
@@ -836,6 +835,12 @@ def main(args=None):  # default argument allows pytest to override argparse for 
             "low_risk_snps_upstream_2mb": int(
                 informative_snps_by_region[
                     (informative_snps_by_region["gene_distance"].str.endswith("_start"))
+                    & (informative_snps_by_region["snp_risk_category"] == "low_risk")
+                ].snp_count.sum()
+            ),
+            "low_risk_snps_within_gene": int(
+                informative_snps_by_region[
+                    (informative_snps_by_region["gene_distance"] == "within_gene")
                     & (informative_snps_by_region["snp_risk_category"] == "low_risk")
                 ].snp_count.sum()
             ),

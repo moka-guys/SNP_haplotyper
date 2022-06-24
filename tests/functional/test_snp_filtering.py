@@ -91,6 +91,7 @@ def test_informative_snps(capsys, name):
         results["high_risk_snps_upstream_2mb"]
         == validation["high_risk_snps_upstream_2mb"]
     )
+    assert results["high_risk_snps_within_gene"] == validation["high_risk_within_gene"]
     assert (
         results["high_risk_snps_downstream_2mb"]
         == validation["high_risk_snps_downstream_2mb"]
@@ -99,6 +100,7 @@ def test_informative_snps(capsys, name):
         results["low_risk_snps_upstream_2mb"]
         == validation["low_risk_snps_upstream_2mb"]
     )
+    assert results["low_risk_snps_within_gene"] == validation["low_risk_within_gene"]
     assert (
         results["low_risk_snps_downstream_2mb"]
         == validation["low_risk_snps_downstream_2mb"]

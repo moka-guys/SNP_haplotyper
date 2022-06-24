@@ -63,20 +63,20 @@ def autosomal_dominant_analysis(
         # Label alleles as high or low risk
         conditions = [
             # Criteria to label high Risk SNPs if reference affected, or low risk SNPs if reference unaffected
-            # Criteria AD1
+            # Criteria AD5
             (df[reference] == "AB")
             & (df[unaffected_partner] == "AA")
             & (df[affected_partner] == "AB"),
-            # Criteria AD2
+            # Criteria AD6
             (df[reference] == "AB")
             & (df[unaffected_partner] == "BB")
             & (df[affected_partner] == "AB"),
             # Criteria to label low Risk SNPs if reference affected, or high risk SNPs if reference unaffected
-            # Criteria AD3
+            # Criteria AD7
             (df[reference] == "AA")
             & (df[unaffected_partner] == "AA")
             & (df[affected_partner] == "AB"),
-            # Criteria AD4
+            # Criteria AD8
             (df[reference] == "BB")
             & (df[unaffected_partner] == "BB")
             & (df[affected_partner] == "AB"),
@@ -84,17 +84,17 @@ def autosomal_dominant_analysis(
         # Assign the correct labels depending upon reference status
         if reference_status == "affected":
             values = [
-                "high_risk",  # Criteria AD1
-                "high_risk",  # Criteria AD2
-                "low_risk",  # Criteria AD3
-                "low_risk",  # Criteria AD4
+                "high_risk",  # Criteria AD5
+                "high_risk",  # Criteria AD6
+                "low_risk",  # Criteria AD7
+                "low_risk",  # Criteria AD8
             ]
         elif reference_status == "unaffected":
             values = [
-                "low_risk",  # Criteria AD1
-                "low_risk",  # Criteria AD2
-                "high_risk",  # Criteria AD3
-                "high_risk",  # Criteria AD4
+                "low_risk",  # Criteria AD5
+                "low_risk",  # Criteria AD6
+                "high_risk",  # Criteria AD7
+                "high_risk",  # Criteria AD8
             ]
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
 
