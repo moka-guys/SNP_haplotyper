@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-# Logic is the same whether using affected son of carrier grandmother as reference
+# Logic is the same whether using affected son of carrier or grandmother as reference
 def x_linked_analysis(
     df,
     affected_partner,

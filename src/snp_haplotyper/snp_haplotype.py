@@ -2,6 +2,7 @@ import argparse
 from jinja2 import Environment, PackageLoader
 import json
 import pandas as pd
+from pathlib import Path
 import numpy as np
 import sys
 
@@ -11,6 +12,7 @@ from autosomal_recessive_logic import autosomal_recessive_analysis
 from x_linked_logic import x_linked_analysis
 from snp_plot import plot_results, summarise_snps_per_embryo
 
+from exceptions import ArgumentInputError
 
 # TODO Copy rsID from hover tap
 # TODO Add in gene count to plot
@@ -34,6 +36,13 @@ parser.add_argument(
     "--output_prefix",
     type=str,
     help="Output filename prefix",
+)
+
+parser.add_argument(
+    "-f",
+    "--output_folder",
+    type=str,
+    help="Output folder path",
 )
 
 # Patient data
@@ -216,6 +225,25 @@ def add_rsid_column(df, affy_2_rs_ids_df):
     return df
 
 
+def export_json_data_as_csv(input_json, output_csv):
+    """Import a JSON file and save the data as a CSV
+
+    Imports a simple JSON file and exports it as a CSV file.
+    Used to import test data from JSON files (informative_snp_validation.json, embryo_validation_data.json,
+    launch.json) and export it as human readable CSV.  These CSV can be shared with Genomic Scientists during
+    the validation process.
+
+    Args:
+        input_json (string): The path to a JSON file
+        output_csv (string): The path and filename for the output csv file
+    """
+    p = Path(input_json)
+    with p.open("r", encoding="utf-8") as f:
+        data = json.loads(f.read())
+    df = pd.json_normalize(data)
+    df.to_csv(output_csv, index=False, encoding="utf-8")
+
+
 def annotate_distance_from_gene(df, chr, start, end):
     """Annotates the probeset based on the provided genomic co-ordinates
 
@@ -229,7 +257,6 @@ def annotate_distance_from_gene(df, chr, start, end):
 
     Returns:
         dataframe: Original dataframe, df, with "gene_distance" column added characterising the probeset in relation to the gene of interest
-
     """
     conditions = [
         (df["Position"] > start) & (df["Position"] < end),
@@ -330,7 +357,16 @@ def calculate_qc_metrics(df, male_partner, female_partner, reference, embryo_ids
 
 
 def calculate_nocall_percentages(df):
+    """Calculate the percentage of nocalls
 
+    Takes a dataframe produced from calculate_qc_metrics() and calculates
+    the % of nocalls per sample.
+
+    Args:
+        df (dataframe): A dataframe produced by calculate_qc_metrics()
+    Returns:
+        dataframe: Dataframe summarising the % of NoCalls per sample
+    """
     nocall = df[df["call_type"] == "NoCall"]
     if nocall.shape[0] > 0:
         trimmed_nocall = nocall.iloc[:, 1:]  # Trim first column
@@ -344,78 +380,132 @@ def calculate_nocall_percentages(df):
         pass
 
 
-def calculate_miscalls(df, male_partner, female_partner, embryo_ids):
-    """
-    QC identify miscalls
-    """
-    miscall_df = df[
-        [
-            "probeset_id",
-            "rsID",
-            "Position",
-        ]
-    ].copy()
-    for embryo in embryo_ids:
-        mis_list = []
-        for row in df.iterrows():
-            parent_alleles = [row[1][male_partner], row[1][female_partner]]
-            if row[1][embryo] == "NoCall":
-                mis_list.append("NoCall")
-            else:
-                match parent_alleles:
-                    case ["AA", "AA"]:
-                        mis_list.append("miscall") if row[1][
-                            embryo
-                        ] != "AA" else mis_list.append("call")
-                    case ["BB", "BB"]:
-                        mis_list.append("miscall") if row[1][
-                            embryo
-                        ] != "BB" else mis_list.append("call")
-                    case ["AA", "BB"]:
-                        mis_list.append("ADO") if row[1][
-                            embryo
-                        ] != "AB" else mis_list.append("call")
-                    case ["BB", "AA"]:
-                        mis_list.append("ADO") if row[1][
-                            embryo
-                        ] != "AB" else mis_list.append("call")
-                    case ["AA", "AB"]:
-                        mis_list.append("ADO") if row[1][embryo] not in [
-                            "AA",
-                            "AB",
-                        ] else mis_list.append("ADO")
-                    case ["AB", "AA"]:
-                        mis_list.append("ADO") if row[1][embryo] not in [
-                            "AA",
-                            "AB",
-                        ] else mis_list.append("call")
-                    case ["BB", "AB"]:
-                        mis_list.append("ADO") if row[1][embryo] not in [
-                            "BB",
-                            "AB",
-                        ] else mis_list.append("call")
-                    case ["AB", "BB"]:
-                        mis_list.append("ADO") if row[1][embryo] not in [
-                            "BB",
-                            "AB",
-                        ] else mis_list.append("call")
-                    # TODO chcek that AB AB are all filtered out
-                    case ["AB", "AB"]:
-                        mis_list.append("placeholder") if row[1][embryo] not in [
-                            "AA",
-                            "BB",
-                            "AB",
-                        ] else mis_list.append("call")
-        miscall_df[embryo] = mis_list
-    return miscall_df
+def detect_miscall_or_ado(
+    male_partner_haplotype, female_partner_haplotype, embryo_haplotype
+):
+    """QC identify miscalls or ADOs (Allele Drop Outs)
 
+    Takes the haplotypes for the male partner, female partner and embryo and calculates whether
+    it indicates a miscall or ADO (Allele dropout) in the embryo for that SNP.
 
-def summarise_miscalls():
-    # TODO
-    pass
+    The definition of a miscall is any haplotype in the embryo which is inconsistent
+    with the haplotype of the parents i.e. Parents AA, AA and an embryo AB. This is due
+    to technical error in the measurement.  NOTE: that the miscall could be in any one of the
+    trio even though it is recorded under the embryo.
+
+    The definition of ADO (Allele dropout) is used when there is a suspected biological origin for the
+    mismatch in haplotypes, due to uniparental inheritance of the allele i.e Parents AA, AB and an embryo AA,
+    the B allele has dropped out.  NOTE: that the ADO could have occured in any of the trio even though it is
+    recorded under the embryo.  It is expected that the Genomic Scientist will look at the SNP plots and
+    use their judgement as to whether allele dropout is observed.
+
+    Args:
+        male_partner_haplotype (string): Either "AA", "BB", or "AB" (NoCalls will throw an exception))
+        female_partner_haplotype (string): Either "AA", "BB", or "AB" (NoCalls will throw an exception))
+        embryo_haplotype (string): Either "AA", "BB", or "AB" (NoCalls will throw an exception))
+    Returns:
+        string: 'call', 'miscall', 'ADO', or an Error message
+    """
+
+    # Validate input data or throw exception
+    illegal_args = set(
+        [male_partner_haplotype, female_partner_haplotype, embryo_haplotype]
+    ) - set(["AA", "BB", "AB", "NoCall"])
+    if len(illegal_args) != 0:
+        raise ArgumentInputError(
+            f"Function detect_miscall_or_ado() only excepts 'AA','BB', 'AB', NoCall' as arguments, recieved {str(illegal_args)}"
+        )
+
+    parent_alleles = [male_partner_haplotype, female_partner_haplotype]
+    if embryo_haplotype == "NoCall":
+        result = "NoCall"
+    else:
+        match parent_alleles:
+            case ["AA", "AA"]:
+                result = "miscall" if embryo_haplotype != "AA" else "call"
+            case ["BB", "BB"]:
+                result = "miscall" if embryo_haplotype != "BB" else "call"
+            case ["AA", "BB"]:
+                result = "ADO" if embryo_haplotype != "AB" else "call"
+            case ["BB", "AA"]:
+                result = "ADO" if embryo_haplotype != "AB" else "call"
+            case ["AA", "AB"]:
+                result = (
+                    "ADO"
+                    if embryo_haplotype
+                    not in [
+                        "AA",
+                        "AB",
+                    ]
+                    else "call"
+                )
+            case ["AB", "AA"]:
+                result = (
+                    "ADO"
+                    if embryo_haplotype
+                    not in [
+                        "AA",
+                        "AB",
+                    ]
+                    else "call"
+                )
+            case ["BB", "AB"]:
+                result = (
+                    "ADO"
+                    if embryo_haplotype
+                    not in [
+                        "BB",
+                        "AB",
+                    ]
+                    else "call"
+                )
+            case ["AB", "BB"]:
+                result = (
+                    "ADO"
+                    if embryo_haplotype
+                    not in [
+                        "BB",
+                        "AB",
+                    ]
+                    else "call"
+                )
+            case ["AB", "AB"]:
+                result = (
+                    "Error! Haplotypes most be AA, BB, or AB"
+                    if embryo_haplotype
+                    not in [
+                        "AA",
+                        "BB",
+                        "AB",
+                    ]
+                    else "call"
+                )
+    return result
 
 
 def snps_by_region(df):
+    """Summarise the number of SNPs by regions around the gene of interest
+
+    Takes a results_df dataframe produced from either autosomal_dominant_analysis(),
+    autosomal_dominant_analysis(), or x_linked_analysis() and counts
+    the SNPs per "gene_distance":
+            "1-2MB_from_start",
+            "0-1MB_from_start",
+            "within_gene",
+            "0-1MB_from_end",
+            "1-2MB_from_end",
+     and "snp_risk_category":
+            "low_risk",
+            "high_risk",
+            #TODO up date as appropriate
+
+    Args:
+        df (dataframe): A dataframe produced by either autosomal_dominant_analysis(),
+    autosomal_dominant_analysis(), or x_linked_analysis()
+
+    Returns:
+        dataframe: Dataframe summarising the SNPs per genome region
+    """
     snps_by_region = df.value_counts(["gene_distance", "snp_risk_category"]).to_frame()
     # Extract snps_by_region data from index into columns
     snps_by_region = snps_by_region.reset_index()
@@ -429,6 +519,9 @@ def snps_by_region(df):
 
 
 def summarised_snps_by_region(df):
+    """
+    TODO - check what this function does compared to snps_by_region()
+    """
     # Filter out "uninformative" from summary
     categorised_snps_by_region = df[df["snp_risk_category"] != "uninformative"]
     # Group informative 'low_risk' and 'high_risk' SNPs together per region
@@ -460,19 +553,45 @@ def summarised_snps_by_region(df):
     return summary_categorised_snps_by_region
 
 
-def categorise_embryo_alleles(df, miscall_df, embryo_ids, mode_of_inheritance):
+def categorise_embryo_alleles(
+    df, male_partner, female_partner, embryo_ids, mode_of_inheritance
+):
+    """For each embryo this fuction categorises their SNPs
+
+    Takes a dataframe produced
+
+    Args:
+        df (dataframe): A results_df dataframe produce
+        male_partner (string):
+        female_partner (string):
+        embryo_ids (list): List of embryo_ids matching the columns names in df
+        mode_of_inheritance (string): "autosomal_dominant", "autosomal_recessive", "x_linked"
+    Returns:
+        dataframe: Dataframe with new column for each embryo annotate with a risk_category.
+    """
+    # Initiate dataframe for results
+    embryo_category_df = df[
+        [
+            "probeset_id",
+            "rsID",
+            "Position",
+            "gene_distance",
+            male_partner,
+            female_partner,
+        ]
+        + embryo_ids
+    ].copy()
+    # For autosomal_resessive also include the "snp_inherited_from" column
     if mode_of_inheritance == "autosomal_recessive":
-        embryo_category_df = df[
-            ["probeset_id", "rsID", "Position", "snp_inherited_from", "gene_distance"]
-        ].copy()
-    elif (
-        mode_of_inheritance == "autosomal_dominant" or mode_of_inheritance == "x_linked"
-    ):
-        embryo_category_df = df[
-            ["probeset_id", "rsID", "Position", "gene_distance"]
-        ].copy()
+        embryo_category_df = embryo_category_df.join(
+            df[
+                "snp_inherited_from",
+            ].copy()
+        )
+
     for embryo in embryo_ids:
-        # Initiate empty database for results
+        embryo_risk_col = f"{embryo}_risk_category"
+        # categorise risk category for each SNP in the embryo
         if mode_of_inheritance == "autosomal_dominant":
             conditions = [
                 (df["snp_risk_category"] == "high_risk") & (df[embryo] == "AB"),
@@ -484,7 +603,7 @@ def categorise_embryo_alleles(df, miscall_df, embryo_ids, mode_of_inheritance):
                 "low_risk",
                 "NoCall",
             ]
-            embryo_category_df[f"{embryo}_risk_category"] = np.select(
+            embryo_category_df[embryo_risk_col] = np.select(
                 conditions, values, default="uninformative"
             )
         elif mode_of_inheritance == "autosomal_recessive":
@@ -524,24 +643,32 @@ def categorise_embryo_alleles(df, miscall_df, embryo_ids, mode_of_inheritance):
                 "female_partner_low_and_high_risk",
                 "uninformative",
             ]
-            embryo_category_df[f"{embryo}_risk_category"] = np.select(
+            embryo_category_df[embryo_risk_col] = np.select(
                 conditions, values, default="uninformative"
             )
         elif mode_of_inheritance == "x_linked":
             pass
-
-    # Populate embryo_category_df with data from miscall_df
-    for embryo in embryo_ids:
-        embryo_category_df.loc[
-            miscall_df[embryo] == "miscall", f"{embryo}_risk_category"
-        ] = "miscall"
-        embryo_category_df.loc[
-            miscall_df[embryo] == "ADO", f"{embryo}_risk_category"
-        ] = "ADO"
+        # Populate embryo_category_df with data regarding miscalls and ADOs
+        embryo_category_df[embryo_risk_col] = embryo_category_df.apply(
+            lambda row: row[embryo_risk_col]
+            if row[embryo_risk_col] != "uninformative"
+            else detect_miscall_or_ado(
+                row[male_partner], row[female_partner], row[embryo]
+            ),
+            axis=1,
+        )
+        # Rename any uninformative calls from "call" to "uninformative" so they are consistent
+        # with plotting functions
+        embryo_category_df[embryo_risk_col] = embryo_category_df[
+            embryo_risk_col
+        ].replace("call", "uninformative")
     return embryo_category_df
 
 
 def summarise_embryo_results(df, embryo_ids):
+    """
+    # TODO Docstring
+    """
     summary_embryo_results = pd.DataFrame()
     for embryo in embryo_ids:
         new_column = df[f"{embryo}_risk_category"].value_counts()
@@ -559,6 +686,7 @@ def summarise_embryo_results(df, embryo_ids):
     return summary_embryo_results
 
 
+# TODO use or remove function
 def highlight_risk(category):
     criteria = ["low_risk_allele", "high_risk_allele"]
     return [
@@ -576,11 +704,10 @@ def produce_html_table(
 
     Args:
         df (dataframe): A dataframe which requires rendering as HTML for inclusion in the HTML report
-        table_identifier (): A
+        table_identifier (string): Sets id attribute for the table in the HTML
 
     Returns:
         String: HTML formated table with the provide table_id used to set the HTML table id attribute.
-
     """
 
     # styled_df = df.style.highlight_null(null_color='red').hide_columns(['hap1_risk_category','hap2_risk_category'])
@@ -649,9 +776,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         results_df = autosomal_dominant_analysis(
             filtered_df,
             affected_partner,
-            affected_partner_sex,
             unaffected_partner,
-            unaffected_partner_sex,
             args.reference,
             args.reference_status,
             args.reference_relationship,
@@ -682,15 +807,11 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     # Get total of informative SNPs
     summary_snps_by_region = summarised_snps_by_region(informative_snps_by_region)
 
-    # Produce summary of miscalled SNPs
-    miscall_df = calculate_miscalls(
-        results_df, args.male_partner, args.female_partner, args.embryo_ids
-    )
-
     # Categorise embryo alleles
     embryo_category_df = categorise_embryo_alleles(
         results_df,
-        miscall_df,
+        args.male_partner,
+        args.female_partner,
         args.embryo_ids,
         args.mode_of_inheritance,
     )
@@ -775,6 +896,16 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     # Stream machine readable JSON output to stdout for testing purposes
     if args.testing:
+
+        export_json_data_as_csv(
+            "test_data/embryo_validation_data.json",
+            "test_data/embryo_validation_data.csv",
+        )
+        export_json_data_as_csv(
+            "test_data/informative_snp_validation.json",
+            "test_data/informative_snp_validation.csv",
+        )
+
         informative_snp_data = {
             "mode": args.mode_of_inheritance,
             "sample_id": args.output_prefix,
@@ -851,11 +982,20 @@ def main(args=None):  # default argument allows pytest to override argparse for 
                 ].snp_count.sum()
             ),
         }
-        json.dump(informative_snp_data, sys.stdout, indent=4)
+        embryo_cat_data = embryo_snps_summary_df.to_dict(orient="record")
+
+        json.dump(
+            {
+                "informative_snp_data": informative_snp_data,
+                "embryo_cat_json": embryo_cat_data,
+            },
+            sys.stdout,
+            indent=4,
+        )
 
     else:
         # Produce human readable HTML report
-        with open(f"{args.output_prefix}.html", "w") as f:
+        with open(f"{args.output_folder}{args.output_prefix}.html", "w") as f:
             f.write(html_string)
 
 
