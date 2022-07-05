@@ -15,7 +15,6 @@ from snp_plot import plot_results, summarise_snps_per_embryo
 from exceptions import ArgumentInputError
 
 # TODO Copy rsID from hover tap
-# TODO Add in gene count to plot
 # TODO Check telomeric/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
 # TODO Add support for no embryos (just TRIOs being run to check if enough informative SNPs)
 # TODO Add ADO % to table
@@ -259,11 +258,11 @@ def annotate_distance_from_gene(df, chr, start, end):
         dataframe: Original dataframe, df, with "gene_distance" column added characterising the probeset in relation to the gene of interest
     """
     conditions = [
-        (df["Position"] > start) & (df["Position"] < end),
-        (df["Position"] < start) & (df["Position"] > start - 1000000),
-        (df["Position"] < start - 1000000) & (df["Position"] > start - 2000000),
-        (df["Position"] > end) & (df["Position"] < end + 1000000),
-        (df["Position"] > end + 1000000) & (df["Position"] < end + 2000000),
+        (df["Position"] > start) & (df["Position"] <= end),
+        (df["Position"] <= start) & (df["Position"] > start - 1000000),
+        (df["Position"] <= start - 1000000) & (df["Position"] > start - 2000000),
+        (df["Position"] > end) & (df["Position"] <= end + 1000000),
+        (df["Position"] > end + 1000000) & (df["Position"] <= end + 2000000),
     ]
 
     values = [
