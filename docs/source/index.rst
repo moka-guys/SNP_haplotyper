@@ -10,6 +10,8 @@ Welcome to SNP_Haplotyper's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   readme
+   changelog
 
 
 Indices and tables

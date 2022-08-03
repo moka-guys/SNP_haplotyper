@@ -12,7 +12,7 @@ def autosomal_dominant_analysis(
     reference_status,
     reference_relationship,
 ):
-    """Identifies any SNPs which are "informative" and then categorises them as "high_risk" or "low_risk"
+    """Identifies any SNPs which are "informative" and then categorises them as "high_risk" or "low_risk" for cases where the inheritance is autosomal dominant.
     # TODO change google doc link to link to read the docs.
     The full logic behind the function is described here https://docs.google.com/document/d/1ZsdSTQ_oliSDM-1EO65XbKfifaPK2-lIPwK1Ksl8L6s/edit?usp=sharing
     This function asks the question - For the combination of haplotypes present in the reference trio (reference,
@@ -34,7 +34,7 @@ def autosomal_dominant_analysis(
 
     """
     # NOTE: Lines marked with a Critera_AD# and Option_AD# ID  refer to passages in the specification for
-    # this project. During code review this allows the programs logic to be easily compared to the spec.
+    # this project. During code review this allows the program's logic to be easily compared to the spec.
 
     if reference_relationship in [
         "grandparent",  # TODO populate with all appropriate relationships
@@ -78,6 +78,7 @@ def autosomal_dominant_analysis(
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
     elif reference_relationship in [
         "child",
+        "embryo",
     ]:
         # Label alleles as high or low risk
         conditions = [

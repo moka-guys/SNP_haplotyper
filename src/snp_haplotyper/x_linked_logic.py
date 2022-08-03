@@ -4,104 +4,98 @@ import pandas as pd
 # Logic is the same whether using affected son of carrier or grandmother as reference
 def x_linked_analysis(
     df,
-    affected_partner,
-    affected_partner_sex,
-    unaffected_partner,
-    unaffected_partner_sex,
-    reference,
-    reference_status,
-    reference_relationship,
+    carrier_female_partner,  # Always female partner for X-linked
+    unaffected_male_partner,
+    reference,  # Either carrier or affected
 ):
-    """
-    TODO: Add docstring
-    """
-    if reference_relationship in [
-        "grandparent",  # TODO populate with all appropriate relationships
-    ]:
-        # Label alleles as high or low risk
-        conditions = [
-            # Criteria to label high Risk SNPs if reference affected, or low risk SNPs if reference unaffected
-            # Criteria 1
-            (df[reference] == "AA")
-            & (df[unaffected_partner] == "BB")
-            & (df[affected_partner] == "AB"),
-            # Criteria 2
-            (df[reference] == "BB")
-            & (df[unaffected_partner] == "AA")
-            & (df[affected_partner] == "AB"),
-            # Criteria to label low Risk SNPs if reference affected, or high risk SNPs if reference unaffected
-            # Criteria 3
-            (df[reference] == "AA")
-            & (df[unaffected_partner] == "AA")
-            & (df[affected_partner] == "AB"),
-            # Criteria 4
-            (df[reference] == "BB")
-            & (df[unaffected_partner] == "BB")
-            & (df[affected_partner] == "AB"),
-        ]
-        # Assign the correct labels depending upon reference status
-        if reference_status == "affected":
-            values = [
-                "high_risk",  # Criteria 1
-                "high_risk",  # Criteria 2
-                "low_risk",  # Criteria 3
-                "low_risk",  # Criteria 4
-            ]
-        elif reference_status == "unaffected":
-            values = [
-                "low_risk",  # Criteria 1
-                "low_risk",  # Criteria 2
-                "high_risk",  # Criteria 3
-                "high_risk",  # Criteria 4
-            ]
-        df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
-    elif reference_relationship in [
-        "child",  # TODO populate with all appropriate relationships
-    ]:
-        # Label alleles as high or low risk
-        conditions = [
-            # Criteria to label high Risk SNPs if reference affected, or low risk SNPs if reference unaffected
-            # Criteria 1
-            (df[reference] == "AB")
-            & (df[unaffected_partner] == "AA")
-            & (df[affected_partner] == "AB"),
-            # Criteria 2
-            (df[reference] == "AB")
-            & (df[unaffected_partner] == "BB")
-            & (df[affected_partner] == "AB"),
-            # Criteria to label low Risk SNPs if reference affected, or high risk SNPs if reference unaffected
-            # Criteria 3
-            (df[reference] == "AA")
-            & (df[unaffected_partner] == "AA")
-            & (df[affected_partner] == "AB"),
-            # Criteria 4
-            (df[reference] == "BB")
-            & (df[unaffected_partner] == "BB")
-            & (df[affected_partner] == "AB"),
-        ]
-        # Assign the correct labels depending upon reference status
-        if reference_status == "affected":
-            values = [
-                "high_risk",  # Criteria 1
-                "high_risk",  # Criteria 2
-                "low_risk",  # Criteria 3
-                "low_risk",  # Criteria 4
-            ]
-        elif reference_status == "unaffected":
-            values = [
-                "low_risk",  # Criteria 1
-                "low_risk",  # Criteria 2
-                "high_risk",  # Criteria 3
-                "high_risk",  # Criteria 4
-            ]
-        df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
+    """Identifies any SNPs which are "informative" and then categorises them as "high_risk" or "low_risk" for any cases which are x-linked inheritance.
+    # TODO change google doc link to link to read the docs.
+    The full logic behind the function is described here https://docs.google.com/document/d/1QKdQ-XpD8TFaxhdP41X8-BrUc0j9gENGrIBnYhPtJiE/edit?usp=sharing
+    This function asks the question - For the combination of haplotypes present in the reference trio (reference,
+    unaffected_partner and affected_partner) what information would this SNP provide us with if the SNP was:
 
-        # Add snp_inherited_from column to record the sex the SNP is inherited from TODO Check this logic below
-        df["snp_inherited_from"] = df["snp_risk_category"]
-        df.loc[
-            df["snp_inherited_from"] == "low_risk", "snp_inherited_from"
-        ] = affected_partner_sex
-        df.loc[
-            df["snp_inherited_from"] == "high_risk", "snp_inherited_from"
-        ] = unaffected_partner_sex
+    AB in a female embryo
+    AA in a male embryo
+    BB in a male embryo
+
+    i.e. does this SNP indicate "high_risk", "low_risk", or is it "uninformative"?
+
+
+    Args:
+        df (dataframe): A dataframe with input data
+            carrier_female_partner (string): Column name in dataframe refering to carrier_female_partner's data
+             unaffected_male_partner (string): Column name in dataframe refering to  unaffected_male_partner's data
+            reference (string) : Column name in dataframe refering to reference's data (Always child)"
+
+    Returns:
+        Dataframe: Dataframe containing 3 new "snp_risk_category" columns, used to categorise the SNPs as
+        "high_risk", "low_risk", and "uninformative" for three different embryo catergories - female_AB_snp_risk_category, male_AA_snp_risk_category, male_BB_snp_risk_category
+
+    """
+
+    # Calculate & classify the informative for female AB embryos
+    conditions = [
+        # Criteria_XL1
+        (df[reference] == "AA")
+        & (df[unaffected_male_partner] == "AA")
+        & (df[carrier_female_partner] == "AB"),
+        # Criteria_XL2
+        (df[reference] == "AA")
+        & (df[unaffected_male_partner] == "BB")
+        & (df[carrier_female_partner] == "AB"),
+        # Criteria_XL3
+        (df[reference] == "BB")
+        & (df[unaffected_male_partner] == "AA")
+        & (df[carrier_female_partner] == "AB"),
+        # Criteria_XL4
+        (df[reference] == "BB")
+        & (df[unaffected_male_partner] == "BB")
+        & (df[carrier_female_partner] == "AB"),
+    ]
+    # Assign the correct labels
+
+    values = [
+        "low_risk",  # Criteria_XL1
+        "high_risk",  # Criteria_XL2
+        "high_risk",  # Criteria_XL3
+        "low_risk",  # Criteria_XL4
+    ]
+
+    df["female_AB_snp_risk_category"] = np.select(
+        conditions, values, default="uninformative"
+    )
+
+    # Calculate & classify the informative for male embryos
+    conditions = [
+        # Criteria_XL5, Criteria_XL7
+        (df[reference] == "AA")
+        & (df[unaffected_male_partner] == "BB")
+        & (df[carrier_female_partner] == "AB"),
+        # Criteria_XL6, Criteria_XL8
+        (df[reference] == "BB")
+        & (df[unaffected_male_partner] == "AA")
+        & (df[carrier_female_partner] == "AB"),
+    ]
+    # Assign the correct labels for male AA
+
+    values = [
+        "high_risk",  # Criteria_XL5
+        "low_risk",  # Criteria_XL6
+    ]
+
+    df["male_AA_snp_risk_category"] = np.select(
+        conditions, values, default="uninformative"
+    )
+
+    values = [
+        "low_risk",  # Criteria_XL7
+        "high_risk",  # Criteria_XL8
+    ]
+
+    # Assign the correct labels for male BB
+
+    df["male_BB_snp_risk_category"] = np.select(
+        conditions, values, default="uninformative"
+    )
+
     return df
