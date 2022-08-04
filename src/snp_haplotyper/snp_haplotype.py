@@ -11,6 +11,7 @@ from autosomal_dominant_logic import autosomal_dominant_analysis
 from autosomal_recessive_logic import autosomal_recessive_analysis
 from x_linked_logic import x_linked_analysis
 from snp_plot import plot_results, summarise_snps_per_embryo
+from stream_output import stream_autosomal_dominant_output
 
 from exceptions import ArgumentInputError
 
@@ -1072,83 +1073,18 @@ def main(args=None):  # default argument allows pytest to override argparse for 
             "test_data/informative_snp_validation.csv",
         )
 
-        informative_snp_data = {
-            "mode": args.mode_of_inheritance,
-            "sample_id": args.output_prefix,
-            "num_snps": number_snps_imported,
-            "info_snps_upstream_2mb": int(
-                informative_snps_by_region[
-                    (informative_snps_by_region["gene_distance"].str.endswith("_start"))
-                    & (
-                        informative_snps_by_region["snp_risk_category"]
-                        != "uninformative"
-                    )
-                ].snp_count.sum()
-            ),
-            "info_snps_in_gene": int(
-                informative_snps_by_region[
-                    (informative_snps_by_region["gene_distance"] == "within_gene")
-                    & (
-                        informative_snps_by_region["snp_risk_category"]
-                        != "uninformative"
-                    )
-                ].snp_count.sum()
-            ),
-            "info_snps_downstream_2mb": int(
-                informative_snps_by_region[
-                    (informative_snps_by_region["gene_distance"].str.endswith("_end"))
-                    & (
-                        informative_snps_by_region["snp_risk_category"]
-                        != "uninformative"
-                    )
-                ].snp_count.sum()
-            ),
-            "total_info_snps": int(
-                informative_snps_by_region[
-                    informative_snps_by_region["snp_risk_category"] != "uninformative"
-                ].snp_count.sum()
-            ),
-            "high_risk_snps_upstream_2mb": int(
-                informative_snps_by_region[
-                    (informative_snps_by_region["gene_distance"].str.endswith("_start"))
-                    & (informative_snps_by_region["snp_risk_category"] == "high_risk")
-                ].snp_count.sum()
-            ),
-            "high_risk_snps_within_gene": int(
-                informative_snps_by_region[
-                    (informative_snps_by_region["gene_distance"] == "within_gene")
-                    & (informative_snps_by_region["snp_risk_category"] == "high_risk")
-                ].snp_count.sum()
-            ),
-            "high_risk_snps_downstream_2mb": int(
-                informative_snps_by_region[
-                    (
-                        informative_snps_by_region["gene_distance"].str.endswith("_end")
-                        | (informative_snps_by_region["gene_distance"] == "within_gene")
-                    )
-                    & (informative_snps_by_region["snp_risk_category"] == "high_risk")
-                ].snp_count.sum()
-            ),
-            "low_risk_snps_upstream_2mb": int(
-                informative_snps_by_region[
-                    (informative_snps_by_region["gene_distance"].str.endswith("_start"))
-                    & (informative_snps_by_region["snp_risk_category"] == "low_risk")
-                ].snp_count.sum()
-            ),
-            "low_risk_snps_within_gene": int(
-                informative_snps_by_region[
-                    (informative_snps_by_region["gene_distance"] == "within_gene")
-                    & (informative_snps_by_region["snp_risk_category"] == "low_risk")
-                ].snp_count.sum()
-            ),
-            "low_risk_snps_downstream_2mb": int(
-                informative_snps_by_region[
-                    (informative_snps_by_region["gene_distance"].str.endswith("_end"))
-                    & (informative_snps_by_region["snp_risk_category"] == "low_risk")
-                ].snp_count.sum()
-            ),
-        }
-        embryo_cat_data = embryo_snps_summary_df.to_dict(orient="record")
+        if args.mode_of_inheritance == "autosomal_dominant":
+            informative_snp_data, embryo_cat_data = stream_autosomal_dominant_output(
+                args.mode_of_inheritance,
+                informative_snps_by_region,
+                embryo_snps_summary_df,
+                number_snps_imported,
+                args.output_prefix,
+            )
+        elif args.mode_of_inheritance == "autosomal_recessive":
+            pass
+        elif args.mode_of_inheritance == "x_linked":
+            pass
 
         json.dump(
             {
