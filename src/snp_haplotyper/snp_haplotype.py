@@ -11,7 +11,7 @@ from autosomal_dominant_logic import autosomal_dominant_analysis
 from autosomal_recessive_logic import autosomal_recessive_analysis
 from x_linked_logic import x_linked_analysis
 from snp_plot import plot_results, summarise_snps_per_embryo
-from stream_output import stream_autosomal_dominant_output
+from stream_output import stream_autosomal_dominant_output, stream_x_linked_output
 
 from exceptions import ArgumentInputError
 
@@ -1084,7 +1084,13 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         elif args.mode_of_inheritance == "autosomal_recessive":
             pass
         elif args.mode_of_inheritance == "x_linked":
-            pass
+            informative_snp_data, embryo_cat_data = stream_x_linked_output(
+                args.mode_of_inheritance,
+                informative_snps_by_region,
+                embryo_snps_summary_df,
+                number_snps_imported,
+                args.output_prefix,
+            )
 
         json.dump(
             {
