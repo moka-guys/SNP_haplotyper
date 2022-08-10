@@ -3,9 +3,10 @@ import sys
 
 def get_snp_count(df, pattern, category_col, snp_count_col):
     count = int(
-        df[(df["gene_distance"] == pattern) & (df[category_col] != "uninformative")][
-            snp_count_col
-        ].sum()
+        df[
+            (df["gene_distance"].str.endswith(pattern))
+            & (df[category_col] != "uninformative")
+        ][snp_count_col].sum()
     )
     return count
 
@@ -17,9 +18,10 @@ def get_total_snp_count(df, category_col, snp_count_col):
 
 def get_snp_count_and_filter(df, pattern, category_col, snp_count_col, risk_filter):
     count = int(
-        df[(df["gene_distance"] == pattern) & (df[category_col] != "uninformative")][
-            snp_count_col & (df[category_col] == risk_filter)
-        ].sum()
+        df[
+            (df["gene_distance"].str.endswith(pattern))
+            & (df[category_col] == risk_filter)
+        ][snp_count_col].sum()
     )
     return count
 
@@ -56,7 +58,7 @@ def stream_autosomal_dominant_output(
             informative_snps_by_region, "within_gene", "snp_risk_category", "snp_count"
         ),
         "info_snps_downstream_2mb": get_snp_count(
-            informative_snps_by_region, "within_gene", "snp_risk_category", "snp_count"
+            informative_snps_by_region, "_end", "snp_risk_category", "snp_count"
         ),
         "total_info_snps": get_total_snp_count(
             informative_snps_by_region, "snp_risk_category", "snp_count"
@@ -133,96 +135,77 @@ def stream_x_linked_output(
         "mode": mode_of_inheritance,
         "sample_id": output_prefix,
         "num_snps": number_snps_imported,
-        "info_snps_upstream_2mb": int(
-            informative_snps_by_region[
-                (informative_snps_by_region["gene_distance"].str.endswith("_start"))
-                & (
-                    informative_snps_by_region["female_AB_snp_risk_category"]
-                    != "uninformative"
-                )
-            ].female_AB_snp_count.sum()
+        "info_snps_upstream_2mb": get_snp_count(
+            informative_snps_by_region,
+            "_start",
+            "female_AB_snp_risk_category",
+            "female_AB_snp_count",
         ),
-        "info_snps_in_gene": int(
-            informative_snps_by_region[
-                (informative_snps_by_region["gene_distance"] == "within_gene")
-                & (
-                    informative_snps_by_region["female_AB_snp_risk_category"]
-                    != "uninformative"
-                )
-            ].female_AB_snp_count.sum()
+        "info_snps_in_gene": get_snp_count(
+            informative_snps_by_region,
+            "within_gene",
+            "female_AB_snp_risk_category",
+            "female_AB_snp_count",
         ),
-        "info_snps_downstream_2mb": int(
-            informative_snps_by_region[
-                (informative_snps_by_region["gene_distance"].str.endswith("_end"))
-                & (
-                    informative_snps_by_region["female_AB_snp_risk_category"]
-                    != "uninformative"
-                )
-            ].female_AB_snp_count.sum()
+        "info_snps_downstream_2mb": get_snp_count(
+            informative_snps_by_region,
+            "_end",
+            "female_AB_snp_risk_category",
+            "female_AB_snp_count",
         ),
-        "total_info_snps": int(
-            informative_snps_by_region[
-                informative_snps_by_region["female_AB_snp_risk_category"]
-                != "uninformative"
-            ].female_AB_snp_count.sum()
+        "total_info_snps": get_total_snp_count(
+            informative_snps_by_region,
+            "female_AB_snp_risk_category",
+            "female_AB_snp_count",
         ),
-        "high_risk_snps_upstream_2mb": int(
-            informative_snps_by_region[
-                (informative_snps_by_region["gene_distance"].str.endswith("_start"))
-                & (
-                    informative_snps_by_region["female_AB_snp_risk_category"]
-                    == "high_risk"
-                )
-            ].female_AB_snp_count.sum()
+        "high_risk_snps_upstream_2mb": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "female_AB_snp_risk_category",
+            "female_AB_snp_count",
+            "high_risk",
         ),
-        "high_risk_snps_within_gene": int(
-            informative_snps_by_region[
-                (informative_snps_by_region["gene_distance"] == "within_gene")
-                & (
-                    informative_snps_by_region["female_AB_snp_risk_category"]
-                    == "high_risk"
-                )
-            ].female_AB_snp_count.sum()
+        "high_risk_snps_within_gene": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "within_gene",
+            "female_AB_snp_risk_category",
+            "female_AB_snp_count",
+            "high_risk",
         ),
-        "high_risk_snps_downstream_2mb": int(
-            informative_snps_by_region[
-                (
-                    informative_snps_by_region["gene_distance"].str.endswith("_end")
-                    | (informative_snps_by_region["gene_distance"] == "within_gene")
-                )
-                & (
-                    informative_snps_by_region["female_AB_snp_risk_category"]
-                    == "high_risk"
-                )
-            ].female_AB_snp_count.sum()
+        "high_risk_snps_downstream_2mb": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_end",
+            "female_AB_snp_risk_category",
+            "female_AB_snp_count",
+            "high_risk",
         ),
-        "low_risk_snps_upstream_2mb": int(
-            informative_snps_by_region[
-                (informative_snps_by_region["gene_distance"].str.endswith("_start"))
-                & (
-                    informative_snps_by_region["female_AB_snp_risk_category"]
-                    == "low_risk"
-                )
-            ].female_AB_snp_count.sum()
+        "low_risk_snps_upstream_2mb": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "female_AB_snp_risk_category",
+            "female_AB_snp_count",
+            "low_risk",
         ),
-        "low_risk_snps_within_gene": int(
-            informative_snps_by_region[
-                (informative_snps_by_region["gene_distance"] == "within_gene")
-                & (
-                    informative_snps_by_region["female_AB_snp_risk_category"]
-                    == "low_risk"
-                )
-            ].female_AB_snp_count.sum()
+        "low_risk_snps_within_gene": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "within_gene",
+            "female_AB_snp_risk_category",
+            "female_AB_snp_count",
+            "low_risk",
         ),
-        "low_risk_snps_downstream_2mb": int(
-            informative_snps_by_region[
-                (informative_snps_by_region["gene_distance"].str.endswith("_end"))
-                & (
-                    informative_snps_by_region["female_AB_snp_risk_category"]
-                    == "low_risk"
-                )
-            ].female_AB_snp_count.sum()
+        "low_risk_snps_downstream_2mb": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_end",
+            "female_AB_snp_risk_category",
+            "female_AB_snp_count",
+            "low_risk",
         ),
     }
-    embryo_cat_data = embryo_snps_summary_df.to_dict(orient="record")
+
+    # Populate stream with additional fields:
+    embryo_snps_output_df = embryo_snps_summary_df
+    embryo_snps_output_df["mode"] = mode_of_inheritance
+    embryo_snps_output_df["sample_id"] = output_prefix
+
+    embryo_cat_data = embryo_snps_output_df.to_dict(orient="record")
     return [informative_snp_data, embryo_cat_data]

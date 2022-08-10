@@ -154,8 +154,8 @@ def test_embryo_categorization(capsys, name):
 
     result = results_dict[embryo_id]
     validation = all_validation[name.split("_", 2)[2] + "_" + embryo_id]
-    # assert result["mode"] == validation["mode"]
-    # assert result["sample_id"] == validation["sample_id"]
+    assert result["mode"] == validation["mode"]
+    assert result["sample_id"] == validation["sample_id"]
     assert result["upstream_2mb_high_risk_snps"] == validation["high_risk_upstream_2mb"]
     assert result["within_gene_high_risk_snps"] == validation["high_risk_within_gene"]
     assert (
