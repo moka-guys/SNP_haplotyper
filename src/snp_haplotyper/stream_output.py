@@ -105,8 +105,12 @@ def stream_autosomal_dominant_output(
             "snp_count",
             "low_risk",
         ),
-    }
-    embryo_cat_data = embryo_snps_summary_df.to_dict(orient="record")
+    }    
+    # Populate stream with additional fields:
+    embryo_snps_output_df = embryo_snps_summary_df
+    embryo_snps_output_df["mode"] = mode_of_inheritance
+    embryo_snps_output_df["sample_id"] = output_prefix
+    embryo_cat_data = embryo_snps_output_df.to_dict(orient="record")
     return [informative_snp_data, embryo_cat_data]
 
 
