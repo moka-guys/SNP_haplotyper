@@ -759,30 +759,6 @@
                 "--chr",
                 "x"
             ]
-        },
-        {
-            "name": "test_parser",
-            "type": "python",
-            "request": "launch",
-            "program": "src/snp_haplotyper/excel_parser.py",
-            "console": "integratedTerminal",
-            "args": [
-                "--input_file",
-                "/home/graeme/Downloads/SNP_haplotype_template_v1.6.xlsm"
-            ]
-        },
-        {
-            "name": "excel_writer",
-            "type": "python",
-            "request": "launch",
-            "program": "src/snp_haplotyper/excel_parser.py",
-            "console": "integratedTerminal",
-            "args": [
-                "--template_file",
-                "/home/graeme/Downloads/SNP_haplotype_template_v1.6.xlsm",
-                "--json_file",
-                ".vscode/launch.json"
-            ]
         }
     ]
 }
