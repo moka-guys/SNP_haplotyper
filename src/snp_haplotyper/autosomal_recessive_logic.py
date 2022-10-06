@@ -9,7 +9,6 @@ def autosomal_recessive_analysis(
     female_partner,
     reference,
     reference_status,
-    reference_relationship,
     consanguineous,
 ):
     """

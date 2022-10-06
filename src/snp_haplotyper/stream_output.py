@@ -113,6 +113,92 @@ def stream_autosomal_dominant_output(
     embryo_cat_data = embryo_snps_output_df.to_dict(orient="record")
     return [informative_snp_data, embryo_cat_data]
 
+def stream_autosomal_recessive_output(
+    mode_of_inheritance,
+    informative_snps_by_region,
+    embryo_snps_summary_df,
+    number_snps_imported,
+    output_prefix,
+):
+    """Converts autosomal recessive output into JSON compatible format to stream for use in testing
+
+    New column created in the dataframe, df, matching the probes_set IDs to dbSNP rsIDs.
+
+    Args:
+        mode_of_inheritance (string): "autosomal_recessive"
+        informative_snps_by_region (dataframe): informative_snps_by_region dataframe
+        embryo_snps_summary_df (dataframe): embryo_snps_summary_df dataframe
+        number_snps_imported (string): Number of SNPs in imported input file
+        output_prefix (string): Sample ID
+    Returns:
+        list: List contains two dictionaries informative_snp_data & embryo_cat_data
+
+    """
+    informative_snp_data = {
+        "mode": mode_of_inheritance,
+        "sample_id": output_prefix,
+        "num_snps": number_snps_imported,
+        "info_snps_upstream_2mb": get_snp_count(
+            informative_snps_by_region, "_start", "snp_risk_category", "snp_count"
+        ),
+        "info_snps_in_gene": get_snp_count(
+            informative_snps_by_region, "within_gene", "snp_risk_category", "snp_count"
+        ),
+        "info_snps_downstream_2mb": get_snp_count(
+            informative_snps_by_region, "_end", "snp_risk_category", "snp_count"
+        ),
+        "total_info_snps": get_total_snp_count(
+            informative_snps_by_region, "snp_risk_category", "snp_count"
+        ),
+        "high_risk_snps_upstream_2mb": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "high_risk_snps_within_gene": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "within_gene",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "high_risk_snps_downstream_2mb": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_end",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "low_risk_snps_upstream_2mb": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "low_risk",
+        ),
+        "low_risk_snps_within_gene": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "within_gene",
+            "snp_risk_category",
+            "snp_count",
+            "low_risk",
+        ),
+        "low_risk_snps_downstream_2mb": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_end",
+            "snp_risk_category",
+            "snp_count",
+            "low_risk",
+        ),
+    }
+    # Populate stream with additional fields:
+    embryo_snps_output_df = embryo_snps_summary_df
+    embryo_snps_output_df["mode"] = mode_of_inheritance
+    embryo_snps_output_df["sample_id"] = output_prefix
+    embryo_cat_data = embryo_snps_output_df.to_dict(orient="record")
+    return [informative_snp_data, embryo_cat_data]
 
 def stream_x_linked_output(
     mode_of_inheritance,

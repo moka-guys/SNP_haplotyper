@@ -11,7 +11,7 @@ from autosomal_dominant_logic import autosomal_dominant_analysis
 from autosomal_recessive_logic import autosomal_recessive_analysis
 from x_linked_logic import x_linked_analysis
 from snp_plot import plot_results, summarise_snps_per_embryo
-from stream_output import stream_autosomal_dominant_output, stream_x_linked_output
+from stream_output import stream_autosomal_dominant_output, stream_autosomal_recessive_output, stream_x_linked_output
 
 from exceptions import ArgumentInputError
 
@@ -507,7 +507,7 @@ def snps_by_region(df, mode_of_inheritance):
     Returns:
         dataframe: Dataframe summarising the SNPs per genome region with additional columns for each relevant haplotype in the embryo.
     """
-    if mode_of_inheritance == "autosomal_dominant":
+    if mode_of_inheritance == "autosomal_dominant" or mode_of_inheritance == "autosomal_recessive":
         snps_by_region = df.value_counts(
             ["gene_distance", "snp_risk_category"]
         ).to_frame()
@@ -590,7 +590,7 @@ def summarised_snps_by_region(df, mode_of_inheritance):
     """
     TODO - check what this function does compared to snps_by_region()
     """
-    if mode_of_inheritance == "autosomal_dominant":
+    if mode_of_inheritance == "autosomal_dominant" or mode_of_inheritance == "autosomal_recessive":
         # Filter out "uninformative" from summary
         categorised_snps_by_region = df[df["snp_risk_category"] != "uninformative"]
         # Group informative 'low_risk' and 'high_risk' SNPs together per region
@@ -621,8 +621,6 @@ def summarised_snps_by_region(df, mode_of_inheritance):
         summary_categorised_snps_by_region = (
             summary_categorised_snps_by_region.reset_index()
         )
-    elif mode_of_inheritance == "autosomal_recessive":
-        pass
     elif mode_of_inheritance == "x_linked":
         # Filter out "uninformative" from summary
         categorised_snps_by_region = df[
@@ -668,7 +666,7 @@ def summarised_snps_by_region(df, mode_of_inheritance):
 
 
 def categorise_embryo_alleles(
-    df, male_partner, female_partner, embryo_ids, embryo_sex, mode_of_inheritance
+    df, male_partner, female_partner, embryo_ids, embryo_sex, mode_of_inheritance, consanguineous
 ):
     """For each embryo this fuction categorises their SNPs
 
@@ -681,6 +679,7 @@ def categorise_embryo_alleles(
         embryo_ids (list): List of embryo_ids matching the columns names in df
         embryo_sex (list) : List of sexes in the same order as embryo_ids (required for x-linked cases)
         mode_of_inheritance (string): "autosomal_dominant", "autosomal_recessive", "x_linked"
+        consanguineous (boolean): Boolean value indicating if the parents are consanguineous
     Returns:
         dataframe: Dataframe with new column for each embryo annotate with a risk_category.
     """
@@ -703,7 +702,7 @@ def categorise_embryo_alleles(
     if mode_of_inheritance == "autosomal_recessive":
         embryo_category_df = embryo_category_df.join(
             df[
-                "snp_inherited_from",
+                "snp_inherited_from"
             ].copy()
         )
 
@@ -726,41 +725,18 @@ def categorise_embryo_alleles(
             )
         elif mode_of_inheritance == "autosomal_recessive":
             conditions = [
-                (df["snp_risk_category"] == "male_partner_low_risk")
-                & (df[embryo] == "AA"),
-                (df["snp_risk_category"] == "male_partner_low_risk")
-                & (df[embryo] == "BB"),
-                (df["snp_risk_category"] == "male_partner_high_risk")
-                & (df[embryo] == "AB"),
-                (df["snp_risk_category"] == "male_partner_high_risk")
-                & (df[embryo] == "AB"),
-                (df["snp_risk_category"] == "male_partner_low_and_high_risk")
-                & ((df[embryo] == "AA") | (df[embryo] == "BB")),
-                (df["snp_risk_category"] == "female_partner_low_risk")
-                & (df[embryo] == "AA"),
-                (df["snp_risk_category"] == "female_partner_low_risk")
-                & (df[embryo] == "BB"),
-                (df["snp_risk_category"] == "female_partner_high_risk")
-                & (df[embryo] == "AB"),
-                (df["snp_risk_category"] == "female_partner_high_risk")
-                & (df[embryo] == "AB"),
-                (df["snp_risk_category"] == "female_partner_low_and_high_risk")
-                & ((df[embryo] == "AA") | (df[embryo] == "BB")),
+                (df["snp_risk_category"] == "high_risk") & (df[embryo] == "AB"),
+                (df["snp_risk_category"] == "high_risk") & ((df[embryo] == "AA") | (df[embryo] == "BB")) & consanguineous,
+                (df["snp_risk_category"] == "low_risk") & (df[embryo] == "AB"),
                 (df["snp_risk_category"] != "uninformative") & (df[embryo] == "NoCall"),
             ]
             values = [
-                "male_partner_low_risk",
-                "male_partner_low_risk",
-                "male_partner_high_risk",
-                "male_partner_high_risk",
-                "male_partner_low_and_high_risk",
-                "female_partner_low_risk",
-                "female_partner_low_risk",
-                "female_partner_high_risk",
-                "female_partner_high_risk",
-                "female_partner_low_and_high_risk",
-                "uninformative",
+                "high_risk",
+                "high_risk",
+                "low_risk",
+                "NoCall",
             ]
+
             embryo_category_df[embryo_risk_col] = np.select(
                 conditions, values, default="uninformative"
             )
@@ -951,7 +927,6 @@ def main(args=None):  # default argument allows pytest to override argparse for 
             args.female_partner,
             args.reference,
             args.reference_status,
-            args.reference_relationship,
             args.consanguineous,
         )
     elif args.mode_of_inheritance == "x_linked":
@@ -979,6 +954,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         args.embryo_ids,
         args.embryo_sex,
         args.mode_of_inheritance,
+        args.consanguineous,
     )
 
     # Summarise embryo results
@@ -1082,7 +1058,13 @@ def main(args=None):  # default argument allows pytest to override argparse for 
                 args.output_prefix,
             )
         elif args.mode_of_inheritance == "autosomal_recessive":
-            pass
+            informative_snp_data, embryo_cat_data = stream_autosomal_recessive_output(
+                args.mode_of_inheritance,
+                informative_snps_by_region,
+                embryo_snps_summary_df,
+                number_snps_imported,
+                args.output_prefix,
+            )
         elif args.mode_of_inheritance == "x_linked":
             informative_snp_data, embryo_cat_data = stream_x_linked_output(
                 args.mode_of_inheritance,

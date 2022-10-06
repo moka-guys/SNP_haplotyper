@@ -480,16 +480,12 @@ def plot_results(
                 "Low_risk count male",
                 "upstream_2mb_male_high_risk_snps",
                 "upstream_2mb_male_low_risk_snps",
+                'within_gene_male_high_risk_snps',
+                'within_gene_male_low_risk_snps',
                 "downstream_2mb_male_high_risk_snps",
                 "downstream_2mb_male_low_risk_snps",
             )
-            # TODO check this is needed
-            # add_snp_count_annotation(
-            #     2,
-            #     embryo,
-            #     "High_risk count unassigned",
-            #     "Low_risk count unassigned",
-            # )
+
             add_snp_count_annotation(
                 1,
                 embryo,
@@ -498,6 +494,8 @@ def plot_results(
                 "Low_risk count female",
                 "upstream_2mb_female_high_risk_snps",
                 "upstream_2mb_female_low_risk_snps",
+                'within_gene_female_high_risk_snps',
+                'within_gene_female_low_risk_snps',
                 "downstream_2mb_female_high_risk_snps",
                 "downstream_2mb_female_low_risk_snps",
             )
