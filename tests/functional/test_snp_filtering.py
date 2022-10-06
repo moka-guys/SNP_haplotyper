@@ -68,6 +68,7 @@ def setup_test_data(split_by_embryo=False):
             gene_start=int(arg_dictionary["gene_start"]),
             gene_end=int(arg_dictionary["gene_end"]),
             chr=arg_dictionary["chr"],
+            consanguineous= True if "consanguineous" in arg_dictionary else False, # arg_dictionary["consanguineous"],
             testing=True,
         )
         run_data_dictionary[run_name] = args
