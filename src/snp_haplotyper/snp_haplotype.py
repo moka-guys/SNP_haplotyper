@@ -11,7 +11,11 @@ from autosomal_dominant_logic import autosomal_dominant_analysis
 from autosomal_recessive_logic import autosomal_recessive_analysis
 from x_linked_logic import x_linked_analysis
 from snp_plot import plot_results, summarise_snps_per_embryo
-from stream_output import stream_autosomal_dominant_output, stream_autosomal_recessive_output, stream_x_linked_output
+from stream_output import (
+    stream_autosomal_dominant_output,
+    stream_autosomal_recessive_output,
+    stream_x_linked_output,
+)
 
 from exceptions import ArgumentInputError
 
@@ -487,7 +491,7 @@ def snps_by_region(df, mode_of_inheritance):
     """Summarise the number of SNPs by regions around the gene of interest
 
     Takes a results_df dataframe produced from either autosomal_dominant_analysis(),
-    autosomal_dominant_analysis(), or x_linked_analysis() and counts
+    autosomal_recessive_analysis(), or x_linked_analysis() and counts
     the SNPs per "gene_distance":
             "1-2MB_from_start",
             "0-1MB_from_start",
@@ -507,7 +511,7 @@ def snps_by_region(df, mode_of_inheritance):
     Returns:
         dataframe: Dataframe summarising the SNPs per genome region with additional columns for each relevant haplotype in the embryo.
     """
-    if mode_of_inheritance == "autosomal_dominant" or mode_of_inheritance == "autosomal_recessive":
+    if mode_of_inheritance == "autosomal_dominant":
         snps_by_region = df.value_counts(
             ["gene_distance", "snp_risk_category"]
         ).to_frame()
@@ -517,6 +521,19 @@ def snps_by_region(df, mode_of_inheritance):
         snps_by_region.columns = [
             "gene_distance",
             "snp_risk_category",
+            "snp_count",
+        ]
+    elif mode_of_inheritance == "autosomal_recessive":
+        snps_by_region = df.value_counts(
+            ["gene_distance", "snp_risk_category", "snp_inherited_from"]
+        ).to_frame()
+        # Extract snps_by_region data from index into columns
+        snps_by_region = snps_by_region.reset_index()
+        # Rename columns
+        snps_by_region.columns = [
+            "gene_distance",
+            "snp_risk_category",
+            "snp_inherited_from",
             "snp_count",
         ]
     elif mode_of_inheritance == "x_linked":
@@ -590,7 +607,7 @@ def summarised_snps_by_region(df, mode_of_inheritance):
     """
     TODO - check what this function does compared to snps_by_region()
     """
-    if mode_of_inheritance == "autosomal_dominant" or mode_of_inheritance == "autosomal_recessive":
+    if mode_of_inheritance == "autosomal_dominant":
         # Filter out "uninformative" from summary
         categorised_snps_by_region = df[df["snp_risk_category"] != "uninformative"]
         # Group informative 'low_risk' and 'high_risk' SNPs together per region
@@ -607,6 +624,46 @@ def summarised_snps_by_region(df, mode_of_inheritance):
                 "1-2MB_from_end",
             ]
         )
+        # Replace any NaN with 0 and convert any floats to ints (caused when NaN included in column)
+        summary_categorised_snps_by_region = summary_categorised_snps_by_region.fillna(
+            0
+        )
+        summary_categorised_snps_by_region[
+            "snp_count"
+        ] = summary_categorised_snps_by_region["snp_count"].astype(int)
+        # Calculate totals
+        summary_categorised_snps_by_region.loc[
+            "total_snps"
+        ] = summary_categorised_snps_by_region.sum(numeric_only=True, axis=0)
+        summary_categorised_snps_by_region = (
+            summary_categorised_snps_by_region.reset_index()
+        )
+    elif mode_of_inheritance == "autosomal_recessive":
+        # Filter out "uninformative" from summary
+        categorised_snps_by_region = df[df["snp_risk_category"] != "uninformative"]
+        # Group informative 'low_risk' and 'high_risk' SNPs together per region
+        summary_categorised_snps_by_region = (
+            categorised_snps_by_region.groupby(
+                by=["gene_distance", "snp_inherited_from"]
+            )
+            .sum()
+            .reset_index()
+        )
+        # Ensure rows are in logical order
+        # summary_categorised_snps_by_region = summary_categorised_snps_by_region.reindex(
+        #     [
+        #         "0-1MB_from_end,female_partner",
+        #         "0-1MB_from_end,male_partner",
+        #         "0-1MB_from_start,female_partner",
+        #         "0-1MB_from_start,male_partner",
+        #         "1-2MB_from_end,female_partner",
+        #         "1-2MB_from_end,male_partner",
+        #         "1-2MB_from_start,female_partner",
+        #         "1-2MB_from_start,male_partner",
+        #         "within_gene,male_partner",
+        #         "within_gene,female_partner",
+        #     ]
+        # )
         # Replace any NaN with 0 and convert any floats to ints (caused when NaN included in column)
         summary_categorised_snps_by_region = summary_categorised_snps_by_region.fillna(
             0
@@ -666,7 +723,13 @@ def summarised_snps_by_region(df, mode_of_inheritance):
 
 
 def categorise_embryo_alleles(
-    df, male_partner, female_partner, embryo_ids, embryo_sex, mode_of_inheritance, consanguineous
+    df,
+    male_partner,
+    female_partner,
+    embryo_ids,
+    embryo_sex,
+    mode_of_inheritance,
+    consanguineous,
 ):
     """For each embryo this fuction categorises their SNPs
 
@@ -700,11 +763,7 @@ def categorise_embryo_alleles(
     ].copy()
     # For autosomal_resessive also include the "snp_inherited_from" column
     if mode_of_inheritance == "autosomal_recessive":
-        embryo_category_df = embryo_category_df.join(
-            df[
-                "snp_inherited_from"
-            ].copy()
-        )
+        embryo_category_df = embryo_category_df.join(df["snp_inherited_from"].copy())
 
     for embryo in embryo_ids:
         embryo_risk_col = f"{embryo}_risk_category"
@@ -726,7 +785,9 @@ def categorise_embryo_alleles(
         elif mode_of_inheritance == "autosomal_recessive":
             conditions = [
                 (df["snp_risk_category"] == "high_risk") & (df[embryo] == "AB"),
-                (df["snp_risk_category"] == "high_risk") & ((df[embryo] == "AA") | (df[embryo] == "BB")) & consanguineous,
+                (df["snp_risk_category"] == "high_risk")
+                & ((df[embryo] == "AA") | (df[embryo] == "BB"))
+                & consanguineous,
                 (df["snp_risk_category"] == "low_risk") & (df[embryo] == "AB"),
                 (df["snp_risk_category"] != "uninformative") & (df[embryo] == "NoCall"),
             ]
@@ -940,11 +1001,15 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     # Informative SNPs
     informative_snps_by_region = snps_by_region(results_df, args.mode_of_inheritance)
 
+    print(informative_snps_by_region)
+
     # Get total of informative SNPs
     summary_snps_by_region = summarised_snps_by_region(
         informative_snps_by_region,
         args.mode_of_inheritance,
     )
+
+    print(summary_snps_by_region)
 
     # Categorise embryo alleles
     embryo_category_df = categorise_embryo_alleles(
@@ -965,6 +1030,8 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     )
 
     summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
+
+    print(summary_embryo_df)
 
     # Produce report
     results_table_1 = produce_html_table(
