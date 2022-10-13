@@ -68,7 +68,9 @@ def setup_test_data(split_by_embryo=False):
             gene_start=int(arg_dictionary["gene_start"]),
             gene_end=int(arg_dictionary["gene_end"]),
             chr=arg_dictionary["chr"],
-            consanguineous= True if "consanguineous" in arg_dictionary else False, # arg_dictionary["consanguineous"],
+            consanguineous=True
+            if "consanguineous" in arg_dictionary
+            else False,  # arg_dictionary["consanguineous"],
             testing=True,
         )
         run_data_dictionary[run_name] = args
@@ -101,32 +103,74 @@ def test_informative_snps(capsys, name):
         for dict in snp_validation:
             all_validation[dict["sample_id"]] = dict
 
-    validation = all_validation[results["sample_id"]]
-    assert results["mode"] == validation["mode"]
-    assert results["sample_id"] == validation["sample_id"]
-    assert results["num_snps"] == validation["num_snps"]
-    assert results["info_snps_upstream_2mb"] == validation["info_snps_upstream_2mb"]
-    assert results["info_snps_in_gene"] == validation["info_snps_in_gene"]
-    assert results["info_snps_downstream_2mb"] == validation["info_snps_downstream_2mb"]
-    assert results["total_info_snps"] == validation["total_info_snps"]
-    assert (
-        results["high_risk_snps_upstream_2mb"]
-        == validation["high_risk_snps_upstream_2mb"]
-    )
-    assert results["high_risk_snps_within_gene"] == validation["high_risk_within_gene"]
-    assert (
-        results["high_risk_snps_downstream_2mb"]
-        == validation["high_risk_snps_downstream_2mb"]
-    )
-    assert (
-        results["low_risk_snps_upstream_2mb"]
-        == validation["low_risk_snps_upstream_2mb"]
-    )
-    assert results["low_risk_snps_within_gene"] == validation["low_risk_within_gene"]
-    assert (
-        results["low_risk_snps_downstream_2mb"]
-        == validation["low_risk_snps_downstream_2mb"]
-    )
+    if results["mode"] == "autosomal_dominant" or results["mode"] == "x_linked":
+        validation = all_validation[results["sample_id"]]
+        assert results["mode"] == validation["mode"]
+        assert results["sample_id"] == validation["sample_id"]
+        assert results["num_snps"] == validation["num_snps"]
+        assert results["info_snps_upstream_2mb"] == validation["info_snps_upstream_2mb"]
+        assert results["info_snps_in_gene"] == validation["info_snps_in_gene"]
+        assert (
+            results["info_snps_downstream_2mb"]
+            == validation["info_snps_downstream_2mb"]
+        )
+        assert results["total_info_snps"] == validation["total_info_snps"]
+        assert (
+            results["high_risk_snps_upstream_2mb"]
+            == validation["high_risk_snps_upstream_2mb"]
+        )
+        assert (
+            results["high_risk_snps_within_gene"] == validation["high_risk_within_gene"]
+        )
+        assert (
+            results["high_risk_snps_downstream_2mb"]
+            == validation["high_risk_snps_downstream_2mb"]
+        )
+        assert (
+            results["low_risk_snps_upstream_2mb"]
+            == validation["low_risk_snps_upstream_2mb"]
+        )
+        assert (
+            results["low_risk_snps_within_gene"] == validation["low_risk_within_gene"]
+        )
+        assert (
+            results["low_risk_snps_downstream_2mb"]
+            == validation["low_risk_snps_downstream_2mb"]
+        )
+    elif results["mode"] == "autosomal_recessive":
+        validation = all_validation[results["sample_id"]]
+        assert results["mode"] == validation["mode"]
+        assert results["sample_id"] == validation["sample_id"]
+        assert results["num_snps"] == validation["num_snps"]
+        assert results["info_snps_upstream_2mb"] == validation["info_snps_upstream_2mb"]
+        assert results["info_snps_in_gene"] == validation["info_snps_in_gene"]
+        assert (
+            results["info_snps_downstream_2mb"]
+            == validation["info_snps_downstream_2mb"]
+        )
+        assert results["total_info_snps"] == validation["total_info_snps"]
+        assert (
+            results["high_risk_snps_upstream_2mb"]
+            == validation["high_risk_snps_upstream_2mb"]
+        )
+        assert (
+            results["high_risk_snps_within_gene"] == validation["high_risk_within_gene"]
+        )
+        assert (
+            results["high_risk_snps_downstream_2mb"]
+            == validation["high_risk_snps_downstream_2mb"]
+        )
+        assert (
+            results["low_risk_snps_upstream_2mb"]
+            == validation["low_risk_snps_upstream_2mb"]
+        )
+        assert (
+            results["low_risk_snps_within_gene"] == validation["low_risk_within_gene"]
+        )
+        assert (
+            results["low_risk_snps_downstream_2mb"]
+            == validation["low_risk_snps_downstream_2mb"]
+        )
 
 
 @pytest.mark.parametrize("name", setup_test_data(True))
@@ -155,16 +199,76 @@ def test_embryo_categorization(capsys, name):
 
     result = results_dict[embryo_id]
     validation = all_validation[name.split("_", 2)[2] + "_" + embryo_id]
-    assert result["mode"] == validation["mode"]
-    assert result["sample_id"] == validation["sample_id"]
-    assert result["upstream_2mb_high_risk_snps"] == validation["high_risk_upstream_2mb"]
-    assert result["within_gene_high_risk_snps"] == validation["high_risk_within_gene"]
-    assert (
-        result["downstream_2mb_high_risk_snps"]
-        == validation["high_risk_downstream_2mb"]
-    )
-    assert result["upstream_2mb_low_risk_snps"] == validation["low_risk_upstream_2mb"]
-    assert result["within_gene_low_risk_snps"] == validation["low_risk_within_gene"]
-    assert (
-        result["downstream_2mb_low_risk_snps"] == validation["low_risk_downstream_2mb"]
-    )
+    if result["mode"] == "autosomal_dominant" or result["mode"] == "x_linked":
+        assert result["mode"] == validation["mode"]
+        assert result["sample_id"] == validation["sample_id"]
+        assert (
+            result["upstream_2mb_high_risk_snps"]
+            == validation["high_risk_upstream_2mb"]
+        )
+        assert (
+            result["within_gene_high_risk_snps"] == validation["high_risk_within_gene"]
+        )
+        assert (
+            result["downstream_2mb_high_risk_snps"]
+            == validation["high_risk_downstream_2mb"]
+        )
+        assert (
+            result["upstream_2mb_low_risk_snps"] == validation["low_risk_upstream_2mb"]
+        )
+        assert result["within_gene_low_risk_snps"] == validation["low_risk_within_gene"]
+        assert (
+            result["downstream_2mb_low_risk_snps"]
+            == validation["low_risk_downstream_2mb"]
+        )
+    elif result["mode"] == "autosomal_recessive":
+        assert result["mode"] == validation["mode"]
+        assert result["sample_id"] == validation["sample_id"]
+        assert (
+            result["upstream_2mb_female_high_risk_snps"]
+            == validation["high_risk_snps_upstream_2mb_from_female"]
+        )
+        assert (
+            result["within_gene_female_high_risk_snps"]
+            == validation["high_risk_within_gene_from_female"]
+        )
+        assert (
+            result["downstream_2mb_female_high_risk_snps"]
+            == validation["high_risk_snps_downstream_2mb_from_female"]
+        )
+        assert (
+            result["downstream_2mb_female_low_risk_snps"]
+            == validation["low_risk_snps_upstream_2mb_from_female"]
+        )
+        assert (
+            result["within_gene_female_low_risk_snps"]
+            == validation["low_risk_within_gene_from_female"]
+        )
+        assert (
+            result["upstream_2mb_female_low_risk_snps"]
+            == validation["low_risk_snps_downstream_2mb_from_female"]
+        )
+        assert (
+            result["upstream_2mb_male_high_risk_snps"]
+            == validation["high_risk_snps_upstream_2mb_from_male"]
+        )
+        assert (
+            result["within_gene_male_high_risk_snps"]
+            == validation["high_risk_within_gene_from_male"]
+        )
+        assert (
+            result["downstream_2mb_male_high_risk_snps"]
+            == validation["high_risk_snps_downstream_2mb_from_male"]
+        )
+        assert (
+            result["upstream_2mb_male_low_risk_snps"]
+            == validation["low_risk_snps_upstream_2mb_from_male"]
+        )
+        assert (
+            result["within_gene_male_low_risk_snps"]
+            == validation["low_risk_within_gene_from_male"]
+        )
+        assert (
+            result["downstream_2mb_male_low_risk_snps"]
+            == validation["low_risk_snps_downstream_2mb_from_male"]
+        )
