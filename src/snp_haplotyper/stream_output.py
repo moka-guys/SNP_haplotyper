@@ -16,13 +16,22 @@ def get_total_snp_count(df, category_col, snp_count_col):
     return total
 
 
-def get_snp_count_and_filter(df, pattern, category_col, snp_count_col, risk_filter):
-    count = int(
-        df[
-            (df["gene_distance"].str.endswith(pattern))
-            & (df[category_col] == risk_filter)
-        ][snp_count_col].sum()
-    )
+def get_snp_count_and_filter(df, pattern, category_col, snp_count_col, risk_filter, filter_on_inherited_partner=False, inherited_from_col="None", partner_filter="None"):
+    if filter_on_inherited_partner == False:
+        count = int(
+            df[
+                (df["gene_distance"].str.endswith(pattern))
+                & (df[category_col] == risk_filter)
+            ][snp_count_col].sum()
+        )
+    else:
+        # For Autosomal Recessive samples also filter on the partner SNP inherited from
+        count = int(
+            df[
+                (df["gene_distance"].str.endswith(pattern))
+                & (df[category_col] == risk_filter) & (df[inherited_from_col] == partner_filter)
+            ][snp_count_col].sum()
+        )
     return count
 
 
@@ -105,7 +114,7 @@ def stream_autosomal_dominant_output(
             "snp_count",
             "low_risk",
         ),
-    }    
+    }
     # Populate stream with additional fields:
     embryo_snps_output_df = embryo_snps_summary_df
     embryo_snps_output_df["mode"] = mode_of_inheritance
@@ -157,40 +166,89 @@ def stream_autosomal_recessive_output(
             "snp_count",
             "high_risk",
         ),
-        "high_risk_snps_within_gene": get_snp_count_and_filter(
-            informative_snps_by_region,
-            "within_gene",
-            "snp_risk_category",
-            "snp_count",
-            "high_risk",
-        ),
-        "high_risk_snps_downstream_2mb": get_snp_count_and_filter(
-            informative_snps_by_region,
-            "_end",
-            "snp_risk_category",
-            "snp_count",
-            "high_risk",
-        ),
-        "low_risk_snps_upstream_2mb": get_snp_count_and_filter(
+        "high_risk_snps_upstream_2mb_from_female": get_snp_count_and_filter(
             informative_snps_by_region,
             "_start",
             "snp_risk_category",
             "snp_count",
-            "low_risk",
+            "high_risk",
         ),
-        "low_risk_snps_within_gene": get_snp_count_and_filter(
+        "high_risk_within_gene_from_female": get_snp_count_and_filter(
             informative_snps_by_region,
-            "within_gene",
+            "_start",
             "snp_risk_category",
             "snp_count",
-            "low_risk",
+            "high_risk",
         ),
-        "low_risk_snps_downstream_2mb": get_snp_count_and_filter(
+        "high_risk_snps_downstream_2mb_from_female": get_snp_count_and_filter(
             informative_snps_by_region,
-            "_end",
+            "_start",
             "snp_risk_category",
             "snp_count",
-            "low_risk",
+            "high_risk",
+        ),
+        "low_risk_snps_upstream_2mb_from_female": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "low_risk_within_gene_from_female": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "low_risk_snps_downstream_2mb_from_female": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "high_risk_snps_upstream_2mb_from_male": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "high_risk_within_gene_from_male": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "high_risk_snps_downstream_2mb_from_male": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "low_risk_snps_upstream_2mb_from_male": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "low_risk_within_gene_from_male": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
+        ),
+        "low_risk_snps_downstream_2mb_from_male": get_snp_count_and_filter(
+            informative_snps_by_region,
+            "_start",
+            "snp_risk_category",
+            "snp_count",
+            "high_risk",
         ),
     }
     # Populate stream with additional fields:
