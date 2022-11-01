@@ -38,6 +38,9 @@
         <h2>Embryo Alleles</h2>
         {{ summary_embryo_table }}
 
+        <h2>Embryo Summary</h2>
+        {{ summary_embryo_by_region_table }}
+
         <h2>Plot Embryo Results</h2>
         {{ html_text_for_plots }}
 </body>
@@ -141,6 +144,17 @@
         });
     });
 </script>
+
+<script>
+    $(document).ready(function () {
+        $('#summary_embryo_by_region_table').DataTable({
+            "paging": false,
+            "ordering": false,
+            "info": false
+        });
+    });
+</script>
+
 
 <script>
     /* Custom filtering function which will search data in column four between two values */

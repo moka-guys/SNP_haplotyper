@@ -23,7 +23,7 @@ def autosomal_recessive_analysis(
     if reference_status == "affected":
         # Label alleles as high or low risk
         conditions = [
-            # Criteria ARto label low Risk SNPs if reference affected, or low risk SNPs if reference unaffected
+            # Criteria AR to label low Risk SNPs if reference affected, or low risk SNPs if reference unaffected
             # Criteria AR1
             (df[reference] == "AA")
             & (df[male_partner] == "AA")

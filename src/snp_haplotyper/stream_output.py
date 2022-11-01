@@ -16,8 +16,15 @@ def get_total_snp_count(df, category_col, snp_count_col):
     return total
 
 
-def get_snp_count_and_filter(df, pattern, category_col, snp_count_col, risk_filter, filter_on_inherited_partner=False, inherited_from_col="None", partner_filter="None"):
-    if filter_on_inherited_partner == False:
+def get_snp_count_and_filter(
+    df,
+    pattern,
+    category_col,
+    snp_count_col,
+    risk_filter,
+    inherited_from_col="None",  # For Autosomal Recessive samples also filter on the partner SNP inherited from
+):
+    if inherited_from_col == "None":
         count = int(
             df[
                 (df["gene_distance"].str.endswith(pattern))
@@ -29,7 +36,8 @@ def get_snp_count_and_filter(df, pattern, category_col, snp_count_col, risk_filt
         count = int(
             df[
                 (df["gene_distance"].str.endswith(pattern))
-                & (df[category_col] == risk_filter) & (df[inherited_from_col] == partner_filter)
+                & (df[category_col] == risk_filter)
+                & (df["snp_inherited_from"] == inherited_from_col)
             ][snp_count_col].sum()
         )
     return count
@@ -122,6 +130,7 @@ def stream_autosomal_dominant_output(
     embryo_cat_data = embryo_snps_output_df.to_dict(orient="record")
     return [informative_snp_data, embryo_cat_data]
 
+
 def stream_autosomal_recessive_output(
     mode_of_inheritance,
     informative_snps_by_region,
@@ -159,54 +168,53 @@ def stream_autosomal_recessive_output(
         "total_info_snps": get_total_snp_count(
             informative_snps_by_region, "snp_risk_category", "snp_count"
         ),
-        "high_risk_snps_upstream_2mb": get_snp_count_and_filter(
-            informative_snps_by_region,
-            "_start",
-            "snp_risk_category",
-            "snp_count",
-            "high_risk",
-        ),
         "high_risk_snps_upstream_2mb_from_female": get_snp_count_and_filter(
             informative_snps_by_region,
             "_start",
             "snp_risk_category",
             "snp_count",
             "high_risk",
+            "female_partner",
         ),
         "high_risk_within_gene_from_female": get_snp_count_and_filter(
             informative_snps_by_region,
-            "_start",
+            "within_gene",
             "snp_risk_category",
             "snp_count",
             "high_risk",
+            "female_partner",
         ),
         "high_risk_snps_downstream_2mb_from_female": get_snp_count_and_filter(
             informative_snps_by_region,
-            "_start",
+            "_end",
             "snp_risk_category",
             "snp_count",
             "high_risk",
+            "female_partner",
         ),
         "low_risk_snps_upstream_2mb_from_female": get_snp_count_and_filter(
             informative_snps_by_region,
             "_start",
             "snp_risk_category",
             "snp_count",
-            "high_risk",
+            "low_risk",
+            "female_partner",
         ),
         "low_risk_within_gene_from_female": get_snp_count_and_filter(
             informative_snps_by_region,
-            "_start",
+            "within_gene",
             "snp_risk_category",
             "snp_count",
-            "high_risk",
+            "low_risk",
+            "female_partner",
         ),
         "low_risk_snps_downstream_2mb_from_female": get_snp_count_and_filter(
             informative_snps_by_region,
-            "_start",
+            "_end",
             "snp_risk_category",
             "snp_count",
-            "high_risk",
+            "low_risk",
+            "female_partner",
         ),
         "high_risk_snps_upstream_2mb_from_male": get_snp_count_and_filter(
             informative_snps_by_region,
@@ -214,41 +222,47 @@ def stream_autosomal_recessive_output(
             "snp_risk_category",
             "snp_count",
             "high_risk",
+            "male_partner",
         ),
         "high_risk_within_gene_from_male": get_snp_count_and_filter(
             informative_snps_by_region,
-            "_start",
+            "within_gene",
             "snp_risk_category",
             "snp_count",
             "high_risk",
+            "male_partner",
         ),
         "high_risk_snps_downstream_2mb_from_male": get_snp_count_and_filter(
             informative_snps_by_region,
-            "_start",
+            "_end",
             "snp_risk_category",
             "snp_count",
             "high_risk",
+            "male_partner",
         ),
         "low_risk_snps_upstream_2mb_from_male": get_snp_count_and_filter(
             informative_snps_by_region,
             "_start",
             "snp_risk_category",
             "snp_count",
-            "high_risk",
+            "low_risk",
+            "male_partner",
         ),
         "low_risk_within_gene_from_male": get_snp_count_and_filter(
             informative_snps_by_region,
-            "_start",
+            "within_gene",
             "snp_risk_category",
             "snp_count",
-            "high_risk",
+            "low_risk",
+            "male_partner",
         ),
         "low_risk_snps_downstream_2mb_from_male": get_snp_count_and_filter(
             informative_snps_by_region,
-            "_start",
+            "_end",
             "snp_risk_category",
             "snp_count",
-            "high_risk",
+            "low_risk",
+            "male_partner",
         ),
     }
     # Populate stream with additional fields:
@@ -257,6 +271,7 @@ def stream_autosomal_recessive_output(
     embryo_snps_output_df["sample_id"] = output_prefix
     embryo_cat_data = embryo_snps_output_df.to_dict(orient="record")
     return [informative_snp_data, embryo_cat_data]
+
 
 def stream_x_linked_output(
     mode_of_inheritance,

@@ -644,40 +644,51 @@ def summarised_snps_by_region(df, mode_of_inheritance):
         # Group informative 'low_risk' and 'high_risk' SNPs together per region
         summary_categorised_snps_by_region = (
             categorised_snps_by_region.groupby(
-                by=["gene_distance", "snp_inherited_from"]
+                by=["gene_distance", "snp_risk_category", "snp_inherited_from"]
             )
             .sum()
             .reset_index()
         )
+
         # Ensure rows are in logical order
-        # summary_categorised_snps_by_region = summary_categorised_snps_by_region.reindex(
-        #     [
-        #         "0-1MB_from_end,female_partner",
-        #         "0-1MB_from_end,male_partner",
-        #         "0-1MB_from_start,female_partner",
-        #         "0-1MB_from_start,male_partner",
-        #         "1-2MB_from_end,female_partner",
-        #         "1-2MB_from_end,male_partner",
-        #         "1-2MB_from_start,female_partner",
-        #         "1-2MB_from_start,male_partner",
-        #         "within_gene,male_partner",
-        #         "within_gene,female_partner",
-        #     ]
-        # )
-        # Replace any NaN with 0 and convert any floats to ints (caused when NaN included in column)
-        summary_categorised_snps_by_region = summary_categorised_snps_by_region.fillna(
-            0
+        summary_categorised_snps_by_region["snp_inherited_from"] = pd.Categorical(
+            summary_categorised_snps_by_region["snp_inherited_from"],
+            ["male_partner", "female_partner"],
         )
-        summary_categorised_snps_by_region[
-            "snp_count"
-        ] = summary_categorised_snps_by_region["snp_count"].astype(int)
-        # Calculate totals
-        summary_categorised_snps_by_region.loc[
-            "total_snps"
-        ] = summary_categorised_snps_by_region.sum(numeric_only=True, axis=0)
+
+        summary_categorised_snps_by_region["gene_distance"] = pd.Categorical(
+            summary_categorised_snps_by_region["gene_distance"],
+            [
+                "1-2MB_from_start",
+                "0-1MB_from_start",
+                "within_gene",
+                "0-1MB_from_end",
+                "1-2MB_from_end",
+            ],
+        )
+
         summary_categorised_snps_by_region = (
-            summary_categorised_snps_by_region.reset_index()
+            summary_categorised_snps_by_region.sort_values(
+                by=["snp_inherited_from", "snp_risk_category", "gene_distance"],
+                ascending=[True, True, True],
+            )
         )
+
+        # Replace any NaN with 0 and convert any floats to ints (caused when NaN included in column)
+
+        # TODO Add total column in HTML
+
+        # # Calculate totals
+        # summary_categorised_snps_by_region.loc[
+        #     "total_snps"
+        # ] = summary_categorised_snps_by_region.sum(numeric_only=True, axis=0)
+        # # Convert any floats to ints (caused when NaN included in column)
+        # summary_categorised_snps_by_region[
+        #     "snp_count"
+        # ] = summary_categorised_snps_by_region["snp_count"].astype(int)
+        # summary_categorised_snps_by_region = (
+        #     summary_categorised_snps_by_region.reset_index()
+        # )
     elif mode_of_inheritance == "x_linked":
         # Filter out "uninformative" from summary
         categorised_snps_by_region = df[
@@ -784,23 +795,58 @@ def categorise_embryo_alleles(
             )
         elif mode_of_inheritance == "autosomal_recessive":
             conditions = [
-                (df["snp_risk_category"] == "high_risk") & (df[embryo] == "AB"),
+                # male_partner
                 (df["snp_risk_category"] == "high_risk")
+                & (df["snp_inherited_from"] == "male_partner")
+                & (df[embryo] == "AB"),
+                (df["snp_risk_category"] == "high_risk")
+                & (df["snp_inherited_from"] == "male_partner")
                 & ((df[embryo] == "AA") | (df[embryo] == "BB"))
                 & consanguineous,
-                (df["snp_risk_category"] == "low_risk") & (df[embryo] == "AB"),
+                (df["snp_risk_category"] == "low_risk")
+                & (df["snp_inherited_from"] == "male_partner")
+                & (df[embryo] == "AB"),
+                # female_partner
+                (df["snp_risk_category"] == "high_risk")
+                & (df["snp_inherited_from"] == "female_partner")
+                & (df[embryo] == "AB"),
+                (df["snp_risk_category"] == "high_risk")
+                & (df["snp_inherited_from"] == "female_partner")
+                & ((df[embryo] == "AA") | (df[embryo] == "BB"))
+                & consanguineous,
+                (df["snp_risk_category"] == "low_risk")
+                & (df["snp_inherited_from"] == "female_partner")
+                & (df[embryo] == "AB"),
+                # NoCall
                 (df["snp_risk_category"] != "uninformative") & (df[embryo] == "NoCall"),
             ]
             values = [
                 "high_risk",
                 "high_risk",
                 "low_risk",
+                "high_risk",
+                "high_risk",
+                "low_risk",
                 "NoCall",
             ]
+
+            # snp_inherited_from = [
+            #     "male_partner",
+            #     "male_partner",
+            #     "both_partners",
+            #     "female_partner",
+            #     "female_partner",
+            #     "both_partners",
+            #     "no_call",
+            # ]
 
             embryo_category_df[embryo_risk_col] = np.select(
                 conditions, values, default="uninformative"
             )
+        #     embryo_snp_inherited_col = f"{embryo}_risk_category"
+        #     embryo_category_df[embryo_snp_inherited_col ] = np.select(
+        #     conditions, snp_inherited_from, default="uninformative"
+        # )
         elif mode_of_inheritance == "x_linked":
             if embryo_sex_lookup[embryo] == "female":
                 conditions = [
@@ -897,6 +943,7 @@ def highlight_risk(category):
 def produce_html_table(
     df,
     table_identifier,
+    include_index=False,
 ):
     """HTML table for pandas dataframe
 
@@ -912,7 +959,9 @@ def produce_html_table(
 
     # styled_df = df.style.highlight_null(null_color='red').hide_columns(['hap1_risk_category','hap2_risk_category'])
     # styled_df = df.style.apply(highlight_risk)
-    html_table = df.to_html(table_id=table_identifier, index=False, classes="display")
+    html_table = df.to_html(
+        table_id=table_identifier, index=include_index, classes="display"
+    )
     return html_table
 
 
@@ -1001,15 +1050,11 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     # Informative SNPs
     informative_snps_by_region = snps_by_region(results_df, args.mode_of_inheritance)
 
-    print(informative_snps_by_region)
-
     # Get total of informative SNPs
     summary_snps_by_region = summarised_snps_by_region(
         informative_snps_by_region,
         args.mode_of_inheritance,
     )
-
-    print(summary_snps_by_region)
 
     # Categorise embryo alleles
     embryo_category_df = categorise_embryo_alleles(
@@ -1030,8 +1075,6 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     )
 
     summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
-
-    print(summary_embryo_df)
 
     # Produce report
     results_table_1 = produce_html_table(
@@ -1059,7 +1102,14 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         "summary_embryo_table",
     )
 
-    # TODO remove flow control
+    summary_embryo_by_region_df = embryo_snps_summary_df.set_index("embryo_id")
+    summary_embryo_by_region_df = summary_embryo_by_region_df.transpose()
+    summary_embryo_by_region_table = produce_html_table(
+        summary_embryo_by_region_df,
+        "summary_embryo_by_region_table",
+        True,
+    )
+
     if args.mode_of_inheritance == "autosomal_dominant":
         html_list_of_plots = plot_results(
             embryo_category_df,
@@ -1099,12 +1149,14 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         "nocall_percentages_table": nocall_percentages_table,
         "summary_snps_table": summary_snps_table,
         "summary_embryo_table": summary_embryo_table,
+        "summary_embryo_by_region_table": summary_embryo_by_region_table,
         "html_text_for_plots": html_text_for_plots,
     }
 
     html_string = template.render(place_holder_values)
 
     # Stream machine readable JSON output to stdout for testing purposes
+    # args.testing = True
     if args.testing:
 
         export_json_data_as_csv(
