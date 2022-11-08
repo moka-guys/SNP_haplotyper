@@ -8,7 +8,9 @@ def x_linked_analysis(
     unaffected_male_partner,
     reference,  # Either carrier or affected
 ):
-    """Identifies any SNPs which are "informative" and then categorises them as "high_risk" or "low_risk" for any cases which are x-linked inheritance.
+    """Identifies any SNP site which could be used to inform a decision regarding inheriting an X-linked condition ("informative" SNPs) and categorizes
+    the site as indicating "high_risk" or "low_risk" of inheriting an X-linked condition for a known haplotype in the embryo (See below for details).
+    Identifies any SNPs which are "informative" and then categorises them as "high_risk" or "low_risk" for any cases which are x-linked inheritance.
     # TODO change google doc link to link to read the docs.
     The full logic behind the function is described here https://docs.google.com/document/d/1QKdQ-XpD8TFaxhdP41X8-BrUc0j9gENGrIBnYhPtJiE/edit?usp=sharing
     This function asks the question - For the combination of haplotypes present in the reference trio (reference,
@@ -18,19 +20,19 @@ def x_linked_analysis(
     AA in a male embryo
     BB in a male embryo
 
-    i.e. does this SNP indicate "high_risk", "low_risk", or is it "uninformative"?
+    i.e. does this SNP indicate "high_risk", "low_risk", or is it "uninformative" in regard to inheriting the X-linked condition?
 
 
     Args:
-        df (dataframe): A dataframe with input data
-            carrier_female_partner (string): Column name in dataframe refering to carrier_female_partner's data
-             unaffected_male_partner (string): Column name in dataframe refering to  unaffected_male_partner's data
-            reference (string) : Column name in dataframe refering to reference's data (Always child)"
+        df (dataframe): A dataframe containing SNP input data for both partners, reference, & embryos
+        carrier_female_partner (string): Column name in dataframe refering to carrier_female_partner's data
+        unaffected_male_partner (string): Column name in dataframe refering to unaffected_male_partner's data
+        reference (string) : Column name in dataframe refering to reference's data (Always child)"
 
     Returns:
         Dataframe: Dataframe containing 3 new "snp_risk_category" columns, used to categorise the SNPs as
-        "high_risk", "low_risk", and "uninformative" for three different embryo catergories - female_AB_snp_risk_category, male_AA_snp_risk_category, male_BB_snp_risk_category
-
+        "high_risk", "low_risk", and "uninformative" for the three different embryo catergories - female_AB_snp_risk_category,
+        male_AA_snp_risk_category, male_BB_snp_risk_category
     """
 
     # Calculate & classify the informative for female AB embryos

@@ -223,6 +223,7 @@ def add_rsid_column(df, affy_2_rs_ids_df):
     df = pd.merge(
         df, affy_2_rs_ids_df[["probeset_id", "rsID"]], on="probeset_id", how="left"
     )
+
     # Rearrange columns so that rsID is next to Affy Id
     df.insert(0, "probeset_id", df.pop("probeset_id"))
     df.insert(1, "rsID", df.pop("rsID"))
