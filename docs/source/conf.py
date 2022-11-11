@@ -15,14 +15,20 @@ import sphinx_rtd_theme
 import os
 import sys
 
-# sys.path.insert(0, os.path.abspath("../SNP_haplotype/"))
-basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+basedir = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+    )
+)
 sys.path.insert(0, basedir)
-
+sys.path.insert(0, os.path.abspath("../../snp_haplotyper"))
+sys.path.insert(0, os.path.abspath("../../docs/source"))
 
 # -- Project information -----------------------------------------------------
 
-project = "SNP_Haplotyper"
+project = "BASHer"
 copyright = "2022, Graeme Smith"
 author = "Graeme Smith"
 
@@ -39,7 +45,21 @@ release = "0.1"
 extensions = [
     "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
-    "recommonmark",
+    "myst_parser",
+]
+
+myst_enable_extensions = [
+    "amsmath",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "html_admonition",
+    "html_image",
+    "linkify",
+    "replacements",
+    "smartquotes",
+    "substitution",
+    "tasklist",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
