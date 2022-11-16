@@ -11,6 +11,7 @@ Welcome to BASHer's documentation!
    deployment.md
    internal_logic.md
    changelog.md
+   test.md
 
 Indices and tables
 ==================

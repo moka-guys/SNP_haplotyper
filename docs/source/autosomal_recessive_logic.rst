@@ -2,4 +2,4 @@ Autosomal recessive logic
 ===========================
 
 .. raw:: html
-   :file: SNPHaplotyperXLinkedLogic.html
+   :file: SNPHaplotyperAutosomalRecessiveLogic.html
