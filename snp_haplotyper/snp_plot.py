@@ -1,4 +1,3 @@
-from turtle import mode
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -34,22 +33,6 @@ def filter_snps_by_region(
     # Check that df is not empty
     filtered_df = df[df["gene_distance"].isin(required_region)]
     return filtered_df
-
-
-# if (
-#     lookup_category
-#     in (df[df["Position"] >= gene_end][f"{embryo}_risk_category"]).unique()
-# ):
-#     snp_count = df.loc[
-#         (df["Position"] >= gene_end),
-#         [
-#             f"{embryo}_risk_category",
-#         ],
-#     ].value_counts()[lookup_category]
-# else:
-#     snp_count = 0
-
-# return snp_count
 
 
 def summarise_snps_per_embryo(
@@ -305,7 +288,18 @@ def plot_results(
     gene_end,
     mode_of_inheritance,
 ):
-    # TODO Add dataframe
+    """Plots SNP data
+
+    For AD and XL produces a single plotly plot of the gene + 2mb flanking region with SNP information and summaries.
+    For AR a faceted plot is produced further splitting the info by partner theSNP inherited from.
+
+    Args:
+        df:
+        embryo_ids:
+        mode_of_inheritance:
+    Returns:
+
+    """
 
     plots_as_html = []
 

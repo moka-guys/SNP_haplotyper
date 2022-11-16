@@ -15,11 +15,11 @@ def autosomal_recessive_analysis(
     the site as  indicating "high_risk" or "low_risk" of inheriting an autosomal recessive condition if that site is heterozygous (AB) in the embryo.  For consanguineous
     cases (where "informative" SNPs can be limited) the function also considers sites TODO
     # TODO change google doc link to link to read the docs.
-    The full logic behind the function is described here https://docs.google.com/document/d/1ZsdSTQ_oliSDM-1EO65XbKfifaPK2-lIPwK1Ksl8L6s/edit?usp=sharing
+    The full logic behind the function is described here TODO
     This function asks the question - For the combination of haplotypes present in the reference trio (reference,
     unaffected_partner and affected_partner) what information would this SNP provide us with if the SNP was
     AB in the embryo - does the SNP indicate "high_risk", "low_risk", or is it "uninformative"? Additioanlly for
-    consanguineous cases it also considers TODO
+    consanguineous cases it also considers additional sites in the embryo (AA,BB) to boost the number of informative SNPs.
 
 
     Args:
@@ -35,7 +35,6 @@ def autosomal_recessive_analysis(
         dataframe: Dataframe with a "snp_risk_category" column added, used to categorise the SNPs as
         "high_risk", "low_risk", and "uninformative", and a "snp_inherited_from" column indicating which
         partner the risk is inherited
-
     """
     # Cosanguineous samples should always have an affected reference
     if consanguineous and reference_status == "unaffected":

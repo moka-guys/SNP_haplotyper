@@ -218,7 +218,6 @@ def add_rsid_column(df, affy_2_rs_ids_df):
 
     Returns:
         dataframe: Original dataframe, df, with columns for "rsID" added next to the "probeset_id" column (these columns are now the 1st columns of the dataframe)
-
     """
     df = pd.merge(
         df, affy_2_rs_ids_df[["probeset_id", "rsID"]], on="probeset_id", how="left"
@@ -279,8 +278,20 @@ def annotate_distance_from_gene(df, chr, start, end):
         "1-2MB_from_end",
     ]
 
-    # TODO check correct chr has been given and boundaries are correct
+    # # TODO check correct chr has been given and boundaries are correct
     df["gene_distance"] = np.select(conditions, values, default="outside_range")
+
+    df["gene_distance"] = df["gene_distance"].astype("category")
+
+    df["gene_distance"] = df["gene_distance"].cat.set_categories(
+        [
+            "1-2MB_from_start",
+            "0-1MB_from_start",
+            "within_gene",
+            "0-1MB_from_end",
+            "1-2MB_from_end",
+        ],
+    )
     return df
 
 
@@ -309,6 +320,8 @@ def filter_out_nocalls(df, male_partner, female_partner, reference):
 
 
 # TODO standardise the order of fp/mp args across functions
+
+
 def calculate_qc_metrics(df, male_partner, female_partner, reference, embryo_ids):
     """Calculate QC metrics based on the number of NoCalls per sample (measure of DNA quality)
 
@@ -502,8 +515,10 @@ def snps_by_region(df, mode_of_inheritance):
      and "snp_risk_category":
             "low_risk",
             "high_risk",
-    For autosomal dominant one column is produced for where the embryo SNP is AB, for x-linked three columns
-    are produced for where the embryo SNP is female_AB, male_AA, or male_BB.
+    For autosomal dominant one "snp_risk_category" column is produced for where the embryo SNP is AB,
+    for x-linked three columns are produced for where the embryo SNP is female_AB, male_AA, or male_BB,
+    for autosomal recessive cases an "snp_inherited_from" is also added to show which partner the SNP
+    is inherited from .
 
     Args:
         df (dataframe): A dataframe produced by either autosomal_dominant_analysis(),
@@ -512,6 +527,7 @@ def snps_by_region(df, mode_of_inheritance):
     Returns:
         dataframe: Dataframe summarising the SNPs per genome region with additional columns for each relevant haplotype in the embryo.
     """
+
     if mode_of_inheritance == "autosomal_dominant":
         snps_by_region = df.value_counts(
             ["gene_distance", "snp_risk_category"]
@@ -679,17 +695,6 @@ def summarised_snps_by_region(df, mode_of_inheritance):
 
         # TODO Add total column in HTML
 
-        # # Calculate totals
-        # summary_categorised_snps_by_region.loc[
-        #     "total_snps"
-        # ] = summary_categorised_snps_by_region.sum(numeric_only=True, axis=0)
-        # # Convert any floats to ints (caused when NaN included in column)
-        # summary_categorised_snps_by_region[
-        #     "snp_count"
-        # ] = summary_categorised_snps_by_region["snp_count"].astype(int)
-        # summary_categorised_snps_by_region = (
-        #     summary_categorised_snps_by_region.reset_index()
-        # )
     elif mode_of_inheritance == "x_linked":
         # Filter out "uninformative" from summary
         categorised_snps_by_region = df[
@@ -831,23 +836,10 @@ def categorise_embryo_alleles(
                 "NoCall",
             ]
 
-            # snp_inherited_from = [
-            #     "male_partner",
-            #     "male_partner",
-            #     "both_partners",
-            #     "female_partner",
-            #     "female_partner",
-            #     "both_partners",
-            #     "no_call",
-            # ]
-
             embryo_category_df[embryo_risk_col] = np.select(
                 conditions, values, default="uninformative"
             )
-        #     embryo_snp_inherited_col = f"{embryo}_risk_category"
-        #     embryo_category_df[embryo_snp_inherited_col ] = np.select(
-        #     conditions, snp_inherited_from, default="uninformative"
-        # )
+
         elif mode_of_inheritance == "x_linked":
             if embryo_sex_lookup[embryo] == "female":
                 conditions = [
@@ -909,7 +901,83 @@ def categorise_embryo_alleles(
         embryo_category_df[embryo_risk_col] = embryo_category_df[
             embryo_risk_col
         ].replace("call", "uninformative")
+
+        embryo_category_df[embryo_risk_col] = embryo_category_df[
+            embryo_risk_col
+        ].astype("category")
+        embryo_category_df[embryo_risk_col] = embryo_category_df[
+            embryo_risk_col
+        ].cat.set_categories(
+            ["uninformative", "NoCall", "miscall", "ADO", "high_risk", "low_risk"]
+        )
     return embryo_category_df
+
+
+def annotate_snp_position(df):
+    """For a dataframe with a "gene_distance" column this adds a "snp_position" column.  This is useful for summarising
+    data in the column,
+
+    Args:
+        df (dataframe): A dataframe with "gene_distance" column with category values in the range:
+            "1-2MB_from_start",
+            "0-1MB_from_start",
+            "within_gene",
+            "0-1MB_from_end",
+            "1-2MB_from_end",
+
+    Returns:
+        dataframe: Dataframe with new column "snp_position", with the category values "upstream", "within_gene", and "downstream".
+    """
+
+    df["snp_position"] = df["gene_distance"].str.replace(
+        r"\d-\dMB_from_",
+        "",
+        regex=True,
+    )
+    df["snp_position"] = (
+        df["snp_position"].replace("start", "upstream").astype("category")
+    )
+    df["snp_position"] = (
+        df["snp_position"].replace("end", "downstream").astype("category")
+    )
+    df["snp_position"] = df["snp_position"].cat.set_categories(
+        [
+            "upstream",
+            "within_gene",
+            "downstream",
+        ],
+    )
+    return df
+
+
+def summarise_snps_per_embryo_pretty(
+    df,
+    embryo_ids,
+    mode_of_inheritance,
+):
+    counter = 0
+    for embryo in embryo_ids:
+        if counter == 0:
+            output_df = (
+                df.groupby(["gene_distance", f"{embryo}_risk_category"])
+                .size()
+                .reset_index()
+            )
+            output_df.columns = ["gene_distance", "risk_category", embryo]
+            counter = 1
+        elif counter > 0:
+            temp_df = (
+                df.groupby(["gene_distance", f"{embryo}_risk_category"])
+                .size()
+                .reset_index()
+            )
+            temp_df.columns = ["gene_distance", "risk_category", embryo]
+            output_df[embryo] = temp_df[embryo].values
+
+    # Add new column- 'upstream', 'downstream', or 'within_gene'
+    output_df = annotate_snp_position(output_df)
+
+    return output_df
 
 
 def summarise_embryo_results(df, embryo_ids):
@@ -933,18 +1001,11 @@ def summarise_embryo_results(df, embryo_ids):
     return summary_embryo_results
 
 
-# TODO use or remove function
-def highlight_risk(category):
-    criteria = ["low_risk_allele", "high_risk_allele"]
-    return [
-        "background-color: red" if i == "high_risk_allele" else "" for i in category
-    ]
-
-
 def produce_html_table(
     df,
     table_identifier,
     include_index=False,
+    include_total=False,
 ):
     """HTML table for pandas dataframe
 
@@ -1075,17 +1136,23 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         args.mode_of_inheritance,
     )
 
-    summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
+    # summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
+
+    ##############################################################################
+    embryo_count_data_df = summarise_snps_per_embryo_pretty(
+        embryo_category_df, args.embryo_ids, args.mode_of_inheritance
+    )
+
+    summary_embryo_df = embryo_count_data_df.groupby(by=["risk_category"]).sum()
+    summary_embryo_by_region_df = embryo_count_data_df.groupby(
+        by=["risk_category", "snp_position"]
+    ).sum()
+    ##############################################################################
 
     # Produce report
     results_table_1 = produce_html_table(
         results_df,
         "results_table_1",
-    )
-
-    summary_snps_table = produce_html_table(
-        summary_snps_by_region,
-        "summary_snps_table",
     )
 
     nocall_table = produce_html_table(
@@ -1098,13 +1165,43 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         "nocall_percentages_table",
     )
 
+    if args.mode_of_inheritance == "autosomal_dominant":
+        summary_snps_table = produce_html_table(
+            summary_snps_by_region,
+            "summary_snps_table",
+        )
+    elif args.mode_of_inheritance == "autosomal_recessive":
+        temp_df = annotate_snp_position(summary_snps_by_region)
+        temp_df = temp_df.groupby(
+            by=["snp_inherited_from", "snp_risk_category", "snp_position"]
+        ).sum()
+        summary_snps_table = produce_html_table(
+            temp_df,
+            "summary_snps_table",
+            True,
+        )
+    elif args.mode_of_inheritance == "x_linked":
+        temp_df = pd.DataFrame().assign(
+            gene_distance=summary_snps_by_region["gene_distance"],
+            female_embryo_snp_count=summary_snps_by_region["female_AB_snp_count"],
+            male_snp_count=summary_snps_by_region["male_AA_snp_count"]
+            + summary_snps_by_region["male_AA_snp_count"],
+        )
+        summary_snps_table = produce_html_table(
+            temp_df,
+            "summary_snps_table",
+        )
+    else:
+        pass  # TODO raise exception
+
     summary_embryo_table = produce_html_table(
         summary_embryo_df,
         "summary_embryo_table",
+        True,
     )
 
-    summary_embryo_by_region_df = embryo_snps_summary_df.set_index("embryo_id")
-    summary_embryo_by_region_df = summary_embryo_by_region_df.transpose()
+    # summary_embryo_by_region_df = embryo_snps_summary_df.set_index("embryo_id")
+    # summary_embryo_by_region_df = summary_embryo_by_region_df.transpose()
     summary_embryo_by_region_table = produce_html_table(
         summary_embryo_by_region_df,
         "summary_embryo_by_region_table",

@@ -12,7 +12,7 @@ def x_linked_analysis(
     the site as indicating "high_risk" or "low_risk" of inheriting an X-linked condition for a known haplotype in the embryo (See below for details).
     Identifies any SNPs which are "informative" and then categorises them as "high_risk" or "low_risk" for any cases which are x-linked inheritance.
     # TODO change google doc link to link to read the docs.
-    The full logic behind the function is described here https://docs.google.com/document/d/1QKdQ-XpD8TFaxhdP41X8-BrUc0j9gENGrIBnYhPtJiE/edit?usp=sharing
+    The full logic behind the function is described here TODO
     This function asks the question - For the combination of haplotypes present in the reference trio (reference,
     unaffected_partner and affected_partner) what information would this SNP provide us with if the SNP was:
 

@@ -123,19 +123,21 @@ ref_seq = argument_dict["ref_seq"]
 ref_status = argument_dict["ref_status"]
 template_version = argument_dict["template_version"]
 
-if partner1_sex=="male" and partner2_sex=="female":
+if partner1_sex == "male" and partner2_sex == "female":
     male_partner_status = partner1_type
     male_partner_col = partner1_column_name
     female_partner_status = partner2_type
     female_partner_col = partner2_column_name
-elif partner1_sex=="female" and partner2_sex=="male":
+elif partner1_sex == "female" and partner2_sex == "male":
     male_partner_status = partner2_type
     male_partner_col = partner2_column_name
     female_partner_status = partner1_type
     female_partner_col = partner1_column_name
 
 
-python_location = "S:\Genetics_Data2\Array\Software\python-3.10.0-embed-amd64\python.exe"
+python_location = (
+    "S:\Genetics_Data2\Array\Software\python-3.10.0-embed-amd64\python.exe"
+)
 snp_haplotype_script = "placeholder"
 output_folder = "."
 
@@ -143,37 +145,43 @@ output_folder = "."
 print(mode_of_inheritance)
 if mode_of_inheritance == "Autosomal_Dominant":
     print(
-        (f" {python_location} -i {snp_haplotype_script}"
-        f" --input_file {input_file} --output_folder {output_folder}"
-        f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
-        f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
-        f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
-        f" --reference {reference_col} --reference_status {reference_status}"
-        f" --reference_relationship {reference_relationship} --embryo_ids 24.F4.EMB11.rhchp 25.F4.EMB12.rhchp 26.F4.EMB13.rhchp"
-        f" --embryo_sex unknown unknown unknown --gene_symbol {gene_symbol} --gene_start {gene_start}"
-        f" --gene_end {gene_end} --chr {chromosome}")
+        (
+            f" {python_location} -i {snp_haplotype_script}"
+            f" --input_file {input_file} --output_folder {output_folder}"
+            f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
+            f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
+            f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
+            f" --reference {reference_col} --reference_status {reference_status}"
+            f" --reference_relationship {reference_relationship} --embryo_ids 24.F4.EMB11.rhchp 25.F4.EMB12.rhchp 26.F4.EMB13.rhchp"
+            f" --embryo_sex unknown unknown unknown --gene_symbol {gene_symbol} --gene_start {gene_start}"
+            f" --gene_end {gene_end} --chr {chromosome}"
+        )
     )
 elif mode_of_inheritance == "Autosomal_Recessive":
     print(
-        (f" {python_location} -i {snp_haplotype_script}"
-        f" --input_file {input_file} --output_folder {output_folder}"
-        f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
-        f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
-        f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
-        f" --reference {reference_col} --reference_status {reference_status}"
-        f" --reference_relationship {reference_relationship} --embryo_ids {embryo_ids}"
-        f" --embryo_sex {embryo_sex} --gene_symbol {gene_symbol} --gene_start {gene_start}"
-        f" --gene_end {gene_end} --chr {chromosome}")
+        (
+            f" {python_location} -i {snp_haplotype_script}"
+            f" --input_file {input_file} --output_folder {output_folder}"
+            f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
+            f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
+            f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
+            f" --reference {reference_col} --reference_status {reference_status}"
+            f" --reference_relationship {reference_relationship} --embryo_ids {embryo_ids}"
+            f" --embryo_sex {embryo_sex} --gene_symbol {gene_symbol} --gene_start {gene_start}"
+            f" --gene_end {gene_end} --chr {chromosome}"
+        )
     )
 elif mode_of_inheritance == "x_linked":
     print(
-        (f"/usr/bin/env /home/graeme/miniconda3/envs/python3.10env/bin/python"
-        f"/home/graeme/.vscode/extensions/ms-python.python-2022.12.0/pythonFiles/lib/python/debugpy/adapter/../../debugpy/launcher 41117"
-        f" -- src/snp_haplotyper/snp_haplotype.py --input_file test_data/autosomal_dominant/F4_BRCA2_AD.txt --output_folder output/ "
-        f" --output_prefix F4_BRCA2_AD --mode_of_inheritance autosomal_dominant --male_partner 22.F4.MP.rhchp --male_partner_status affected "
-        f"--female_partner 23.F4.FP.rhchp --female_partner_status unaffected --reference 19.F4.PGF.rhchp --reference_status affected "
-        f"--reference_relationship grandparent --embryo_ids 24.F4.EMB11.rhchp 25.F4.EMB12.rhchp 26.F4.EMB13.rhchp"
-        f" --embryo_sex unknown unknown unknown --gene_symbol BRCA2 --gene_start 32315086 --gene_end 32400268 --chr 13")
+        (
+            f"/usr/bin/env /home/graeme/miniconda3/envs/python3.10env/bin/python"
+            f"/home/graeme/.vscode/extensions/ms-python.python-2022.12.0/pythonFiles/lib/python/debugpy/adapter/../../debugpy/launcher 41117"
+            f" -- snp_haplotyper/snp_haplotype.py --input_file test_data/autosomal_dominant/F4_BRCA2_AD.txt --output_folder output/ "
+            f" --output_prefix F4_BRCA2_AD --mode_of_inheritance autosomal_dominant --male_partner 22.F4.MP.rhchp --male_partner_status affected "
+            f"--female_partner 23.F4.FP.rhchp --female_partner_status unaffected --reference 19.F4.PGF.rhchp --reference_status affected "
+            f"--reference_relationship grandparent --embryo_ids 24.F4.EMB11.rhchp 25.F4.EMB12.rhchp 26.F4.EMB13.rhchp"
+            f" --embryo_sex unknown unknown unknown --gene_symbol BRCA2 --gene_start 32315086 --gene_end 32400268 --chr 13"
+        )
     )
 else:
     pass  # raise exception

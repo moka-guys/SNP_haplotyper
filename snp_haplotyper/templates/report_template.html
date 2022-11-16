@@ -35,10 +35,10 @@
         <h2>Informative SNPs by region</h2>
         {{ summary_snps_table }}
 
-        <h2>Embryo Alleles</h2>
+        <h2>Embryo Alleles by Risk Category</h2>
         {{ summary_embryo_table }}
 
-        <h2>Embryo Summary</h2>
+        <h2>Embryo Summary by Risk Category and SNP Position</h2>
         {{ summary_embryo_by_region_table }}
 
         <h2>Plot Embryo Results</h2>
@@ -110,7 +110,8 @@
         $('#summary_snps_table').DataTable({
             "paging": false,
             "ordering": false,
-            "info": false
+            "info": false,
+            "searching": false,
         });
     });
 </script>
@@ -120,7 +121,8 @@
         $('#nocall_table').DataTable({
             "paging": false,
             "ordering": false,
-            "info": false
+            "info": false,
+            "searching": false,
         });
     });
 </script>
@@ -130,7 +132,8 @@
         $('#nocall_percentages_table').DataTable({
             "paging": false,
             "ordering": false,
-            "info": false
+            "info": false,
+            "searching": false,
         });
     });
 </script>
@@ -140,7 +143,8 @@
         $('#summary_embryo_table').DataTable({
             "paging": false,
             "ordering": false,
-            "info": false
+            "info": false,
+            "searching": false,
         });
     });
 </script>
@@ -150,7 +154,8 @@
         $('#summary_embryo_by_region_table').DataTable({
             "paging": false,
             "ordering": false,
-            "info": false
+            "info": false,
+            "searching": false,
         });
     });
 </script>
