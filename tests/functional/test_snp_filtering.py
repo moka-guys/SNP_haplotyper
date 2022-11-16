@@ -143,8 +143,13 @@ def test_informative_snps(capsys, name):
         assert results["mode"] == validation["mode"]
         assert results["sample_id"] == validation["sample_id"]
         assert results["num_snps"] == validation["num_snps"]
+        assert results["total_info_snps"] == validation["total_info_snps"]
         assert results["info_snps_upstream_2mb"] == validation["info_snps_upstream_2mb"]
         assert results["info_snps_in_gene"] == validation["info_snps_in_gene"]
+        assert (
+            results["info_snps_downstream_2mb"]
+            == validation["info_snps_downstream_2mb"]
+        )
         assert (
             results["high_risk_snps_upstream_2mb_from_female"]
             == validation["high_risk_snps_upstream_2mb_from_female"]
