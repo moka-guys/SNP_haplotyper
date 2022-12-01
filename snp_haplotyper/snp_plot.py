@@ -284,6 +284,7 @@ def plot_results(
     df,
     summary_df,
     embryo_ids,
+    embryo_sex,
     gene_start,
     gene_end,
     mode_of_inheritance,
@@ -302,6 +303,9 @@ def plot_results(
     """
 
     plots_as_html = []
+
+    # Create lookup dictionary for embryo sex
+    embryo_dict = dict(zip(embryo_ids, embryo_sex))
 
     # preprocess dataframe for input to plotting function
     for embryo in embryo_ids:
@@ -529,7 +533,11 @@ def plot_results(
             )
 
         fig.update_yaxes(range=[-4, 4], showticklabels=False)
-        fig.update_layout(height=540, width=1800, title_text=f"Results for {embryo}")
+        fig.update_layout(
+            height=540,
+            width=1800,
+            title_text=f"Results for {embryo} (Embryo Sex: {embryo_dict[embryo]})",
+        )
 
         plots_as_html.append(fig.to_html(full_html=False, include_plotlyjs="cdn"))
     return plots_as_html

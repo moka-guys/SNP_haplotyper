@@ -202,7 +202,21 @@ parser.add_argument(
 parser.add_argument(
     "--testing",
     action=argparse.BooleanOptionalAction,
+    default=False,
     help="Flag to produce JSON output easily parsed by pytest and prevent HTML reports being produced",
+)
+
+parser.add_argument(
+    "--trio_only",
+    action=argparse.BooleanOptionalAction,
+    default=False,
+    help="Flag to produce a preliminary report without looking at embryos, must be used if not embryo data is provided.",
+)
+
+parser.add_argument(
+    "--header_info",
+    type=json.loads,
+    help='Pass a string in the format of a dictionary to populate the report header. A field will be created for each key provided, for example \'{"PRU":"1234", "Hospital No":"1234", "Biopsy No":"111"}\' will produce 3 fields in the header.',
 )
 
 
@@ -1194,54 +1208,93 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     else:
         pass  # TODO raise exception
 
-    summary_embryo_table = produce_html_table(
-        summary_embryo_df,
-        "summary_embryo_table",
-        True,
-    )
+    # Initiate list to hold HTML for each plot produced below
+    html_list_of_plots = []
 
-    # summary_embryo_by_region_df = embryo_snps_summary_df.set_index("embryo_id")
-    # summary_embryo_by_region_df = summary_embryo_by_region_df.transpose()
-    summary_embryo_by_region_table = produce_html_table(
-        summary_embryo_by_region_df,
-        "summary_embryo_by_region_table",
-        True,
-    )
+    # Produce plot for trios
 
-    if args.mode_of_inheritance == "autosomal_dominant":
-        html_list_of_plots = plot_results(
-            embryo_category_df,
-            embryo_snps_summary_df,
-            args.embryo_ids,
-            args.gene_start,
-            args.gene_end,
-            args.mode_of_inheritance,
+    if (
+        args.trio_only == False
+    ):  # If only a trio is being run do not produce tables/plots for embryos
+
+        summary_embryo_table = produce_html_table(
+            summary_embryo_df,
+            "summary_embryo_table",
+            True,
         )
-    elif args.mode_of_inheritance == "autosomal_recessive":
-        html_list_of_plots = plot_results(
-            embryo_category_df,
-            embryo_snps_summary_df,
-            args.embryo_ids,
-            args.gene_start,
-            args.gene_end,
-            args.mode_of_inheritance,
+
+        # summary_embryo_by_region_df = embryo_snps_summary_df.set_index("embryo_id")
+        # summary_embryo_by_region_df = summary_embryo_by_region_df.transpose()
+        summary_embryo_by_region_table = produce_html_table(
+            summary_embryo_by_region_df,
+            "summary_embryo_by_region_table",
+            True,
         )
-    elif args.mode_of_inheritance == "x_linked":
-        html_list_of_plots = plot_results(
-            embryo_category_df,
-            embryo_snps_summary_df,
-            args.embryo_ids,
-            args.gene_start,
-            args.gene_end,
-            args.mode_of_inheritance,
-        )
+
+        if args.mode_of_inheritance == "autosomal_dominant":
+            html_list_of_plots = html_list_of_plots + plot_results(
+                embryo_category_df,
+                embryo_snps_summary_df,
+                args.embryo_ids,
+                args.embryo_sex,
+                args.gene_start,
+                args.gene_end,
+                args.mode_of_inheritance,
+            )
+        elif args.mode_of_inheritance == "autosomal_recessive":
+            html_list_of_plots = html_list_of_plots + plot_results(
+                embryo_category_df,
+                embryo_snps_summary_df,
+                args.embryo_ids,
+                args.embryo_sex,
+                args.gene_start,
+                args.gene_end,
+                args.mode_of_inheritance,
+            )
+        elif args.mode_of_inheritance == "x_linked":
+            html_list_of_plots = html_list_of_plots + plot_results(
+                embryo_category_df,
+                embryo_snps_summary_df,
+                args.embryo_ids,
+                args.embryo_sex,
+                args.gene_start,
+                args.gene_end,
+                args.mode_of_inheritance,
+            )
 
     html_text_for_plots = "<br>".join(html_list_of_plots)
 
     env = Environment(loader=PackageLoader("snp_haplotype", "templates"))
 
+    # convert header dictionary into html
+    def dict2html(header_dictionary):
+        """ """
+        header_html = f'<h2> Analysis Details </h2> <table style="width:100%"><tr>'
+        for key in header_dictionary:
+            header_html = (
+                header_html + f"<td><b>{key}:</b> {header_dictionary[key]}</td>"
+            )
+        header_html = header_html + f"</tr> </table>"
+        return header_html
+
+    header_html = dict2html(args.header_info)
+
     template = env.get_template("report_template.html")
     place_holder_values = {
+        "header_html": header_html,
+        "mode_of_inheritance": args.mode_of_inheritance,
+        "gene_symbol": args.gene_symbol,
+        "chromsome": args.chr.upper(),
+        "gene_start": args.gene_start,
+        "gene_end": args.gene_end,
+        "input_file": args.input_file.name,
+        "male_partner": args.male_partner,  #
+        "male_partner_status": args.male_partner_status,
+        "female_partner": args.female_partner,
+        "female_partner_status": args.female_partner_status,
+        "reference": args.reference,
+        "reference_status": args.reference_status,
+        "reference_relationship": args.reference_relationship,
         "results_table_1": results_table_1,
         "nocall_table": nocall_table,
         "nocall_percentages_table": nocall_percentages_table,

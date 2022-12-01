@@ -11,7 +11,36 @@
 </head>
 
 <body>
-    <h1>Placeholder 1</h1>
+    <h1>Report Details</h1>
+    {{ header_html }}
+    <table>
+        <tr>
+            <td><b>Mode of Inheritance:</b> {{mode_of_inheritance}} </td>
+        </tr>
+        <tr>
+            <td><b>SNP Data File:</b> {{input_file}} </td>
+        </tr>
+        <tr>
+            <td><b>Gene:</b> {{gene_symbol}} </td>
+            <td> <b>Genomic Range:</b> Chr{{chromsome}}:{{gene_start}}-{{gene_end}} </td>
+        </tr>
+        <tr>
+            <td> <b>Male Partner:</b> {{male_partner}} </td>
+            <td> <b>Male Partner Status:</b> {{male_partner_status}} </td>
+        </tr>
+        <tr>
+            <td> <b>Female Partner:</b> {{female_partner}}</td>
+            <td> <b>Female Partner Status:</b> {{female_partner_status}} </td>
+        </tr>
+        <tr>
+            <td> <b>Reference:</b> {{reference}} </td>
+            <td> <b>Reference Status:</b> {{reference_status}} </td>
+            <td> <b>Reference
+                    Relationship:</b>
+                {{reference_relationship}} </td>
+        </tr>
+    </table>
+
 
     <!-- *** Section 1 *** --->
     <h2>Probe Classification Table</h2>
