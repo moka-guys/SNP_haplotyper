@@ -1159,7 +1159,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     summary_embryo_df = embryo_count_data_df.groupby(by=["risk_category"]).sum()
     summary_embryo_by_region_df = embryo_count_data_df.groupby(
-        by=["risk_category", "snp_position"]
+        by=["risk_category", "gene_distance"]
     ).sum()
     ##############################################################################
 
@@ -1187,7 +1187,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     elif args.mode_of_inheritance == "autosomal_recessive":
         temp_df = annotate_snp_position(summary_snps_by_region)
         temp_df = temp_df.groupby(
-            by=["snp_inherited_from", "snp_risk_category", "snp_position"]
+            by=["snp_inherited_from", "snp_risk_category", "gene_distance"]
         ).sum()
         summary_snps_table = produce_html_table(
             temp_df,
