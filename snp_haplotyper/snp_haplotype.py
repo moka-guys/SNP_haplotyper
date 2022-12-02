@@ -9,6 +9,13 @@ import sys
 # Import mode of inheritance specific code
 from autosomal_dominant_logic import autosomal_dominant_analysis
 from autosomal_recessive_logic import autosomal_recessive_analysis
+from config import (
+    genome_build,
+    allow_autosomal_dominant_cases,
+    allow_autosomal_recessive_cases,
+    allow_x_linked_cases,
+    allow_cosanguineous_cases,
+)
 from x_linked_logic import x_linked_analysis
 from snp_plot import plot_results, summarise_snps_per_embryo
 from stream_output import (
@@ -17,7 +24,7 @@ from stream_output import (
     stream_x_linked_output,
 )
 
-from exceptions import ArgumentInputError
+from exceptions import ArgumentInputError, InvalidParameterSelectedError
 
 # TODO Copy rsID from hover tap
 # TODO Check telomeric/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
@@ -1044,6 +1051,29 @@ def produce_html_table(
 def main(args=None):  # default argument allows pytest to override argparse for testing
     if args is None:
         args = parser.parse_args()
+
+    # Check config.py file to see whether the script should run for the parameters provided.
+    # Typically this is used when the script has been validated for one or more modes of inheritance
+    # and we want to ensure that the script is not run for other, unvalidated, modes of inheritance.
+    # This allows the software to be ushed in production without the risk of running the script on
+    # parameters which have not been validated.
+
+    if (
+        allow_autosomal_dominant_cases == False
+        and args.mode_of_inheritance == "autosomal_dominant"
+    ):
+        InvalidParameterSelectedError()
+    elif (
+        allow_autosomal_recessive_cases == False
+        and args.mode_of_inheritance == "autosomal_recessive"
+    ):
+        InvalidParameterSelectedError()
+    elif allow_x_linked_cases == False and args.mode_of_inheritance == "x_linked":
+        InvalidParameterSelectedError()
+    elif allow_cosanguineous_cases == False and args.consanguieous == True:
+        InvalidParameterSelectedError()
+    else:
+        pass
 
     # import haplotype data from text file
     df = pd.read_csv(
