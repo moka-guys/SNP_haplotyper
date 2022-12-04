@@ -4,6 +4,7 @@ import json
 import pandas as pd
 from pathlib import Path
 import numpy as np
+import re
 import sys
 
 # Import mode of inheritance specific code
@@ -1048,6 +1049,27 @@ def produce_html_table(
     return html_table
 
 
+def add_embryo_sex_to_column_name(html_string, embryo_ids, embryo_sex):
+    """
+    Annotated any table with with embryo data with the sex of the embryos
+
+    Args:
+        html_string (string): A HTML formated table with embryo ID column names
+        embryo_ids (list): A list of embryo IDs
+        embryo_sex (list): A list of embryo sexes coressponding to the embryo ids
+
+    Returns:
+        String: HTML formated table with the column headings annotated with the embryo sex.
+    """
+    embryo_sex_lookup = dict(zip(embryo_ids, embryo_sex))
+    for embryo_id in embryo_sex_lookup:
+        html_string = html_string.replace(
+            f"{embryo_id}",
+            f"{embryo_id} (Sex:{embryo_sex_lookup[embryo_id]})",
+        )
+    return html_string
+
+
 def main(args=None):  # default argument allows pytest to override argparse for testing
     if args is None:
         args = parser.parse_args()
@@ -1261,6 +1283,10 @@ def main(args=None):  # default argument allows pytest to override argparse for 
             "summary_embryo_table",
             True,
         )
+        # Annotate column names with the sex of the embryo
+        summary_embryo_table = add_embryo_sex_to_column_name(
+            summary_embryo_table, args.embryo_ids, args.embryo_sex
+        )
 
         # summary_embryo_by_region_df = embryo_snps_summary_df.set_index("embryo_id")
         # summary_embryo_by_region_df = summary_embryo_by_region_df.transpose()
@@ -1268,6 +1294,10 @@ def main(args=None):  # default argument allows pytest to override argparse for 
             summary_embryo_by_region_df,
             "summary_embryo_by_region_table",
             True,
+        )
+        # Annotate column names with the sex of the embryo
+        summary_embryo_by_region_table = add_embryo_sex_to_column_name(
+            summary_embryo_by_region_table, args.embryo_ids, args.embryo_sex
         )
 
         if args.mode_of_inheritance == "autosomal_dominant":
