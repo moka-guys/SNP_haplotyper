@@ -930,7 +930,7 @@ def categorise_embryo_alleles(
         embryo_category_df[embryo_risk_col] = embryo_category_df[
             embryo_risk_col
         ].cat.set_categories(
-            ["uninformative", "NoCall", "miscall", "ADO", "high_risk", "low_risk"]
+            ["high_risk", "low_risk", "uninformative", "NoCall", "miscall", "ADO"]
         )
     return embryo_category_df
 
