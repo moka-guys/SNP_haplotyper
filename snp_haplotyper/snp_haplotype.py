@@ -1062,16 +1062,25 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         allow_autosomal_dominant_cases == False
         and args.mode_of_inheritance == "autosomal_dominant"
     ):
-        InvalidParameterSelectedError()
+        raise InvalidParameterSelectedError(
+            "Please check the config.py file to see whether autosomal dominant samples are supported in the current release"
+        )
     elif (
         allow_autosomal_recessive_cases == False
         and args.mode_of_inheritance == "autosomal_recessive"
     ):
-        InvalidParameterSelectedError()
+        raise InvalidParameterSelectedError(
+            "Please check the config.py file to see whether autosomal recessive samples are supported in the current release"
+        )
     elif allow_x_linked_cases == False and args.mode_of_inheritance == "x_linked":
-        InvalidParameterSelectedError()
+        raise InvalidParameterSelectedError(
+            "Please check the config.py file to see whether x-linked samples are supported in the current release"
+        )
+
     elif allow_cosanguineous_cases == False and args.consanguieous == True:
-        InvalidParameterSelectedError()
+        raise InvalidParameterSelectedError(
+            "Please check the config.py file to see whether consanguineous samples are supported in the current release"
+        )
     else:
         pass
 
@@ -1317,8 +1326,9 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         "chromsome": args.chr.upper(),
         "gene_start": args.gene_start,
         "gene_end": args.gene_end,
+        "genome_build": genome_build,  # Imported from config.py file
         "input_file": args.input_file.name,
-        "male_partner": args.male_partner,  #
+        "male_partner": args.male_partner,
         "male_partner_status": args.male_partner_status,
         "female_partner": args.female_partner,
         "female_partner_status": args.female_partner_status,
