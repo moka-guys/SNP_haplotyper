@@ -4,29 +4,33 @@ from snp_haplotype import main
 import pandas as pd
 import pytest
 import json
-import re
 
 
 def setup_test_data(split_by_embryo=False):
     # Import launch.json and parse the file for the correct parameters for each of the samples
-    json_file_path = "/home/graeme/Desktop/SNP_haplotype/.vscode/launch.json"
+    json_file_path = ".vscode/launch.json"
 
     with open(json_file_path, "r") as j:
         launch_contents = json.loads(j.read())
 
-    # Grep for arguments
-    p = re.compile(r"'name': '.*?,")
-    run_names = p.findall(str(launch_contents["configurations"]))
-    p = re.compile(r"'args': \[.*?\]")
-    run_args = p.findall(str(launch_contents["configurations"]))
+    run_data_df = pd.json_normalize(launch_contents["configurations"])
 
+    # Run configurations are filtered by the "purpose" field to exclude configurations that are not intended for testing
+    run_data_df = run_data_df[
+        run_data_df["purpose"].str.contains("debug-test", regex=False)
+    ]
+
+    # The name and args columns are zipped into a dictionary for iterating over
+    run_data_dict = dict(zip(run_data_df["name"], run_data_df["args"]))
+
+    # Output dictionaries
     run_data_dictionary = {}
     run_data_per_embryo_dictionary = {}
-    for i in range(len(run_args)):
-        run_name = run_names[i].lstrip("'name : ").rstrip("', ")
-        arg_list = (
-            run_args[i].lstrip("'args': [").rstrip(']"').replace("'", "").split(", ")
-        )
+
+    # The list returned has elements representing flag arguments (starting --) and their values,
+    # which may be a single value or a list of values. We need to amalgamate these values into
+    # a single list of values for each flag argument.
+    for run_name, arg_list in run_data_dict.items():
         arg_dictionary = {}
         dict_values = []
         for i in arg_list:
@@ -72,6 +76,8 @@ def setup_test_data(split_by_embryo=False):
             if "consanguineous" in arg_dictionary
             else False,  # arg_dictionary["consanguineous"],
             testing=True,
+            trio_only=False,
+            header_info=json.loads(arg_dictionary["header_info"]),
         )
         run_data_dictionary[run_name] = args
         # This dictionary needs to be ammended when passed to the function testing the embryo categorising.
