@@ -1,4 +1,5 @@
 import argparse
+from io import IOBase
 from jinja2 import Environment, PackageLoader
 import json
 import pandas as pd
@@ -905,9 +906,13 @@ def categorise_embryo_alleles(
                     conditions, values, default="uninformative"
                 )
             elif embryo_sex_lookup[embryo] == "unknown":
-                pass  # TODO raise exception
+                raise ArgumentInputError(
+                    f"'unknown' embryo sex not allowed for x-linked mode of inheritance.  Check that correct mode of inheritance has been entered for {embryo}, or enter correct sex for {embryo}"
+                )
             else:
-                pass  # TODO raise exception
+                raise ArgumentInputError(
+                    f"Check x_linked code in categorise_embryo_alleles() function and input data for {embryo} - SNP not assigned risk category"
+                )
 
         # Populate embryo_category_df with data regarding miscalls and ADOs
         embryo_category_df[embryo_risk_col] = embryo_category_df.apply(
@@ -1065,7 +1070,7 @@ def add_embryo_sex_to_column_name(html_string, embryo_ids, embryo_sex):
     for embryo_id in embryo_sex_lookup:
         html_string = html_string.replace(
             f"{embryo_id}",
-            f"{embryo_id} (Sex:{embryo_sex_lookup[embryo_id]})",
+            f"{embryo_id} (Sex:{embryo_sex_lookup[embryo_id].title()})",
         )
     return html_string
 
@@ -1357,7 +1362,9 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         "gene_start": args.gene_start,
         "gene_end": args.gene_end,
         "genome_build": genome_build,  # Imported from config.py file
-        "input_file": args.input_file.name,
+        "input_file": args.input_file.name
+        if isinstance(args.input_file, IOBase)
+        else args.input_file,  # Check if input file is a file object or a string
         "male_partner": args.male_partner,
         "male_partner_status": args.male_partner_status,
         "female_partner": args.female_partner,
