@@ -11,7 +11,7 @@
 </head>
 
 <body>
-    <h1>Report Details</h1>
+    <h1>BASHer SNP Haplotyping Report</h1>
     {{ header_html }}
     <table>
         <tr>
@@ -23,6 +23,7 @@
         <tr>
             <td><b>Gene:</b> {{gene_symbol}} </td>
             <td> <b>Genomic Range:</b> Chr{{chromsome}}:{{gene_start}}-{{gene_end}} </td>
+            <td> <b>Genomic Build:</b> {{genome_build}} </td>
         </tr>
         <tr>
             <td> <b>Male Partner:</b> {{male_partner}} </td>
