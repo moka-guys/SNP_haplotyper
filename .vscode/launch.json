@@ -1259,6 +1259,112 @@
             ]
         },
         {
+            "name": "Autosomal_Dominant_F6_BRCA2_AD_sample_mixup",
+            "type": "python",
+            "request": "launch",
+            "program": "snp_haplotyper/snp_haplotype.py",
+            "console": "integratedTerminal",
+            "purpose": [
+                "debug-in-terminal"
+            ],
+            "args": [
+                "--input_file",
+                "test_data/autosomal_dominant/F6_BRCA2_AD_sample_mixup.txt",
+                "--output_folder",
+                "output/clinical_risk_management/",
+                "--header_info",
+                "{\"PRU\":\"1234\", \"Hospital No\":\"1234\", \"Biopsy No\":\"111\"}",
+                "--output_prefix",
+                "F6_BRCA2_AD_sample_mixup",
+                "--mode_of_inheritance",
+                "autosomal_dominant",
+                "--male_partner",
+                "621452_280628_JoC_SNP220628.1_G12.rhchp",
+                "--male_partner_status",
+                "affected",
+                "--female_partner",
+                "35.F6.FP.rhchp",
+                "--female_partner_status",
+                "unaffected",
+                "--reference",
+                "36.F6.PGM.rhchp",
+                "--reference_status",
+                "affected",
+                "--reference_relationship",
+                "grandparent",
+                "--embryo_ids",
+                "37.F6.EMB18.rhchp",
+                "38.F6.EMB19.rhchp",
+                "39.F6.EMB20.rhchp",
+                "40.F6.EMB21.rhchp",
+                "--embryo_sex",
+                "unknown",
+                "unknown",
+                "unknown",
+                "unknown",
+                "--gene_symbol",
+                "BRCA2",
+                "--gene_start",
+                "32315086",
+                "--gene_end",
+                "32400268",
+                "--chr",
+                "13"
+            ]
+        },
+        {
+            "name": "Autosomal_Recessive_F7_FRAS1_AR_sample_mixup",
+            "type": "python",
+            "request": "launch",
+            "program": "snp_haplotyper/snp_haplotype.py",
+            "console": "integratedTerminal",
+            "purpose": [
+                "debug-in-terminal"
+            ],
+            "args": [
+                "--input_file",
+                "test_data/autosomal_recessive/F7_FRAS1_AR_sample_mixup.txt",
+                "--output_folder",
+                "output/clinical_risk_management/",
+                "--header_info",
+                "{\"PRU\":\"1234\", \"Hospital No\":\"1234\", \"Biopsy No\":\"111\"}",
+                "--output_prefix",
+                "F7_FRAS1_AR_sample_mixup",
+                "--mode_of_inheritance",
+                "autosomal_recessive",
+                "--male_partner",
+                "621452_280628_JoC_SNP220628.1_G12.rhchp",
+                "--male_partner_status",
+                "carrier",
+                "--female_partner",
+                "42.F7.EP.rhchp",
+                "--female_partner_status",
+                "carrier",
+                "--reference",
+                "43.F7.CCF.rhchp",
+                "--reference_status",
+                "affected",
+                "--reference_relationship",
+                "child",
+                "--embryo_ids",
+                "44.F7.EMB22.rhchp",
+                "45.F7.EMB23.rhchp",
+                "46.F7.EMB24.rhchp",
+                "--embryo_sex",
+                "unknown",
+                "unknown",
+                "unknown",
+                "--gene_symbol",
+                "FRAS1",
+                "--gene_start",
+                "78057323",
+                "--gene_end",
+                "78544269",
+                "--chr",
+                "4"
+            ]
+        },
+        {
             "name": "test_excel_import",
             "type": "python",
             "purpose": [
@@ -1271,6 +1377,16 @@
                 "--input_file",
                 "/home/graeme/Desktop/ADandXLdata/AD_test_data_v1.6.xlsm"
             ]
+        },
+        {
+            "name": "test_import_browser",
+            "type": "python",
+            "purpose": [
+                "debug-in-terminal"
+            ],
+            "request": "launch",
+            "program": "snp_haplotyper/select_input_file.py",
+            "console": "integratedTerminal"
         }
     ]
 }
