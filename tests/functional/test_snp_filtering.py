@@ -109,7 +109,42 @@ def test_informative_snps(capsys, name):
         for dict in snp_validation:
             all_validation[dict["sample_id"]] = dict
 
-    if results["mode"] == "autosomal_dominant" or results["mode"] == "x_linked":
+    if results["mode"] == "autosomal_dominant":
+        validation = all_validation[results["sample_id"]]
+        assert results["mode"] == validation["mode"]
+        assert results["sample_id"] == validation["sample_id"]
+        assert results["num_snps"] == validation["num_snps"]
+        assert results["info_snps_upstream_2mb"] == validation["info_snps_upstream_2mb"]
+        assert results["info_snps_in_gene"] == validation["info_snps_in_gene"]
+        assert (
+            results["info_snps_downstream_2mb"]
+            == validation["info_snps_downstream_2mb"]
+        )
+        assert results["total_info_snps"] == validation["total_info_snps"]
+        assert (
+            results["high_risk_snps_upstream_2mb"]
+            == validation["high_risk_snps_upstream_2mb"]
+        )
+        assert (
+            results["high_risk_snps_within_gene"] == validation["high_risk_within_gene"]
+        )
+        assert (
+            results["high_risk_snps_downstream_2mb"]
+            == validation["high_risk_snps_downstream_2mb"]
+        )
+        assert (
+            results["low_risk_snps_upstream_2mb"]
+            == validation["low_risk_snps_upstream_2mb"]
+        )
+        assert (
+            results["low_risk_snps_within_gene"] == validation["low_risk_within_gene"]
+        )
+        assert (
+            results["low_risk_snps_downstream_2mb"]
+            == validation["low_risk_snps_downstream_2mb"]
+        )
+    elif results["mode"] == "x_linked":
+        # TODO add check for male embryo informative SNPs
         validation = all_validation[results["sample_id"]]
         assert results["mode"] == validation["mode"]
         assert results["sample_id"] == validation["sample_id"]
@@ -227,12 +262,29 @@ def test_embryo_categorization(capsys, name):
             all_validation[dict["sample_id"] + "_" + dict["embryo_id"]] = dict
 
     results_dict = {}
-    for dict in results:
-        results_dict[dict["embryo_id"].replace(".rhchp", "")] = dict
+    # TODO rename dict variable to something more meaningful
+    # TODO refactor all tests to use x_linked format
+    try:
+        # Required for legacy method testing AR and AD
+        for result_dictionary in results:
+            results_dict[
+                result_dictionary["embryo_id"].replace(".rhchp", "")
+            ] = result_dictionary
+    except TypeError:
+        # Required for new method testing XL
+        pass
 
-    result = results_dict[embryo_id]
+    try:
+        # Required for legacy method testing AR and AD
+        result = results_dict[embryo_id]
+    except KeyError:
+        result = results[embryo_id]
+        result["mode"] = results["mode"]
+        result["sample_id"] = results["sample_id"]
+
     validation = all_validation[name.split("_", 2)[2] + "_" + embryo_id]
-    if result["mode"] == "autosomal_dominant" or result["mode"] == "x_linked":
+
+    if result["mode"] == "autosomal_dominant":
         assert result["mode"] == validation["mode"]
         assert result["sample_id"] == validation["sample_id"]
         assert (
@@ -254,6 +306,15 @@ def test_embryo_categorization(capsys, name):
             result["downstream_2mb_low_risk_snps"]
             == validation["low_risk_downstream_2mb"]
         )
+    elif result["mode"] == "x_linked":
+        assert result["mode"] == validation["mode"]
+        assert result["sample_id"] == validation["sample_id"]
+        assert result["high_risk,upstream"] == validation["high_risk_upstream_2mb"]
+        assert result["high_risk,within_gene"] == validation["high_risk_within_gene"]
+        assert result["high_risk,downstream"] == validation["high_risk_downstream_2mb"]
+        assert result["low_risk,upstream"] == validation["low_risk_upstream_2mb"]
+        assert result["low_risk,within_gene"] == validation["low_risk_within_gene"]
+        assert result["low_risk,downstream"] == validation["low_risk_downstream_2mb"]
     elif result["mode"] == "autosomal_recessive":
         assert result["mode"] == validation["mode"]
         assert result["sample_id"] == validation["sample_id"]
