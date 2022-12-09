@@ -84,6 +84,21 @@ python -m pytest
 pytest --cov=snp_haplotyper
 ```
 
+### Debugging Tests
+
+There is a known issue where the VS Code debugger doesn't stop at breakpoints set in pytest test modules if pytest-cov is used to calculate coverage.  This issue also affects PyCharm.  When debugging tests you can manually set the "--no-cov" flag in the VS Code's settings.json as shown below.
+
+```json
+{
+    "python.testing.pytestArgs": [
+        ".",
+        "--no-cov",
+    ]
+}
+```
+
+You can then debug the tests using breakpoints.  Remember to change the settings.json back again once the debugging is completed.
+
 ## Sphinx Documentation
 
 The documentation for Basher is generated using Sphinx.
