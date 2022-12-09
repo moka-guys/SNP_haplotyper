@@ -32,7 +32,6 @@ def test_ArgumentInputError():
             "female_partner",
             "reference",
             reference_status,
-            "ref_status",
             consanguineous,
         )
 
@@ -327,6 +326,20 @@ def test_annotate_distance_from_gene(setup_all_gene_regions):
             + (["1-2MB_from_end"] * 3)
             + (["outside_range"] * 2),
         }
+    )
+    expected_results_df["gene_distance"] = expected_results_df["gene_distance"].astype(
+        "category"
+    )
+    expected_results_df["gene_distance"] = expected_results_df[
+        "gene_distance"
+    ].cat.set_categories(
+        [
+            "1-2MB_from_start",
+            "0-1MB_from_start",
+            "within_gene",
+            "0-1MB_from_end",
+            "1-2MB_from_end",
+        ],
     )
     tm.assert_series_equal(
         results_df["gene_distance"], expected_results_df["gene_distance"]

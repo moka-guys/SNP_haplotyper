@@ -1,4 +1,4 @@
-src package
+snp_haplotyper package
 ===========
 
 Subpackages
@@ -7,12 +7,12 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   src.snp_haplotyper
+   snp_haplotyper
 
 Module contents
 ---------------
 
-.. automodule:: src
+.. automodule:: snp_haplotyper
    :members:
    :undoc-members:
    :show-inheritance:

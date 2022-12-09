@@ -1,61 +1,61 @@
-src.snp\_haplotyper package
+snp_haplotyper package
 ===========================
 
 Submodules
 ----------
 
-src.snp\_haplotyper.autosomal\_dominant\_logic module
+snp_haplotyper.autosomal\_dominant\_logic module
 -----------------------------------------------------
 
-.. automodule:: src.snp_haplotyper.autosomal_dominant_logic
+.. automodule:: snp_haplotyper.autosomal_dominant_logic
    :members:
    :undoc-members:
    :show-inheritance:
 
-src.snp\_haplotyper.autosomal\_recessive\_logic module
+snp_haplotyper.autosomal\_recessive\_logic module
 ------------------------------------------------------
 
-.. automodule:: src.snp_haplotyper.autosomal_recessive_logic
+.. automodule:: snp_haplotyper.autosomal_recessive_logic
    :members:
    :undoc-members:
    :show-inheritance:
 
-src.snp\_haplotyper.exceptions module
+snp_haplotyper.exceptions module
 -------------------------------------
 
-.. automodule:: src.snp_haplotyper.exceptions
+.. automodule:: snp_haplotyper.exceptions
    :members:
    :undoc-members:
    :show-inheritance:
 
-src.snp\_haplotyper.sample\_sheet\_reader module
+snp_haplotyper.sample\_sheet\_reader module
 ------------------------------------------------
 
-.. automodule:: src.snp_haplotyper.sample_sheet_reader
+.. automodule:: snp_haplotyper.sample_sheet_reader
    :members:
    :undoc-members:
    :show-inheritance:
 
-src.snp\_haplotyper.snp\_haplotype module
+snp_haplotyper.snp\_haplotype module
 -----------------------------------------
 
-.. automodule:: src.snp_haplotyper.snp_haplotype
+.. automodule:: snp_haplotyper.snp_haplotype
    :members:
    :undoc-members:
    :show-inheritance:
 
-src.snp\_haplotyper.snp\_plot module
+snp_haplotyper.snp\_plot module
 ------------------------------------
 
-.. automodule:: src.snp_haplotyper.snp_plot
+.. automodule:: snp_haplotyper.snp_plot
    :members:
    :undoc-members:
    :show-inheritance:
 
-src.snp\_haplotyper.x\_linked\_logic module
+snp_haplotyper.x\_linked\_logic module
 -------------------------------------------
 
-.. automodule:: src.snp_haplotyper.x_linked_logic
+.. automodule:: snp_haplotyper.x_linked_logic
    :members:
    :undoc-members:
    :show-inheritance:
@@ -63,7 +63,7 @@ src.snp\_haplotyper.x\_linked\_logic module
 Module contents
 ---------------
 
-.. automodule:: src.snp_haplotyper
+.. automodule:: snp_haplotyper
    :members:
    :undoc-members:
    :show-inheritance:

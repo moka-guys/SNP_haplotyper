@@ -11,7 +11,37 @@
 </head>
 
 <body>
-    <h1>Placeholder 1</h1>
+    <h1>BASHer SNP Haplotyping Report</h1>
+    {{ header_html }}
+    <table>
+        <tr>
+            <td><b>Mode of Inheritance:</b> {{mode_of_inheritance}} </td>
+        </tr>
+        <tr>
+            <td><b>SNP Data File:</b> {{input_file}} </td>
+        </tr>
+        <tr>
+            <td><b>Gene:</b> {{gene_symbol}} </td>
+            <td> <b>Genomic Range:</b> Chr{{chromsome}}:{{gene_start}}-{{gene_end}} </td>
+            <td> <b>Genomic Build:</b> {{genome_build}} </td>
+        </tr>
+        <tr>
+            <td> <b>Male Partner:</b> {{male_partner}} </td>
+            <td> <b>Male Partner Status:</b> {{male_partner_status}} </td>
+        </tr>
+        <tr>
+            <td> <b>Female Partner:</b> {{female_partner}}</td>
+            <td> <b>Female Partner Status:</b> {{female_partner_status}} </td>
+        </tr>
+        <tr>
+            <td> <b>Reference:</b> {{reference}} </td>
+            <td> <b>Reference Status:</b> {{reference_status}} </td>
+            <td> <b>Reference
+                    Relationship:</b>
+                {{reference_relationship}} </td>
+        </tr>
+    </table>
+
 
     <!-- *** Section 1 *** --->
     <h2>Probe Classification Table</h2>
@@ -35,8 +65,11 @@
         <h2>Informative SNPs by region</h2>
         {{ summary_snps_table }}
 
-        <h2>Embryo Alleles</h2>
+        <h2>Embryo Alleles by Risk Category</h2>
         {{ summary_embryo_table }}
+
+        <h2>Embryo Summary by Risk Category and SNP Position</h2>
+        {{ summary_embryo_by_region_table }}
 
         <h2>Plot Embryo Results</h2>
         {{ html_text_for_plots }}
@@ -107,7 +140,8 @@
         $('#summary_snps_table').DataTable({
             "paging": false,
             "ordering": false,
-            "info": false
+            "info": false,
+            "searching": false,
         });
     });
 </script>
@@ -117,7 +151,8 @@
         $('#nocall_table').DataTable({
             "paging": false,
             "ordering": false,
-            "info": false
+            "info": false,
+            "searching": false,
         });
     });
 </script>
@@ -127,7 +162,8 @@
         $('#nocall_percentages_table').DataTable({
             "paging": false,
             "ordering": false,
-            "info": false
+            "info": false,
+            "searching": false,
         });
     });
 </script>
@@ -137,10 +173,23 @@
         $('#summary_embryo_table').DataTable({
             "paging": false,
             "ordering": false,
-            "info": false
+            "info": false,
+            "searching": false,
         });
     });
 </script>
+
+<script>
+    $(document).ready(function () {
+        $('#summary_embryo_by_region_table').DataTable({
+            "paging": false,
+            "ordering": false,
+            "info": false,
+            "searching": false,
+        });
+    });
+</script>
+
 
 <script>
     /* Custom filtering function which will search data in column four between two values */

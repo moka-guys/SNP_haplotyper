@@ -12,16 +12,17 @@ def autosomal_dominant_analysis(
     reference_status,
     reference_relationship,
 ):
-    """Identifies any SNPs which are "informative" and then categorises them as "high_risk" or "low_risk" for cases where the inheritance is autosomal dominant.
+    """Identifies any SNP site which could be used to inform a decision regarding inheriting an autosomal dominant condition ("informative" SNPs) and categorizes
+    the site as  indicating "high_risk" or "low_risk" of inheriting an autosomal dominant condition if that site is heterozygous (AB) in the embryo.
     # TODO change google doc link to link to read the docs.
-    The full logic behind the function is described here https://docs.google.com/document/d/1ZsdSTQ_oliSDM-1EO65XbKfifaPK2-lIPwK1Ksl8L6s/edit?usp=sharing
+    The full logic behind the function is described here TODO
     This function asks the question - For the combination of haplotypes present in the reference trio (reference,
     unaffected_partner and affected_partner) what information would this SNP provide us with if the SNP was
     AB in the embryo - does the SNP indicate "high_risk", "low_risk", or is it "uninformative"?
 
 
     Args:
-        df (dataframe): A dataframe which requires rendering as HTML for inclusion in the HTML report
+        df (dataframe): A dataframe containing SNP input data for both partners, reference, & embryos
             affected_partner (string): Column name in dataframe refering to affected_partner's data
             unaffected_partner (string): Column name in dataframe refering to unaffected_partner's data
             reference (string) : Column name in dataframe refering to reference's data
@@ -37,7 +38,7 @@ def autosomal_dominant_analysis(
     # this project. During code review this allows the program's logic to be easily compared to the spec.
 
     if reference_relationship in [
-        "grandparent",  # TODO populate with all appropriate relationships
+        "grandparent",
     ]:
         # Label alleles as high or low risk
         conditions = [

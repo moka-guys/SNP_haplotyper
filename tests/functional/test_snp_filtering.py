@@ -4,29 +4,33 @@ from snp_haplotype import main
 import pandas as pd
 import pytest
 import json
-import re
 
 
 def setup_test_data(split_by_embryo=False):
     # Import launch.json and parse the file for the correct parameters for each of the samples
-    json_file_path = "/home/graeme/Desktop/SNP_haplotype/.vscode/launch.json"
+    json_file_path = ".vscode/launch.json"
 
     with open(json_file_path, "r") as j:
         launch_contents = json.loads(j.read())
 
-    # Grep for arguments
-    p = re.compile(r"'name': '.*?,")
-    run_names = p.findall(str(launch_contents["configurations"]))
-    p = re.compile(r"'args': \[.*?\]")
-    run_args = p.findall(str(launch_contents["configurations"]))
+    run_data_df = pd.json_normalize(launch_contents["configurations"])
 
+    # Run configurations are filtered by the "purpose" field to exclude configurations that are not intended for testing
+    run_data_df = run_data_df[
+        run_data_df["purpose"].str.contains("debug-test", regex=False)
+    ]
+
+    # The name and args columns are zipped into a dictionary for iterating over
+    run_data_dict = dict(zip(run_data_df["name"], run_data_df["args"]))
+
+    # Output dictionaries
     run_data_dictionary = {}
     run_data_per_embryo_dictionary = {}
-    for i in range(len(run_args)):
-        run_name = run_names[i].lstrip("'name : ").rstrip("', ")
-        arg_list = (
-            run_args[i].lstrip("'args': [").rstrip(']"').replace("'", "").split(", ")
-        )
+
+    # The list returned has elements representing flag arguments (starting --) and their values,
+    # which may be a single value or a list of values. We need to amalgamate these values into
+    # a single list of values for each flag argument.
+    for run_name, arg_list in run_data_dict.items():
         arg_dictionary = {}
         dict_values = []
         for i in arg_list:
@@ -72,6 +76,8 @@ def setup_test_data(split_by_embryo=False):
             if "consanguineous" in arg_dictionary
             else False,  # arg_dictionary["consanguineous"],
             testing=True,
+            trio_only=False,
+            header_info=json.loads(arg_dictionary["header_info"]),
         )
         run_data_dictionary[run_name] = args
         # This dictionary needs to be ammended when passed to the function testing the embryo categorising.
@@ -103,7 +109,42 @@ def test_informative_snps(capsys, name):
         for dict in snp_validation:
             all_validation[dict["sample_id"]] = dict
 
-    if results["mode"] == "autosomal_dominant" or results["mode"] == "x_linked":
+    if results["mode"] == "autosomal_dominant":
+        validation = all_validation[results["sample_id"]]
+        assert results["mode"] == validation["mode"]
+        assert results["sample_id"] == validation["sample_id"]
+        assert results["num_snps"] == validation["num_snps"]
+        assert results["info_snps_upstream_2mb"] == validation["info_snps_upstream_2mb"]
+        assert results["info_snps_in_gene"] == validation["info_snps_in_gene"]
+        assert (
+            results["info_snps_downstream_2mb"]
+            == validation["info_snps_downstream_2mb"]
+        )
+        assert results["total_info_snps"] == validation["total_info_snps"]
+        assert (
+            results["high_risk_snps_upstream_2mb"]
+            == validation["high_risk_snps_upstream_2mb"]
+        )
+        assert (
+            results["high_risk_snps_within_gene"] == validation["high_risk_within_gene"]
+        )
+        assert (
+            results["high_risk_snps_downstream_2mb"]
+            == validation["high_risk_snps_downstream_2mb"]
+        )
+        assert (
+            results["low_risk_snps_upstream_2mb"]
+            == validation["low_risk_snps_upstream_2mb"]
+        )
+        assert (
+            results["low_risk_snps_within_gene"] == validation["low_risk_within_gene"]
+        )
+        assert (
+            results["low_risk_snps_downstream_2mb"]
+            == validation["low_risk_snps_downstream_2mb"]
+        )
+    elif results["mode"] == "x_linked":
+        # TODO add check for male embryo informative SNPs
         validation = all_validation[results["sample_id"]]
         assert results["mode"] == validation["mode"]
         assert results["sample_id"] == validation["sample_id"]
@@ -139,37 +180,64 @@ def test_informative_snps(capsys, name):
         )
     elif results["mode"] == "autosomal_recessive":
         validation = all_validation[results["sample_id"]]
+        print(results)
         assert results["mode"] == validation["mode"]
         assert results["sample_id"] == validation["sample_id"]
         assert results["num_snps"] == validation["num_snps"]
+        assert results["total_info_snps"] == validation["total_info_snps"]
         assert results["info_snps_upstream_2mb"] == validation["info_snps_upstream_2mb"]
         assert results["info_snps_in_gene"] == validation["info_snps_in_gene"]
         assert (
             results["info_snps_downstream_2mb"]
             == validation["info_snps_downstream_2mb"]
         )
-        assert results["total_info_snps"] == validation["total_info_snps"]
         assert (
-            results["high_risk_snps_upstream_2mb"]
-            == validation["high_risk_snps_upstream_2mb"]
+            results["high_risk_snps_upstream_2mb_from_female"]
+            == validation["high_risk_snps_upstream_2mb_from_female"]
         )
         assert (
-            results["high_risk_snps_within_gene"] == validation["high_risk_within_gene"]
+            results["high_risk_within_gene_from_female"]
+            == validation["high_risk_within_gene_from_female"]
         )
         assert (
-            results["high_risk_snps_downstream_2mb"]
-            == validation["high_risk_snps_downstream_2mb"]
+            results["high_risk_snps_downstream_2mb_from_female"]
+            == validation["high_risk_snps_downstream_2mb_from_female"]
         )
         assert (
-            results["low_risk_snps_upstream_2mb"]
-            == validation["low_risk_snps_upstream_2mb"]
+            results["low_risk_snps_upstream_2mb_from_female"]
+            == validation["low_risk_snps_upstream_2mb_from_female"]
         )
         assert (
-            results["low_risk_snps_within_gene"] == validation["low_risk_within_gene"]
+            results["low_risk_within_gene_from_female"]
+            == validation["low_risk_within_gene_from_female"]
         )
         assert (
-            results["low_risk_snps_downstream_2mb"]
-            == validation["low_risk_snps_downstream_2mb"]
+            results["low_risk_snps_downstream_2mb_from_female"]
+            == validation["low_risk_snps_downstream_2mb_from_female"]
+        )
+        assert (
+            results["high_risk_snps_upstream_2mb_from_male"]
+            == validation["high_risk_snps_upstream_2mb_from_male"]
+        )
+        assert (
+            results["high_risk_within_gene_from_male"]
+            == validation["high_risk_within_gene_from_male"]
+        )
+        assert (
+            results["high_risk_snps_downstream_2mb_from_male"]
+            == validation["high_risk_snps_downstream_2mb_from_male"]
+        )
+        assert (
+            results["low_risk_snps_upstream_2mb_from_male"]
+            == validation["low_risk_snps_upstream_2mb_from_male"]
+        )
+        assert (
+            results["low_risk_within_gene_from_male"]
+            == validation["low_risk_within_gene_from_male"]
+        )
+        assert (
+            results["low_risk_snps_downstream_2mb_from_male"]
+            == validation["low_risk_snps_downstream_2mb_from_male"]
         )
 
 
@@ -194,12 +262,29 @@ def test_embryo_categorization(capsys, name):
             all_validation[dict["sample_id"] + "_" + dict["embryo_id"]] = dict
 
     results_dict = {}
-    for dict in results:
-        results_dict[dict["embryo_id"].replace(".rhchp", "")] = dict
+    # TODO rename dict variable to something more meaningful
+    # TODO refactor all tests to use x_linked format
+    try:
+        # Required for legacy method testing AR and AD
+        for result_dictionary in results:
+            results_dict[
+                result_dictionary["embryo_id"].replace(".rhchp", "")
+            ] = result_dictionary
+    except TypeError:
+        # Required for new method testing XL
+        pass
 
-    result = results_dict[embryo_id]
+    try:
+        # Required for legacy method testing AR and AD
+        result = results_dict[embryo_id]
+    except KeyError:
+        result = results[embryo_id]
+        result["mode"] = results["mode"]
+        result["sample_id"] = results["sample_id"]
+
     validation = all_validation[name.split("_", 2)[2] + "_" + embryo_id]
-    if result["mode"] == "autosomal_dominant" or result["mode"] == "x_linked":
+
+    if result["mode"] == "autosomal_dominant":
         assert result["mode"] == validation["mode"]
         assert result["sample_id"] == validation["sample_id"]
         assert (
@@ -221,6 +306,15 @@ def test_embryo_categorization(capsys, name):
             result["downstream_2mb_low_risk_snps"]
             == validation["low_risk_downstream_2mb"]
         )
+    elif result["mode"] == "x_linked":
+        assert result["mode"] == validation["mode"]
+        assert result["sample_id"] == validation["sample_id"]
+        assert result["high_risk,upstream"] == validation["high_risk_upstream_2mb"]
+        assert result["high_risk,within_gene"] == validation["high_risk_within_gene"]
+        assert result["high_risk,downstream"] == validation["high_risk_downstream_2mb"]
+        assert result["low_risk,upstream"] == validation["low_risk_upstream_2mb"]
+        assert result["low_risk,within_gene"] == validation["low_risk_within_gene"]
+        assert result["low_risk,downstream"] == validation["low_risk_downstream_2mb"]
     elif result["mode"] == "autosomal_recessive":
         assert result["mode"] == validation["mode"]
         assert result["sample_id"] == validation["sample_id"]
@@ -237,7 +331,7 @@ def test_embryo_categorization(capsys, name):
             == validation["high_risk_snps_downstream_2mb_from_female"]
         )
         assert (
-            result["downstream_2mb_female_low_risk_snps"]
+            result["upstream_2mb_female_low_risk_snps"]
             == validation["low_risk_snps_upstream_2mb_from_female"]
         )
         assert (
@@ -246,7 +340,7 @@ def test_embryo_categorization(capsys, name):
         )
         assert (
             result["upstream_2mb_female_low_risk_snps"]
-            == validation["low_risk_snps_downstream_2mb_from_female"]
+            == validation["low_risk_snps_upstream_2mb_from_female"]
         )
         assert (
             result["upstream_2mb_male_high_risk_snps"]
