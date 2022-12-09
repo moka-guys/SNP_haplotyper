@@ -121,7 +121,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-# .env this file adds src/snp_haplotyper to PYTHONPATH so that pytest works in vs code https://code.visualstudio.com/docs/python/environments - Use of the PYTHONPATH variable
+# .env this file adds snp_haplotyper to PYTHONPATH so that pytest works in vs code https://code.visualstudio.com/docs/python/environments - Use of the PYTHONPATH variable
 .venv
 env/
 venv/
