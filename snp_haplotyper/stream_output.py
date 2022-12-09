@@ -2,6 +2,10 @@ import sys
 
 
 def get_snp_count(df, pattern, category_col, snp_count_col):
+    """
+    Count SNPs in a given category
+    """
+
     count = int(
         df[
             (df["gene_distance"].str.endswith(pattern))
@@ -12,7 +16,12 @@ def get_snp_count(df, pattern, category_col, snp_count_col):
 
 
 def get_total_snp_count(df, category_col, snp_count_col):
-    total = int(df[(df[category_col] != "uninformative")][snp_count_col].sum())
+    """
+    Count total SNPs in a given category
+    """
+    total = int(
+        df[(df[category_col] != "uninformative")][snp_count_col].sum(numeric_only=True)
+    )
     return total
 
 
@@ -24,6 +33,9 @@ def get_snp_count_and_filter(
     risk_filter,
     inherited_from_col="None",  # For Autosomal Recessive samples also filter on the partner SNP inherited from
 ):
+    """
+    Count SNPs in a given category filtered by risk filter, or risk filter and inherited from
+    """
     if inherited_from_col == "None":
         count = int(
             df[
@@ -38,7 +50,7 @@ def get_snp_count_and_filter(
                 (df["gene_distance"].str.endswith(pattern))
                 & (df[category_col] == risk_filter)
                 & (df["snp_inherited_from"] == inherited_from_col)
-            ][snp_count_col].sum()
+            ][snp_count_col].sum(numeric_only=True)
         )
     return count
 
@@ -127,7 +139,7 @@ def stream_autosomal_dominant_output(
     embryo_snps_output_df = embryo_snps_summary_df
     embryo_snps_output_df["mode"] = mode_of_inheritance
     embryo_snps_output_df["sample_id"] = output_prefix
-    embryo_cat_data = embryo_snps_output_df.to_dict(orient="record")
+    embryo_cat_data = embryo_snps_output_df.to_dict("records")
     return [informative_snp_data, embryo_cat_data]
 
 
@@ -269,7 +281,7 @@ def stream_autosomal_recessive_output(
     embryo_snps_output_df = embryo_snps_summary_df
     embryo_snps_output_df["mode"] = mode_of_inheritance
     embryo_snps_output_df["sample_id"] = output_prefix
-    embryo_cat_data = embryo_snps_output_df.to_dict(orient="record")
+    embryo_cat_data = embryo_snps_output_df.to_dict("records")
     return [informative_snp_data, embryo_cat_data]
 
 
@@ -367,8 +379,16 @@ def stream_x_linked_output(
 
     # Populate stream with additional fields:
     embryo_snps_output_df = embryo_snps_summary_df
-    embryo_snps_output_df["mode"] = mode_of_inheritance
-    embryo_snps_output_df["sample_id"] = output_prefix
 
-    embryo_cat_data = embryo_snps_output_df.to_dict(orient="record")
+    # TODO Generalise the x_linked approach for the other modes of inheritance
+    if mode_of_inheritance == "x_linked":
+        embryo_snps_output_df.columns = embryo_snps_output_df.columns.str.strip(
+            ".rhchp"
+        )
+        embryo_cat_data = embryo_snps_output_df.to_dict()
+        embryo_cat_data["mode"] = mode_of_inheritance
+        embryo_cat_data["sample_id"] = output_prefix
+
+    else:
+        embryo_cat_data = embryo_snps_output_df.to_dict("records")
     return [informative_snp_data, embryo_cat_data]

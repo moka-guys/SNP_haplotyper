@@ -17,6 +17,7 @@ from config import (
     allow_autosomal_recessive_cases,
     allow_x_linked_cases,
     allow_cosanguineous_cases,
+    stream_results,
 )
 from x_linked_logic import x_linked_analysis
 from snp_plot import plot_results, summarise_snps_per_embryo
@@ -410,9 +411,13 @@ def calculate_nocall_percentages(df):
     """
     nocall = df[df["call_type"] == "NoCall"]
     if nocall.shape[0] > 0:
-        trimmed_nocall = nocall.iloc[:, 1:]  # Trim first column
-        trimmed_df = df.iloc[:, 1:]  # Trim first column
-        nocall_percentage = trimmed_nocall / trimmed_df.sum(axis=0)
+        # Remove non-numeric field 'call_type' from the dataframe
+        numeric_nocall_df = nocall.drop("call_type", axis=1)
+        numeric_df = df.drop("call_type", axis=1)
+        # Calculate the percentage of NoCalls
+        nocall_percentage = numeric_nocall_df / numeric_df.sum(
+            axis=0, numeric_only=True
+        )
         # Add descriptive column
         nocall_percentage.insert(0, "call_type", "NoCall")
         return nocall_percentage
@@ -430,20 +435,20 @@ def detect_miscall_or_ado(
     it indicates a miscall or ADO (Allele dropout) in the embryo for that SNP.
 
     The definition of a miscall is any haplotype in the embryo which is inconsistent
-    with the haplotype of the parents i.e. Parents AA, AA and an embryo AB. This is due
+    with the haplotype of the parents i.e. Parents "AA", "BB" and an embryo "AA". This is due
     to technical error in the measurement.  NOTE: that the miscall could be in any one of the
     trio even though it is recorded under the embryo.
 
     The definition of ADO (Allele dropout) is used when there is a suspected biological origin for the
-    mismatch in haplotypes, due to uniparental inheritance of the allele i.e Parents AA, AB and an embryo AA,
+    mismatch in haplotypes, due to uniparental inheritance of the allele i.e Parents AA, BB and an embryo AA,
     the B allele has dropped out.  NOTE: that the ADO could have occured in any of the trio even though it is
     recorded under the embryo.  It is expected that the Genomic Scientist will look at the SNP plots and
     use their judgement as to whether allele dropout is observed.
 
     Args:
-        male_partner_haplotype (string): Either "AA", "BB", or "AB" (NoCalls will throw an exception))
-        female_partner_haplotype (string): Either "AA", "BB", or "AB" (NoCalls will throw an exception))
-        embryo_haplotype (string): Either "AA", "BB", or "AB" (NoCalls will throw an exception))
+        male_partner_haplotype (string): Either "AA", "BB", "AB", or "NoCall"
+        female_partner_haplotype (string): Either "AA", "BB", "AB", or "NoCall"
+        embryo_haplotype (string): Either "AA", "BB", "AB", or "NoCall"
     Returns:
         string: 'call', 'miscall', 'ADO', or an Error message
     """
@@ -512,7 +517,7 @@ def detect_miscall_or_ado(
                 )
             case ["AB", "AB"]:
                 result = (
-                    "Error! Haplotypes most be AA, BB, or AB"
+                    "Error! Parent haplotypes cannot be AB & AB these shoulds have been filtered out"
                     if embryo_haplotype
                     not in [
                         "AA",
@@ -645,7 +650,7 @@ def snps_by_region(df, mode_of_inheritance):
 
 def summarised_snps_by_region(df, mode_of_inheritance):
     """
-    TODO - check what this function does compared to snps_by_region()
+    Summarises the SNPs per genome region for a given mode of inheritance.
     """
     if mode_of_inheritance == "autosomal_dominant":
         # Filter out "uninformative" from summary
@@ -653,7 +658,7 @@ def summarised_snps_by_region(df, mode_of_inheritance):
         # Group informative 'low_risk' and 'high_risk' SNPs together per region
         summary_categorised_snps_by_region = categorised_snps_by_region.groupby(
             by=["gene_distance"]
-        ).sum()
+        ).sum(numeric_only=True)
         # Ensure rows are in logical order
         summary_categorised_snps_by_region = summary_categorised_snps_by_region.reindex(
             [
@@ -686,7 +691,7 @@ def summarised_snps_by_region(df, mode_of_inheritance):
             categorised_snps_by_region.groupby(
                 by=["gene_distance", "snp_risk_category", "snp_inherited_from"]
             )
-            .sum()
+            .sum(numeric_only=True)
             .reset_index()
         )
 
@@ -728,7 +733,7 @@ def summarised_snps_by_region(df, mode_of_inheritance):
         # Group informative 'low_risk' and 'high_risk' SNPs together per region
         summary_categorised_snps_by_region = categorised_snps_by_region.groupby(
             by=["gene_distance"]
-        ).sum()
+        ).sum(numeric_only=True)
         # Ensure rows are in logical order
         summary_categorised_snps_by_region = summary_categorised_snps_by_region.reindex(
             [
@@ -1009,7 +1014,7 @@ def summarise_snps_per_embryo_pretty(
 
 def summarise_embryo_results(df, embryo_ids):
     """
-    # TODO Docstring
+    Summarise embryo results for each embryo in embryo_ids
     """
     summary_embryo_results = pd.DataFrame()
     for embryo in embryo_ids:
@@ -1018,7 +1023,7 @@ def summarise_embryo_results(df, embryo_ids):
     summary_embryo_results = (
         summary_embryo_results.fillna("0").astype(int).reset_index()
     )
-    # Ensure same ordering of table accross samples TODO check it doesn't break if index not present
+    # Ensure same ordering of table accross samples
     summary_embryo_results = summary_embryo_results.sort_values(
         [
             "index",
@@ -1079,11 +1084,9 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     if args is None:
         args = parser.parse_args()
 
-    # Check config.py file to see whether the script should run for the parameters provided.
-    # Typically this is used when the script has been validated for one or more modes of inheritance
+    # Check config.py file to see which paramters are currently supported.
+    # Typically this is used when the script has been validated for some modes of inheritance
     # and we want to ensure that the script is not run for other, unvalidated, modes of inheritance.
-    # This allows the software to be ushed in production without the risk of running the script on
-    # parameters which have not been validated.
 
     if (
         allow_autosomal_dominant_cases == False
@@ -1108,8 +1111,19 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         raise InvalidParameterSelectedError(
             "Please check the config.py file to see whether consanguineous samples are supported in the current release"
         )
-    else:
-        pass
+
+    # Check input variables are valid
+    if (
+        (args.mode_of_inheritance == "autosomal_dominant")
+        | (args.mode_of_inheritance == "autosomal_recessive")
+    ) and (args.chr == "x"):
+        raise ArgumentInputError(
+            "Chromosome X is not a valid chromosome for autosomal dominant or recessive samples, please check input"
+        )
+    elif (args.mode_of_inheritance == "x_linked") and (args.chr != "x"):
+        raise ArgumentInputError(
+            "Chromosome X is the only valid chromosome for x-linked samples, please check input"
+        )
 
     # import haplotype data from text file
     df = pd.read_csv(
@@ -1209,7 +1223,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         args.consanguineous,
     )
 
-    # Summarise embryo results
+    # Summarise embryo results by risk category and SNP position
     embryo_snps_summary_df = summarise_snps_per_embryo(
         embryo_category_df,
         args.embryo_ids,
@@ -1223,10 +1237,25 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         embryo_category_df, args.embryo_ids, args.mode_of_inheritance
     )
 
-    summary_embryo_df = embryo_count_data_df.groupby(by=["risk_category"]).sum()
+    summary_embryo_df = embryo_count_data_df.groupby(by=["risk_category"]).sum(
+        numeric_only=True
+    )
+
+    embryo_summary_df = (
+        embryo_count_data_df.groupby(["risk_category", "snp_position"])
+        .sum()
+        .reset_index()
+    )
+    embryo_summary_df = embryo_summary_df.set_index(
+        embryo_summary_df.risk_category.str.cat(embryo_summary_df.snp_position, sep=",")
+    )
+    embryo_summary_df = embryo_summary_df.drop(
+        ["snp_position", "risk_category"], axis=1
+    )
+
     summary_embryo_by_region_df = embryo_count_data_df.groupby(
         by=["risk_category", "gene_distance"]
-    ).sum()
+    ).sum(numeric_only=True)
     ##############################################################################
 
     # Produce report
@@ -1254,7 +1283,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         temp_df = annotate_snp_position(summary_snps_by_region)
         temp_df = temp_df.groupby(
             by=["snp_inherited_from", "snp_risk_category", "gene_distance"]
-        ).sum()
+        ).sum(numeric_only=True)
         summary_snps_table = produce_html_table(
             temp_df,
             "summary_snps_table",
@@ -1383,9 +1412,8 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     html_string = template.render(place_holder_values)
 
-    # Stream machine readable JSON output to stdout for testing purposes
-    # args.testing = True
-    if args.testing:
+    # Stream machine readable JSON output to stdout for testing
+    if (args.testing == True) | (stream_results == True):
 
         export_json_data_as_csv(
             "test_data/embryo_validation_data.json",
@@ -1416,7 +1444,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
             informative_snp_data, embryo_cat_data = stream_x_linked_output(
                 args.mode_of_inheritance,
                 informative_snps_by_region,
-                embryo_snps_summary_df,
+                embryo_summary_df,
                 number_snps_imported,
                 args.output_prefix,
             )

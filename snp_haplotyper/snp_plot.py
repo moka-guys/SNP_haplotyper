@@ -40,7 +40,6 @@ def summarise_snps_per_embryo(
     embryo_ids,
     mode_of_inheritance,
 ):
-    # TODO Finish docstring
     """Plots SNP data
 
     For AD and XL produces a single plotly plot of the gene + 2mb flanking region with SNP information and summaries.
@@ -273,8 +272,14 @@ def summarise_snps_per_embryo(
                 within_gene_female_low_risk_snps,
                 upstream_2mb_female_low_risk_snps,
             ]
-        summary_snps_for_embryos_df = summary_snps_for_embryos_df.append(
-            pd.Series(row, summary_snps_for_embryos_df.columns), ignore_index=True
+
+        summary_snps_for_embryos_df = pd.concat(
+            [
+                summary_snps_for_embryos_df,
+                pd.DataFrame([dict(zip(summary_snps_for_embryos_df.columns, row))]),
+            ],
+            ignore_index=True,
+            axis=0,
         )
 
     return summary_snps_for_embryos_df
@@ -313,6 +318,7 @@ def plot_results(
         fig = px.scatter(
             df,
             x="Position",
+            # Replace risk category with numerical values for plotting
             y=df[f"{embryo}_risk_category"].map(
                 {
                     "high_risk": 2,
@@ -323,11 +329,15 @@ def plot_results(
                     "ADO": 1,
                 }
             ),
+            # If AR mode of inheritance, facet by partner the SNP was inherited from
+            # (i.e. produce an additional plot for male_partner & female_partner in addition
+            # to the main plot - 3 plots in total)
             facet_col="snp_inherited_from"
             if mode_of_inheritance == "autosomal_recessive"
             else None,
             facet_col_wrap=1 if mode_of_inheritance == "autosomal_recessive" else 0,
             color=f"{embryo}_risk_category",
+            #  Set color scheme for risk categories
             color_discrete_map={
                 "high_risk": "#e60e0e",
                 "low_risk": "#0ee60e",
@@ -337,6 +347,7 @@ def plot_results(
                 "ADO": "#00ccff",
             },
             symbol=f"{embryo}_risk_category",
+            # Set symbol for risk categories
             symbol_map={
                 "high_risk": "line-ns-open",
                 "low_risk": "line-ns-open",
@@ -345,6 +356,7 @@ def plot_results(
                 "ADO": "line-ns-open",
                 "uninformative": "line-ns-open",
             },
+            # Set order for risk categories for consistently ordered plotting
             category_orders={
                 f"{embryo}_risk_category": [
                     "high_risk",
@@ -354,7 +366,6 @@ def plot_results(
                     "NoCall",
                     "uniformative",
                 ],
-                # TODO check this has no effect for AD and XL
                 "snp_inherited_from": [
                     "male_partner",
                     "uninformative",
@@ -365,6 +376,7 @@ def plot_results(
                 "y": "SNP Category",
                 "Position": "Genomic coordinates",
             },
+            # Set size for risk categories
             size=df[f"{embryo}_risk_category"].map(
                 {
                     "high_risk": 8,
@@ -375,6 +387,7 @@ def plot_results(
                     "uninformative": 1,
                 }
             ),
+            # Turn on hover data
             hover_data={
                 "Position": ":.0f",
                 "probeset_id": True,
@@ -386,6 +399,7 @@ def plot_results(
         fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
         fig.for_each_annotation(lambda a: a.update(xshift=-680))
 
+        # Highlight gene region
         fig.add_vrect(
             x0=gene_start,
             x1=gene_end,
@@ -395,6 +409,7 @@ def plot_results(
             opacity=0.25,
             line_width=0,
         )
+        # add downstream line for 2mb flanking region lines
         fig.add_vline(
             x=gene_start - 2000000,
             line_width=3,
@@ -404,6 +419,7 @@ def plot_results(
             annotation_position="left top",
             annotation_textangle=90,
         )
+        # add upstream line for 2mb flanking region lines
         fig.add_vline(
             x=gene_end + 2000000,
             line_width=3,
@@ -413,10 +429,15 @@ def plot_results(
             annotation_position="right top",
             annotation_textangle=90,
         )
+        # Set reasonable axis size
         fig.update_xaxes(
             range=[gene_start - 2100000, gene_end + 2100000], exponentformat="none"
         )
 
+        # Functions to add SNP count annotations to plot
+        # TODO will refactor to reduce code duplication as calculated in main script
+
+        # Get counts for each risk category per region
         def get_counts(summary_df, embryo, multi_category):
             count = summary_df.loc[
                 summary_df["embryo_id"] == embryo,
@@ -424,6 +445,8 @@ def plot_results(
             ].item()
             return count
 
+        # Add SNP count annotations to plot - code gets convoluted here as we have to
+        # add annotations to three different types of plots (and AR has three faceted plots)
         def add_snp_count_annotation(
             facet_row,
             embryo,
@@ -538,6 +561,6 @@ def plot_results(
             width=1800,
             title_text=f"Results for {embryo} (Embryo Sex: {embryo_dict[embryo]})",
         )
-
+        # Convert plot to HTML and add to list of plots for export and insertion in HTML template
         plots_as_html.append(fig.to_html(full_html=False, include_plotlyjs="cdn"))
     return plots_as_html

@@ -21,6 +21,9 @@ args = parser.parse_args()
 
 
 def load_workbook_range(range_string, worksheet):
+    """
+    Import rows in the range with text entered
+    """
     col_start, col_end = re.findall("[A-Z]+", range_string)
 
     data_rows = []
@@ -31,7 +34,59 @@ def load_workbook_range(range_string, worksheet):
 
 
 def parse_excel_input(input_file):
-
+    """
+    Imports the following defined cells/ranges from the provided excel file:
+        biopsy_number
+        chromosome
+        consanguineous
+        de_novo
+        disease
+        disease_omim
+        embryo_data - range of cells containing embryo data:
+            biopsy_no
+            embryo_id
+            embryo_sex
+            embryo_column_name
+        exclusion
+        female_partner_hosp_num
+        flanking_region_size
+        gene
+        gene_end
+        gene_omim
+        gene_start
+        input_file
+        maternal_mutation
+        mode_of_inheritance
+        multi_analysis
+        partner1_details - range of cells containing partner1 details:
+            partner1_type
+            partner1_type
+            partner1_sex
+            partner1_forename
+            partner1_surname
+            partner1_dob
+            partner1_DNA_number
+            partner1_column_name
+        partner2_details - range of cells containing partner2 details:
+            partner2_type
+            partner2_sex
+            partner2_forename
+            partner2_surname
+            partner2_dob
+            partner2_DNA_number
+            partner2_column_name
+        paste_gene
+        paternal_mutation
+        pgd_worksheet
+        pgd_worksheet_denovo
+        pru
+        reference
+        ref_relationship
+        ref_relationship_to_couple
+        ref_seq
+        ref_status
+        template_version
+    """
     wb = load_workbook(
         filename=input_file,
         keep_vba=False,
@@ -43,12 +98,14 @@ def parse_excel_input(input_file):
 
     # Get list of defined ranges from provided excel sheet
     defined_ranges = wb.defined_names
-    print(defined_ranges)
+    # TODO Add to logger when implemented
+    #  print(defined_ranges)
     data_entry_sheet = wb["data_entry"]
 
     for dn in wb.defined_names.definedName:
-        print(dn.name)
-        print(dn.attr_text)
+        # TODO Add to logger when implemented
+        # print(dn.name)
+        # print(dn.attr_text)
         input_name = dn.name
         if input_name in ["embryo_data", "partner1_details", "partner2_details"]:
             # Import excel ranges

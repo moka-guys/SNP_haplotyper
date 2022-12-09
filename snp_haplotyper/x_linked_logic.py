@@ -70,9 +70,19 @@ def x_linked_analysis(
     # Calculate & classify the informative for male embryos
     conditions = [
         # Criteria_XL5, Criteria_XL7
-        (df[reference] == "AA") & (df[carrier_female_partner] == "AB"),
+        (df[reference] == "AA")
+        & (
+            (df[unaffected_male_partner] == "AA")
+            | (df[unaffected_male_partner] == "BB")
+        )
+        & (df[carrier_female_partner] == "AB"),
         # Criteria_XL6, Criteria_XL8
-        (df[reference] == "BB") & (df[carrier_female_partner] == "AB"),
+        (df[reference] == "BB")
+        & (
+            (df[unaffected_male_partner] == "AA")
+            | (df[unaffected_male_partner] == "BB")
+        )
+        & (df[carrier_female_partner] == "AB"),
     ]
     # Assign the correct labels for male AA
 
