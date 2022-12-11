@@ -6,7 +6,12 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 import re
+
 import sys
+import os
+
+# Add the directory containing this script to the PYTHOPATH
+sys.path.append(os.path.dirname(__file__))
 
 # Import mode of inheritance specific code
 from autosomal_dominant_logic import autosomal_dominant_analysis
