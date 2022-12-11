@@ -229,6 +229,12 @@ parser.add_argument(
     help='Pass a string in the format of a dictionary to populate the report header. A field will be created for each key provided, for example \'{"PRU":"1234", "Hospital No":"1234", "Biopsy No":"111"}\' will produce 3 fields in the header.',
 )
 
+# If no arguments are provided, print the help message
+# sys.argv includes a list of elements starting with the program
+if len(sys.argv) < 2:
+    parser.print_help()
+    parser.exit()
+
 
 def add_rsid_column(df, affy_2_rs_ids_df):
 
