@@ -3,6 +3,7 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_interval
 import pandas as pd
 import re
+import subprocess
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(
@@ -59,7 +60,6 @@ def parse_excel_input(input_file):
         mode_of_inheritance
         multi_analysis
         partner1_details - range of cells containing partner1 details:
-            partner1_type
             partner1_type
             partner1_sex
             partner1_forename
@@ -151,12 +151,24 @@ def parse_excel_input(input_file):
     template_version = argument_dict["template_version"]
 
     embryo_data_df = argument_dict["embryo_data"]
-    # embryo_data_df.columns = [
-    #     "biopsy_no",
-    #     "embryo_id",
-    #     "embryo_sex",
-    #     "embryo_column_name",
-    # ]
+    embryo_data_df.columns = [
+        "biopsy_no",
+        "embryo_id",
+        "embryo_sex",
+        "embryo_column_name",
+    ]
+
+    # Filter embryo data to only include embryos from the current biopsy
+    filtered_embryo_data_df = embryo_data_df[
+        embryo_data_df["biopsy_no"] == biopsy_number
+    ]
+
+    # Check if there are any embryos in the current biopsy
+    if filtered_embryo_data_df.empty:
+        trio_only = True
+    else:
+        trio_only = False
+
     (
         partner1_type,
         partner1_sex,
@@ -207,23 +219,33 @@ def parse_excel_input(input_file):
         f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
         f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
         f" --reference {reference} --reference_status {ref_status}"
-        f" --reference_relationship {ref_relationship} --embryo_ids 24.F4.EMB11.rhchp 25.F4.EMB12.rhchp 26.F4.EMB13.rhchp"
-        f" --embryo_sex unknown unknown unknown --gene_symbol {gene_symbol} --gene_start {gene_start}"
+        f" --reference_relationship {ref_relationship}"
+        f" --gene_symbol {gene_symbol} --gene_start {gene_start}"
         f" --gene_end {gene_end} --chr {chromosome}"
     )
 
-    print(cmd)
+    if trio_only == False:
+        cmd = cmd + (
+            f" --embryo_ids {' '.join(filtered_embryo_data_df.embryo_column_name.to_list())}"
+            f" --embryo_sex {' '.join(filtered_embryo_data_df.embryo_sex.to_list())}"
+        )
 
-    # Run SNP haplotyping script.
-    print(mode_of_inheritance)
-    if mode_of_inheritance == "Autosomal_Dominant":
-        pass
-    elif mode_of_inheritance == "Autosomal_Recessive":
-        pass
-    elif mode_of_inheritance == "x_linked":
-        pass
     else:
-        pass  # raise exception
+        cmd = cmd + f" --trio_only"
+
+    # Add header info to cmd string
+    cmd = cmd + (
+        f' --header {{"PRU":"{pru}", "Hospital Number":"{female_partner_hosp_num}", "Biopsy Number":"{biopsy_number}"}}'
+    )
+
+    # Run SNP haplotyping script. (if statement to allow for future development of mode dependent arguments, currently no difference)
+    # TODO if not required remove if statement
+    if mode_of_inheritance == "Autosomal_Dominant":
+        subprocess.run(cmd, shell=True)
+    elif mode_of_inheritance == "Autosomal_Recessive":
+        subprocess.run(cmd, shell=True)
+    elif mode_of_inheritance == "x_linked":
+        subprocess.run(cmd, shell=True)
 
 
 def main():

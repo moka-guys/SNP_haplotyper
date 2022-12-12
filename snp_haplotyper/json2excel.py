@@ -2,7 +2,6 @@ import argparse
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_interval
 import pandas as pd
-import re
 import json
 
 
@@ -11,7 +10,7 @@ parser = argparse.ArgumentParser(
     description="Populate excel spreadsheet template with test data from JSON file"
 )
 
-# File input/output data
+# Template file for creating excel file
 parser.add_argument(
     "-t",
     "--template_file",
@@ -19,6 +18,7 @@ parser.add_argument(
     help="Excel template file for entering SNP Array meta data",
 )
 
+# JSON file containing test data
 parser.add_argument(
     "-j",
     "--json_file",
@@ -29,152 +29,102 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def read_launch_json(json_file):
-    # Import launch.json and parse the file for the correct parameters for each of the samples
-    json_file_path = json_file
+def read_launch_json(json_file_path):
 
     with open(json_file_path, "r") as j:
         launch_contents = json.loads(j.read())
 
-    # Grep for arguments
-    p = re.compile(r"'name': '.*?,")
-    run_names = p.findall(str(launch_contents["configurations"]))
-    p = re.compile(r"'args': \[.*?\]")
-    run_args = p.findall(str(launch_contents["configurations"]))
+    run_data_df = pd.json_normalize(launch_contents["configurations"])
 
-    run_data_dictionary = {}
-    for i in range(len(run_args)):
-        run_name = run_names[i].lstrip("'name : ").rstrip("', ")
-        arg_list = (
-            run_args[i].lstrip("'args': [").rstrip(']"').replace("'", "").split(", ")
-        )
-        arg_dictionary = {}
-        dict_values = []
-        for i in arg_list:
-            if i.startswith("-"):
-                dict_values = []
-                dict_key = i.strip("-")
-            else:
-                dict_values.append(i)
-            if len(dict_values) == 1:
-                arg_dictionary[dict_key] = dict_values[0]  # Don't return a list of 1
-            else:
-                arg_dictionary[dict_key] = dict_values
+    # Run configurations are filtered by the "purpose" field to exclude configurations that are not intended for testing
+    run_data_df = run_data_df[
+        run_data_df["purpose"].str.contains("debug-test", regex=False)
+    ]
 
-        # Ensure that embryo_ids are a list even if only a single embryo is present
-        if isinstance(arg_dictionary["embryo_ids"], str):
-            embryo_ids_list = [arg_dictionary["embryo_ids"]]
-        else:
-            embryo_ids_list = arg_dictionary["embryo_ids"]
+    # The name and args columns are zipped into a dictionary for iterating over
+    run_data_dict = dict(zip(run_data_df["name"], run_data_df["args"]))
 
-        if isinstance(arg_dictionary["embryo_sex"], str):
-            embryo_sex_list = [arg_dictionary["embryo_sex"]]
-        else:
-            embryo_sex_list = arg_dictionary["embryo_sex"]
-
-        run_data_dictionary[run_name] = args
-
-        return run_data_dictionary
+    return run_data_dict
 
 
-def load_workbook_range(worksheet_and_range, ws):
-    worksheet_string = worksheet_and_range[0]
-    range_string = worksheet_and_range[1]
+def write_data_to_excel(run_data_dict, template_file_path):
+    """
+    Writes the following defined cells/ranges from the provided excel file:
+    biopsy_number
+    chromosome
+    consanguineous
+    embryo_data - range of cells containing embryo data:
+        biopsy_no
+        embryo_id
+        embryo_sex
+        embryo_column_name
+    gene
+    gene_end
+    gene_start
+    input_file
+    mode_of_inheritance
+    partner1_details - range of cells containing partner1 details:
+        partner1_type
+        partner1_sex
+        partner1_column_name
+    partner2_details - range of cells containing partner2 details:
+        partner2_type
+        partner2_sex
+        partner2_column_name
+    paste_gene
+    reference
+    ref_relationship
+    ref_relationship_to_couple
+    ref_seq
+    ref_status
+    """
 
-    # Remove absolute symbols from string
-    range_string = range_string.replace("$", "")
-    if len(re.findall("[A-Z]+", range_string)) == 2:
-        col_start, col_end = re.findall("[A-Z]+", range_string)
-        data_rows = []
-        for row in ws[range_string]:
-            data_rows.append([cell.value for cell in row])
-        range_contents = pd.DataFrame(
-            data_rows, columns=get_column_interval(col_start, col_end)
-        )
-    elif len(re.findall("[A-Z]+", range_string)) == 1:
-        col_start = re.findall("[A-Z]+", range_string)
-        col_end = col_start
-        range_contents = ws[range_string].value
-    return range_contents
+    wb = load_workbook(
+        filename=template_file_path,
+        keep_vba=True,
+        data_only=True,
+        keep_links=True,
+    )
+
+    # Get worksheet "data_entry" from template file
+    data_entry_sheet = wb["data_entry"]
+
+    # Iterate over the run_data_dict and write the data to the excel file
+    for argument_dict in run_data_dict:
+        data_entry_sheet["biopsy_number"] = "12345"
+        data_entry_sheet["chromosome"] = argument_dict["chromosome"]
+        data_entry_sheet["consanguineous"] = argument_dict["consanguineous"]
+        data_entry_sheet["female_partner_hosp_num"] = "12345"
+        data_entry_sheet["gene_symbol"] = argument_dict["gene_symbol"]
+        data_entry_sheet["gene_end"] = argument_dict["gene_end"]
+        data_entry_sheet["gene_omim"] = argument_dict["gene_omim"]
+        data_entry_sheet["gene_start"] = argument_dict["gene_start"]
+        data_entry_sheet["input_file"] = argument_dict["input_file"]
+        data_entry_sheet["mode_of_inheritance"] = argument_dict["mode_of_inheritance"]
+        data_entry_sheet[
+            "paste_gene"
+        ] = f'{argument_dict["chromosome"]}:{argument_dict["gene_start"]}-{argument_dict["gene_end"]}'  # genomic range in format chr3:100000-200000 used to populate other fields
+        data_entry_sheet["pgd_worksheet"] = "12345"
+        data_entry_sheet["pgd_worksheet_denovo"] = argument_dict["pgd_worksheet_denovo"]
+        data_entry_sheet["pru"] = "123456"
+        data_entry_sheet["reference"] = argument_dict["reference"]
+        data_entry_sheet["ref_relationship"] = argument_dict["ref_relationship"]
+        data_entry_sheet["ref_relationship_to_couple"] = argument_dict[
+            "ref_relationship_to_couple"
+        ]
+        data_entry_sheet["ref_seq"] = argument_dict["ref_seq"]
+        data_entry_sheet["ref_status"] = argument_dict["ref_status"]
+        data_entry_sheet["template_version"] = argument_dict["template_version"]
+        data_entry_sheet["embryo_data_df"] = argument_dict["embryo_data"]
 
 
-wb = load_workbook(
-    filename=args.input_file,
-    read_only=True,
-    keep_vba=False,
-    data_only=True,
-    keep_links=True,
-)
+def main(args=None):  # default argument allows pytest to override argparse for testing
+    if args is None:
+        args = parser.parse_args()
 
-argument_dict = {}
-
-# Get list of defined ranges from provided excel sheet
-defined_ranges = wb.defined_names
-print(defined_ranges)
-for dn in wb.defined_names.definedName:
-    print(dn.name)
-    print(dn.attr_text)
-    if dn.attr_text is not None:
-        for worksheet_and_range in wb.defined_names[dn.name].destinations:
-            ws = wb.active
-            range_values = load_workbook_range(worksheet_and_range, ws)
-            argument_dict[dn.name] = range_values
+    test_data_parameters = read_launch_json(args.json_file)
+    write_data_to_excel(test_data_parameters, args.template_file_path)
 
 
-biopsy_number = argument_dict["biopsy_number"]
-chromosome = argument_dict["chromosome"]
-consanguineous = argument_dict["consanguineous"]
-de_novo = argument_dict["de_novo"]
-
-# Flatten merged cells so only the entered value is returned
-disease = argument_dict["disease"].values.tolist()[0][0]
-disease_omim = argument_dict["disease_omim"].values.tolist()[0][0]
-
-# Extract embryo data into dataframe dropping any empty rows
-embryo_data_df = argument_dict["embryo_data"].dropna(axis=0)
-embryo_data_df.columns = [
-    "biopsy_no",
-    "embryo_id",
-    "embryo_column_name",
-]
-
-exclusion = argument_dict["exclusion"]
-female_partner_hosp_num = argument_dict["female_partner_hosp_num"]
-flanking_region_size = argument_dict["flanking_region_size"]
-gene = argument_dict["gene"]
-gene_end = argument_dict["gene_end"]
-gene_omim = argument_dict["gene_omim"]
-gene_start = argument_dict["gene_start"]
-input_file = argument_dict["input_file"]
-maternal_mutation = argument_dict["maternal_mutation"]
-mode_of_inheritance = argument_dict["mode_of_inheritance"]
-multi_analysis = argument_dict["multi_analysis"]
-(
-    partner1_type,
-    partner1_sex,
-    partner1_forename,
-    partner1_surname,
-    partner1_dob,
-    partner1_DNA_number,
-    partner1_column_name,
-) = argument_dict["partner1_details"].values.tolist()[0]
-(
-    partner2_type,
-    partner2_sex,
-    partner2_forename,
-    partner2_surname,
-    partner2_dob,
-    partner2_DNA_number,
-    partner2_column_name,
-) = argument_dict["partner2_details"].values.tolist()[0]
-paste_gene = argument_dict["paste_gene"]
-paternal_mutation = argument_dict["paternal_mutation"]
-pgd_worksheet = argument_dict["pgd_worksheet"]
-pgd_worksheet_denovo = argument_dict["pgd_worksheet_denovo"]
-pru = argument_dict["pru"]
-reference = argument_dict["reference"]
-ref_relationship = argument_dict["ref_relationship"]
-ref_relationship_to_couple = argument_dict["ref_relationship_to_couple"]
-ref_seq = argument_dict["ref_seq"]
-ref_status = argument_dict["ref_status"]
-template_version = argument_dict["template_version"]
+if __name__ == "__main__":
+    main()
