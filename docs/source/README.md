@@ -20,13 +20,13 @@ This script filters and classifies SNPs.
 
 Different methods are used for calling informative SNPs in XL conditions depending on the sex of the embryo.  This relies on accurate sex checking of the embryos.  This should be done by the PGD team downstream of the BASHer and is outside the scope of this software - only the gene and a flanking region are loaded into BASHer and this is not enough info to draw inferences regarding the sex of the embryo.
 
-### Non-paternity
+### Sample mixup
 
-If the listed male partner is not the biological father of the tested embryo’s then this could produce an incorrect diagnosis.
+If there has been a sample mixup and one of the trio is not related to the tested embryo’s then this could produce an incorrect diagnosis.
 
 ### Recombination
 
-TODO Recombination events can affect the diagnosis
+Recombination events can affect the diagnosis.  Single recombination events occur at 
 
 ### Consanguinity
 

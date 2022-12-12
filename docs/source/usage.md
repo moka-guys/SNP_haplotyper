@@ -21,4 +21,16 @@ python3 snp_haplotype.py --input_file F10_FMR1_XL.txt --output_folder output/ --
 
 ## Running Basher via excel_parser.py helper script
 
-TODO
+### Running excel_parser.py from the command line
+
+Rather than manually generating the command with all the correct parameters users can fill in an excel template with the analysis details and use the `excel_parser.py` script to parse the details and automatically generate the command to run BASHer.
+
+`excel_parser.py` can either be run from the command line:
+
+```powershell
+python3 "\path\to\excel_parser.py" --input_file "\path\to\excel_template.xlms
+```
+
+### Running excel_parser.py via a GUI
+
+The simplest way to launch BASHer is for users to right-click on the powershell script `launch_SNP_analysis.ps1`, select "Open with powershell", and use the file browser which opens to select the relevant excel template which will then be passed to `excel_parser.py` causing BASHer to be run with the analysis details in the supplied spreadsheet.

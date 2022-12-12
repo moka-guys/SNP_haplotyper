@@ -20,6 +20,14 @@ snp\_haplotyper.autosomal\_recessive\_logic module
    :undoc-members:
    :show-inheritance:
 
+snp\_haplotyper.config module
+-----------------------------
+
+.. automodule:: snp_haplotyper.config
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 snp\_haplotyper.excel\_parser module
 ------------------------------------
 
@@ -48,6 +56,14 @@ snp\_haplotyper.sample\_sheet\_reader module
 --------------------------------------------
 
 .. automodule:: snp_haplotyper.sample_sheet_reader
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+snp\_haplotyper.select\_input\_file module
+------------------------------------------
+
+.. automodule:: snp_haplotyper.select_input_file
    :members:
    :undoc-members:
    :show-inheritance:
