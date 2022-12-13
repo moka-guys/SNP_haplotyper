@@ -180,7 +180,6 @@ def test_informative_snps(capsys, name):
         )
     elif results["mode"] == "autosomal_recessive":
         validation = all_validation[results["sample_id"]]
-        print(results)
         assert results["mode"] == validation["mode"]
         assert results["sample_id"] == validation["sample_id"]
         assert results["num_snps"] == validation["num_snps"]

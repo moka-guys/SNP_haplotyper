@@ -527,7 +527,7 @@ def plot_results(
             )
         # A faceted 3 plot figure is created for AR so that male and female SNPs can be separated out.
         elif mode_of_inheritance == "autosomal_recessive":
-            add_snp_count_annotation(
+            add_snp_count_annotation(  # Male plot
                 3,
                 embryo,
                 summary_df,
@@ -541,7 +541,7 @@ def plot_results(
                 "downstream_2mb_male_low_risk_snps",
             )
 
-            add_snp_count_annotation(
+            add_snp_count_annotation(  # female plot
                 1,
                 embryo,
                 summary_df,

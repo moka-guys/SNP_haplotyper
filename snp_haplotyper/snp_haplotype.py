@@ -16,14 +16,12 @@ sys.path.append(os.path.dirname(__file__))
 # Import mode of inheritance specific code
 from autosomal_dominant_logic import autosomal_dominant_analysis
 from autosomal_recessive_logic import autosomal_recessive_analysis
-from config import (
-    genome_build,
-    allow_autosomal_dominant_cases,
-    allow_autosomal_recessive_cases,
-    allow_x_linked_cases,
-    allow_cosanguineous_cases,
-    stream_results,
-)
+import config as config
+
+# Imports variables for genome_build, allow_autosomal_dominant_cases, allow_autosomal_recessive_cases,
+# allow_x_linked_cases,allow_cosanguineous_cases, stream_results, basher_version,
+# released_to_production
+
 from x_linked_logic import x_linked_analysis
 from snp_plot import plot_results, summarise_snps_per_embryo
 from stream_output import (
@@ -236,9 +234,9 @@ parser.add_argument(
 
 # If no arguments are provided, print the help message
 # sys.argv includes a list of elements starting with the program
-if len(sys.argv) < 2:
-    parser.print_help()
-    parser.exit()
+# if len(sys.argv) < 2:
+#     parser.print_help()
+#     parser.exit()
 
 
 def add_rsid_column(df, affy_2_rs_ids_df):
@@ -418,7 +416,9 @@ def calculate_nocall_percentages(df):
     Args:
         df (dataframe): A dataframe produced by calculate_qc_metrics()
     Returns:
-        dataframe: Dataframe summarising the % of NoCalls per sample
+        dataframe: Dataframe summarising the % of NoCalls per sample,
+        with the same format as the dataframe produced by calculate_qc_metrics()
+        Essentially provides a row for the % of NoCalls per sample
     """
     nocall = df[df["call_type"] == "NoCall"]
     if nocall.shape[0] > 0:
@@ -996,8 +996,28 @@ def annotate_snp_position(df):
 def summarise_snps_per_embryo_pretty(
     df,
     embryo_ids,
-    mode_of_inheritance,
 ):
+    """
+    This function groups a results data frame by gene_distance and risk category, and then sums the number of SNPs in each category.
+    It then adds a new column to the dataframe, "snp_position", which is either "upstream", "downstream", or "within_gene".
+    Where upstream is 0-2MB from the start of the gene (5' direction) and downstream is 0-2MB from the end of the gene in the 3' direction.
+
+    Args:
+        df (dataframe): A dataframe with "gene_distance" column with category values in the range:
+            "1-2MB_from_start",
+            "0-1MB_from_start",
+            "within_gene",
+            "0-1MB_from_end",
+            "1-2MB_from_end",
+            and risk category columns for each embryo in embryo_ids, with category values in the range:
+            "high_risk",
+            "low_risk",
+            "uninformative",
+            "NoCall",
+            "miscall",
+            "ADO"
+        embryo_ids (list): A list of embryo columns in the dataframe to be summarised.
+    """
     counter = 0
     for embryo in embryo_ids:
         if counter == 0:
@@ -1100,27 +1120,33 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     # and we want to ensure that the script is not run for other, unvalidated, modes of inheritance.
 
     if (
-        allow_autosomal_dominant_cases == False
+        config.allow_autosomal_dominant_cases == False
         and args.mode_of_inheritance == "autosomal_dominant"
     ):
         raise InvalidParameterSelectedError(
             "Please check the config.py file to see whether autosomal dominant samples are supported in the current release"
         )
     elif (
-        allow_autosomal_recessive_cases == False
+        config.allow_autosomal_recessive_cases == False
         and args.mode_of_inheritance == "autosomal_recessive"
     ):
         raise InvalidParameterSelectedError(
-            "Please check the config.py file to see whether autosomal recessive samples are supported in the current release"
+            "As per the config.py file autosomal recessive samples are not supported in this release"
         )
-    elif allow_x_linked_cases == False and args.mode_of_inheritance == "x_linked":
+    elif (
+        config.allow_x_linked_cases == False and args.mode_of_inheritance == "x_linked"
+    ):
         raise InvalidParameterSelectedError(
-            "Please check the config.py file to see whether x-linked samples are supported in the current release"
+            "As per the config.py file x-linked samples are not supported in this release"
         )
 
-    elif allow_cosanguineous_cases == False and args.consanguieous == True:
+    elif config.allow_cosanguineous_cases == False and args.consanguieous == True:
         raise InvalidParameterSelectedError(
-            "Please check the config.py file to see whether consanguineous samples are supported in the current release"
+            "As per the config.py file consanguineous samples are not supported in this release"
+        )
+    elif config.allow_trio_only_analysis == False and args.trios_only == True:
+        raise InvalidParameterSelectedError(
+            "As per the config.py file trio only analysis are not supported in this release"
         )
 
     # Check input variables are valid
@@ -1217,15 +1243,11 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     # Informative SNPs
     informative_snps_by_region = snps_by_region(results_df, args.mode_of_inheritance)
 
-    print(informative_snps_by_region)
-
     # Get total of informative SNPs
     summary_snps_by_region = summarised_snps_by_region(
         informative_snps_by_region,
         args.mode_of_inheritance,
     )
-
-    print(summary_snps_by_region)
 
     # Categorise embryo alleles
     embryo_category_df = categorise_embryo_alleles(
@@ -1245,9 +1267,6 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         args.mode_of_inheritance,
     )
 
-    # summary_embryo_df = summarise_embryo_results(embryo_category_df, args.embryo_ids)
-
-    ##############################################################################
     embryo_count_data_df = summarise_snps_per_embryo_pretty(
         embryo_category_df, args.embryo_ids, args.mode_of_inheritance
     )
@@ -1256,15 +1275,18 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         numeric_only=True
     )
 
-    embryo_summary_df = (
+    # Summarise embryo results by risk category and SNP position - used for streamming X-linked embryo data
+    embryo_stream_output_df = (
         embryo_count_data_df.groupby(["risk_category", "snp_position"])
         .sum()
         .reset_index()
     )
-    embryo_summary_df = embryo_summary_df.set_index(
-        embryo_summary_df.risk_category.str.cat(embryo_summary_df.snp_position, sep=",")
+    embryo_stream_output_df = embryo_stream_output_df.set_index(
+        embryo_stream_output_df.risk_category.str.cat(
+            embryo_stream_output_df.snp_position, sep=","
+        )
     )
-    embryo_summary_df = embryo_summary_df.drop(
+    embryo_stream_output_df = embryo_stream_output_df.drop(
         ["snp_position", "risk_category"], axis=1
     )
 
@@ -1272,8 +1294,6 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         by=["risk_category", "gene_distance"]
     ).sum(numeric_only=True)
     ##############################################################################
-
-    print(summary_embryo_df)
 
     # Produce report
     results_table_1 = produce_html_table(
@@ -1311,7 +1331,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
             gene_distance=summary_snps_by_region["gene_distance"],
             female_embryo_snp_count=summary_snps_by_region["female_AB_snp_count"],
             male_snp_count=summary_snps_by_region["male_AA_snp_count"]
-            + summary_snps_by_region["male_AA_snp_count"],
+            + summary_snps_by_region["male_BB_snp_count"],
         )
         summary_snps_table = produce_html_table(
             temp_df,
@@ -1324,7 +1344,9 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     html_list_of_plots = []
 
     # Produce plot for trios
+    # TODO: Add option to produce plot for embryos only
 
+    # Do not produce plots for embryos if only a trio is being run
     if (
         args.trio_only == False
     ):  # If only a trio is being run do not produce tables/plots for embryos
@@ -1388,7 +1410,17 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     # convert header dictionary into html
     def dict2html(header_dictionary):
-        """ """
+        """
+        Converts a dictionary of header into an html table for displaying in the report.
+        Flexible way of allowing the user to add any information they want to the report header.
+
+        Args:
+            header_dictionary (dict): Dictionary of header information
+            For example: {"Analysis Name": "test", "Analysis Date": "2020-01-01"}
+
+        Returns:
+            header_html (str): HTML table of header information
+        """
         header_html = f'<h2> Analysis Details </h2> <table style="width:100%"><tr>'
         for key in header_dictionary:
             header_html = (
@@ -1399,6 +1431,14 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     header_html = dict2html(args.header_info)
 
+    if config.released_to_production == True:
+        warning_text = ""
+    elif config.released_to_production == False:
+        warning_text = (
+            f"<h3> is a pre-release version of the BASHer tool. "
+            f"Please contact the BASHer team if you have any questions or comments.</h3>"
+        )
+
     template = env.get_template("report_template.html")
     place_holder_values = {
         "header_html": header_html,
@@ -1407,7 +1447,8 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         "chromsome": args.chr.upper(),
         "gene_start": args.gene_start,
         "gene_end": args.gene_end,
-        "genome_build": genome_build,  # Imported from config.py file
+        "genome_build": config.genome_build,  # Imported from config.py file
+        "config.basher_version": config.basher_version,  # Imported from config.py file
         "input_file": args.input_file.name
         if isinstance(args.input_file, IOBase)
         else args.input_file,  # Check if input file is a file object or a string
@@ -1430,7 +1471,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     html_string = template.render(place_holder_values)
 
     # Stream machine readable JSON output to stdout for testing
-    if (args.testing == True) | (stream_results == True):
+    if (args.testing == True) | (config.stream_results == True):
 
         export_json_data_as_csv(
             "test_data/embryo_validation_data.json",
@@ -1461,7 +1502,7 @@ def main(args=None):  # default argument allows pytest to override argparse for 
             informative_snp_data, embryo_cat_data = stream_x_linked_output(
                 args.mode_of_inheritance,
                 informative_snps_by_region,
-                embryo_summary_df,
+                embryo_stream_output_df,
                 number_snps_imported,
                 args.output_prefix,
             )
