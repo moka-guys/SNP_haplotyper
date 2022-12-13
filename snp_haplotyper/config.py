@@ -9,7 +9,7 @@ basher_version = "1.0.0"
 # debugging issues with the test suite as pytest captures this output during testing and
 # compares it to the expected output
 
-stream_results = True
+stream_results = False
 
 # These flags can be used to prevent the program from running certain parts of the analysis
 # for example, if you have validated specific modes of inheritance, you can set the flags
@@ -17,7 +17,8 @@ stream_results = True
 allow_autosomal_dominant_cases = True
 allow_autosomal_recessive_cases = True
 allow_x_linked_cases = False
-allow_cosanguineous_cases = False
+allow_consanguineous_cases = False
+allow_trio_only_analysis = False
 
 # The following flag adds a warning to the report if the version of BASHer used to generate it
 # is still in development

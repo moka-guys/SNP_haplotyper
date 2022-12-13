@@ -12,6 +12,7 @@
 
 <body>
     <h1>BASHer SNP Haplotyping Report</h1>
+    {{ warning }}
     {{ header_html }}
     <table>
         <tr>
@@ -19,6 +20,7 @@
         </tr>
         <tr>
             <td><b>SNP Data File:</b> {{input_file}} </td>
+            <td><b>Report Date:</b> {{report_date}} </td>
             <td><b>Basher Release:</b> {{basher_version}} </td>
         </tr>
         <tr>
@@ -46,6 +48,7 @@
 
     <!-- *** Section 1 *** --->
     <h2>Probe Classification Table</h2>
+    {{ warning }}
     <tbody>
         <tr>
             <td>Minimum Genomic Coordinate:</td>
@@ -58,21 +61,27 @@
         {{ results_table_1 }}
 
         <h2>NoCalls per Sample</h2>
+        {{ warning }}
         {{ nocall_table }}
 
         <h2>NoCalls Proportion per Sample</h2>
+        {{ warning }}
         {{ nocall_percentages_table }}
 
         <h2>Informative SNPs by region</h2>
+        {{ warning }}
         {{ summary_snps_table }}
 
         <h2>Embryo Alleles by Risk Category</h2>
+        {{ warning }}
         {{ summary_embryo_table }}
 
         <h2>Embryo Summary by Risk Category and SNP Position</h2>
+        {{ warning }}
         {{ summary_embryo_by_region_table }}
 
         <h2>Plot Embryo Results</h2>
+        {{ warning }}
         {{ html_text_for_plots }}
 </body>
 

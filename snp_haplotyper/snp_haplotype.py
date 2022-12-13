@@ -5,7 +5,7 @@ import json
 import pandas as pd
 from pathlib import Path
 import numpy as np
-import re
+from datetime import datetime
 
 import sys
 import os
@@ -1140,11 +1140,11 @@ def main(args=None):  # default argument allows pytest to override argparse for 
             "As per the config.py file x-linked samples are not supported in this release"
         )
 
-    elif config.allow_cosanguineous_cases == False and args.consanguieous == True:
+    elif config.allow_consanguineous_cases == False and args.consanguineous == True:
         raise InvalidParameterSelectedError(
             "As per the config.py file consanguineous samples are not supported in this release"
         )
-    elif config.allow_trio_only_analysis == False and args.trios_only == True:
+    elif config.allow_trio_only_analysis == False and args.trio_only == True:
         raise InvalidParameterSelectedError(
             "As per the config.py file trio only analysis are not supported in this release"
         )
@@ -1268,7 +1268,8 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     )
 
     embryo_count_data_df = summarise_snps_per_embryo_pretty(
-        embryo_category_df, args.embryo_ids, args.mode_of_inheritance
+        embryo_category_df,
+        args.embryo_ids,
     )
 
     summary_embryo_df = embryo_count_data_df.groupby(by=["risk_category"]).sum(
@@ -1435,8 +1436,8 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         warning_text = ""
     elif config.released_to_production == False:
         warning_text = (
-            f"<h3> is a pre-release version of the BASHer tool. "
-            f"Please contact the BASHer team if you have any questions or comments.</h3>"
+            f"<h3 style='color:red'> This is a pre-release version of the BASHer tool. "
+            f"Please contact the BASHer team if you have any questions.</h3>"
         )
 
     template = env.get_template("report_template.html")
@@ -1445,10 +1446,10 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         "mode_of_inheritance": args.mode_of_inheritance,
         "gene_symbol": args.gene_symbol,
         "chromsome": args.chr.upper(),
-        "gene_start": args.gene_start,
-        "gene_end": args.gene_end,
+        "gene_start": f"{args.gene_start:,}",  # Format with 1000s comma separator
+        "gene_end": f"{args.gene_end:,}",  # Format with 1000s comma separator
         "genome_build": config.genome_build,  # Imported from config.py file
-        "config.basher_version": config.basher_version,  # Imported from config.py file
+        "basher_version": config.basher_version,  # Imported from config.py file
         "input_file": args.input_file.name
         if isinstance(args.input_file, IOBase)
         else args.input_file,  # Check if input file is a file object or a string
@@ -1462,10 +1463,12 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         "results_table_1": results_table_1,
         "nocall_table": nocall_table,
         "nocall_percentages_table": nocall_percentages_table,
+        "report_date": datetime.today().strftime("%Y-%m-%d %H:%M:%S"),
         "summary_snps_table": summary_snps_table,
         "summary_embryo_table": summary_embryo_table,
         "summary_embryo_by_region_table": summary_embryo_by_region_table,
         "html_text_for_plots": html_text_for_plots,
+        "warning": warning_text,  # Warning text, for example if the tool is not released to production
     }
 
     html_string = template.render(place_holder_values)
