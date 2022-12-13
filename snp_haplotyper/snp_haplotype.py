@@ -789,7 +789,13 @@ def categorise_embryo_alleles(
 ):
     """For each embryo this fuction categorises their SNPs
 
-    Takes a dataframe produced
+    Note the usable/informative genotypes for each mode of inheritance are hardcoded into this function.
+    These have been defined with the PGD team. Note genotypes are defined as usable based on whether we
+    can trace the inheritance from a parent AND if it's shared by an affected/unaffected reference and NOT
+    if it matches with the required genotype to perform a SNV analysis of that site, eg In AR condition,
+    if performing SNV analysis would be interested in homozygous sites but these sites are not informative
+    in this application - only heterozygous sites allow us to determine who an allele was inherited from and
+    if it's shared by the reference.
 
     Args:
         df (dataframe): A results_df dataframe produce
@@ -1020,6 +1026,10 @@ def summarise_snps_per_embryo_pretty(
     """
     counter = 0
     for embryo in embryo_ids:
+        # Code below acts like a pivot table producing a breakdown of the number in each category of
+        # gene_distance and risk category. size() tells the function to count the number of occurrences
+        # rather than say sum(). reset_index() converts it from a groupby object with two indexes,
+        # gene_distance and risk_category into one index of "gene_distance, risk_category".
         if counter == 0:
             output_df = (
                 df.groupby(["gene_distance", f"{embryo}_risk_category"])

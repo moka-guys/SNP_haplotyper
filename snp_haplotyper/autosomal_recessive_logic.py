@@ -11,15 +11,15 @@ def autosomal_recessive_analysis(
     reference_status,
     consanguineous,
 ):
-    """Identifies any SNP site which could be used to inform a decision regarding inheriting an autosomal recessive condition ("informative" SNPs) and categorizes
-    the site as  indicating "high_risk" or "low_risk" of inheriting an autosomal recessive condition if that site is heterozygous (AB) in the embryo.  For consanguineous
-    cases (where "informative" SNPs can be limited) the function also considers sites TODO
-    # TODO change google doc link to link to read the docs.
-    The full logic behind the function is described here TODO
+    """Identifies any "informative" probes because, if the embryo was heterozygous, we could identify who an allele was inherited
+    from and if it is shared by the affected/unaffected reference. For example, if the male partner is AA and female partner AB
+    and the B allele is also in the affected reference we could say that if the embryo was AB it must have inherited a high risk
+    allele from the female partner.  The full logic behind the function is described inthe documentation.
     This function asks the question - For the combination of haplotypes present in the reference trio (reference,
     unaffected_partner and affected_partner) what information would this SNP provide us with if the SNP was
-    AB in the embryo - does the SNP indicate "high_risk", "low_risk", or is it "uninformative"? Additioanlly for
-    consanguineous cases it also considers additional sites in the embryo (AA,BB) to boost the number of informative SNPs.
+    AB in the embryo - does the SNP indicate "high_risk", "low_risk", or is it "uninformative"? Additionally for
+    consanguineous cases (where "informative" SNPs can be limited) it also considers additional sites in the embryo
+    (AA,BB) to boost the number of informative SNPs. NOTE: Consanguineous cases are not currently supported.
 
 
     Args:
