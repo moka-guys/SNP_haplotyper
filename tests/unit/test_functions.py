@@ -37,7 +37,7 @@ def test_ArgumentInputError():
 
 
 @pytest.fixture
-def setup_all_combintion_of_inputs():
+def setup_all_combination_of_inputs_AD():
     # Dictionary of all possible combinations of haplotypes for the trio
     d = {
         "affected_partner": [
@@ -131,11 +131,106 @@ def setup_all_combintion_of_inputs():
     return d
 
 
+@pytest.fixture
+def setup_all_combination_of_inputs_AR():
+    # Dictionary of all possible combinations of haplotypes for the trio
+    d = {
+        "male_partner": [
+            "AA",
+            "AA",
+            "AA",
+            "BB",
+            "BB",
+            "BB",
+            "AB",
+            "AB",
+            "AB",
+            "AA",
+            "AA",
+            "AA",
+            "BB",
+            "BB",
+            "BB",
+            "AB",
+            "AB",
+            "AB",
+            "AA",
+            "AA",
+            "AA",
+            "BB",
+            "BB",
+            "BB",
+            "AB",
+            "AB",
+            "AB",
+        ],
+        "female_partner": [
+            "AA",
+            "BB",
+            "AB",
+            "AA",
+            "BB",
+            "AB",
+            "AA",
+            "BB",
+            "AB",
+            "AA",
+            "BB",
+            "AB",
+            "AA",
+            "BB",
+            "AB",
+            "AA",
+            "BB",
+            "AB",
+            "AA",
+            "BB",
+            "AB",
+            "AA",
+            "BB",
+            "AB",
+            "AA",
+            "BB",
+            "AB",
+        ],
+        "reference": [
+            "AA",
+            "AA",
+            "AA",
+            "AA",
+            "AA",
+            "AA",
+            "AA",
+            "AA",
+            "AA",
+            "BB",
+            "BB",
+            "BB",
+            "BB",
+            "BB",
+            "BB",
+            "BB",
+            "BB",
+            "BB",
+            "AB",
+            "AB",
+            "AB",
+            "AB",
+            "AB",
+            "AB",
+            "AB",
+            "AB",
+            "AB",
+        ],
+    }
+    return d
+
+
 @pytest.mark.autosomal_dominant_logic
 @pytest.mark.ref_affected
 @pytest.mark.ref_grandparent
-def test_ref_affected_grandparent_AD(setup_all_combintion_of_inputs):
-    test_df = pd.DataFrame(data=setup_all_combintion_of_inputs)
+def test_ref_affected_grandparent_AD(setup_all_combination_of_inputs_AD):
+    test_df = pd.DataFrame(data=setup_all_combination_of_inputs_AD)
     reference_status = "affected"
     reference_relationship = "grandparent"
     results_df = autosomal_dominant_analysis(
@@ -169,8 +264,8 @@ def test_ref_affected_grandparent_AD(setup_all_combintion_of_inputs):
 @pytest.mark.autosomal_dominant_logic
 @pytest.mark.ref_unaffected
 @pytest.mark.ref_grandparent
-def test_ref_unaffected_grandparent_AD(setup_all_combintion_of_inputs):
-    test_df = pd.DataFrame(data=setup_all_combintion_of_inputs)
+def test_ref_unaffected_grandparent_AD(setup_all_combination_of_inputs_AD):
+    test_df = pd.DataFrame(data=setup_all_combination_of_inputs_AD)
     reference_status = "unaffected"
     reference_relationship = "grandparent"
     results_df = autosomal_dominant_analysis(
@@ -204,8 +299,8 @@ def test_ref_unaffected_grandparent_AD(setup_all_combintion_of_inputs):
 @pytest.mark.autosomal_dominant_logic
 @pytest.mark.ref_affected
 @pytest.mark.ref_child
-def test_ref_affected_child_AD(setup_all_combintion_of_inputs):
-    test_df = pd.DataFrame(data=setup_all_combintion_of_inputs)
+def test_ref_affected_child_AD(setup_all_combination_of_inputs_AD):
+    test_df = pd.DataFrame(data=setup_all_combination_of_inputs_AD)
     reference_status = "affected"
     reference_relationship = "child"
     results_df = autosomal_dominant_analysis(
@@ -242,8 +337,8 @@ def test_ref_affected_child_AD(setup_all_combintion_of_inputs):
 @pytest.mark.autosomal_dominant_logic
 @pytest.mark.ref_unaffected
 @pytest.mark.ref_child
-def test_ref_unaffected_child_AD(setup_all_combintion_of_inputs):
-    test_df = pd.DataFrame(data=setup_all_combintion_of_inputs)
+def test_ref_unaffected_child_AD(setup_all_combination_of_inputs_AD):
+    test_df = pd.DataFrame(data=setup_all_combination_of_inputs_AD)
     reference_status = "unaffected"
     reference_relationship = "child"
     results_df = autosomal_dominant_analysis(
@@ -270,6 +365,144 @@ def test_ref_unaffected_child_AD(setup_all_combintion_of_inputs):
                 "low_risk",
                 "uninformative",
             ],
+        }
+    )
+    tm.assert_series_equal(
+        results_df["snp_risk_category"], expected_results_df["snp_risk_category"]
+    )
+
+
+@pytest.mark.autosomal_recessive_logic
+@pytest.mark.ref_affected
+def test_ref_affected_AR(setup_all_combination_of_inputs_AR):
+    test_df = pd.DataFrame(data=setup_all_combination_of_inputs_AR)
+    reference_status = "affected"
+    results_df = autosomal_recessive_analysis(
+        test_df,
+        "male_partner",
+        "female_partner",
+        "reference",
+        reference_status,
+        consanguineous=False,
+    )
+    expected_results_df = pd.DataFrame(
+        data={
+            "snp_risk_category": (["uninformative"] * 2)
+            + [
+                "low_risk",
+            ]
+            + (["uninformative"] * 3)
+            + [
+                "low_risk",
+            ]
+            + (["uninformative"] * 7)
+            + [
+                "low_risk",
+                "uninformative",
+                "low_risk",
+            ]
+            + (["uninformative"] * 3)
+            + [
+                "high_risk",
+            ]
+            + (["uninformative"] * 2)
+            + (["high_risk"] * 3)
+            + ["uninformative"],
+            "snp_inherited_from": (["uninformative"] * 2)
+            + [
+                "female_partner",
+            ]
+            + (["uninformative"] * 3)
+            + [
+                "male_partner",
+            ]
+            + (["uninformative"] * 7)
+            + [
+                "female_partner",
+                "uninformative",
+                "male_partner",
+            ]
+            + (["uninformative"] * 3)
+            + [
+                "female_partner",
+            ]
+            + (
+                ["uninformative"] * 2
+                + [
+                    "female_partner",
+                ]
+            )
+            + (["male_partner"] * 2)
+            + ["uninformative"],
+        }
+    )
+    tm.assert_series_equal(
+        results_df["snp_risk_category"], expected_results_df["snp_risk_category"]
+    )
+
+
+@pytest.mark.autosomal_recessive_logic
+@pytest.mark.ref_unaffected
+def test_ref_unaffected_AR(setup_all_combination_of_inputs_AR):
+    test_df = pd.DataFrame(data=setup_all_combination_of_inputs_AR)
+    reference_status = "unaffected"
+    results_df = autosomal_recessive_analysis(
+        test_df,
+        "male_partner",
+        "female_partner",
+        "reference",
+        reference_status,
+        consanguineous=False,
+    )
+    expected_results_df = pd.DataFrame(
+        data={
+            "snp_risk_category": (["uninformative"] * 2)
+            + [
+                "high_risk",
+            ]
+            + (["uninformative"] * 3)
+            + [
+                "high_risk",
+            ]
+            + (["uninformative"] * 7)
+            + [
+                "high_risk",
+                "uninformative",
+                "high_risk",
+            ]
+            + (["uninformative"] * 3)
+            + [
+                "low_risk",
+            ]
+            + (["uninformative"] * 2)
+            + (["low_risk"] * 3)
+            + ["uninformative"],
+            "snp_inherited_from": (["uninformative"] * 2)
+            + [
+                "female_partner",
+            ]
+            + (["uninformative"] * 3)
+            + [
+                "male_partner",
+            ]
+            + (["uninformative"] * 7)
+            + [
+                "female_partner",
+                "uninformative",
+                "male_partner",
+            ]
+            + (["uninformative"] * 3)
+            + [
+                "female_partner",
+            ]
+            + (
+                ["uninformative"] * 2
+                + [
+                    "female_partner",
+                ]
+            )
+            + (["male_partner"] * 2)
+            + ["uninformative"],
         }
     )
     tm.assert_series_equal(
@@ -347,7 +580,7 @@ def test_annotate_distance_from_gene(setup_all_gene_regions):
 
 
 # def test_criteria_AR1():
-#     test_df = pd.DataFrame(data=setup_all_combintion_of_inputs())
+#     test_df = pd.DataFrame(data=setup_all_combination_of_inputs_AD())
 #     reference_status = "affected"
 #     consanguineous = True
 #     results_df = autosomal_recessive_analysis(
