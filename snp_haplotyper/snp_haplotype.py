@@ -1292,15 +1292,17 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         .sum()
         .reset_index()
     )
+    # Concatenate risk category and SNP position to create a unique index
     embryo_stream_output_df = embryo_stream_output_df.set_index(
         embryo_stream_output_df.risk_category.str.cat(
             embryo_stream_output_df.snp_position, sep=","
         )
     )
+    # Drop risk category and SNP position columns as they are now redundant
     embryo_stream_output_df = embryo_stream_output_df.drop(
         ["snp_position", "risk_category"], axis=1
     )
-
+    # Group by risk category and SNP position and sum the counts
     summary_embryo_by_region_df = embryo_count_data_df.groupby(
         by=["risk_category", "gene_distance"]
     ).sum(numeric_only=True)

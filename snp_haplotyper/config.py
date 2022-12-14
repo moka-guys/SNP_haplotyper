@@ -16,8 +16,8 @@ stream_results = False
 # to skip the analysis of other modes of inheritance
 allow_autosomal_dominant_cases = True
 allow_autosomal_recessive_cases = True
-allow_x_linked_cases = False
-allow_consanguineous_cases = False
+allow_x_linked_cases = True
+allow_consanguineous_cases = True
 allow_trio_only_analysis = False
 
 # The following flag adds a warning to the report if the version of BASHer used to generate it
