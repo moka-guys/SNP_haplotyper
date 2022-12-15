@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(
 # File input/output data
 parser.add_argument(
     "-i",
-    "--input_file",
+    "--input_spreadsheet",
     type=str,
     help="Excel file containing SNP Array meta data",
 )
@@ -89,7 +89,7 @@ def parse_excel_input(input_file):
         template_version
     """
     wb = load_workbook(
-        filename=input_file,
+        filename=input_spreadsheet,
         keep_vba=False,
         data_only=True,
         keep_links=True,
@@ -271,7 +271,7 @@ def parse_excel_input(input_file):
 
 
 def main():
-    parse_excel_input(args.input_file)
+    parse_excel_input(args.input_spreadsheet)
 
 
 if __name__ == "__main__":
