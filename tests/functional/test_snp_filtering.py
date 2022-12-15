@@ -1,6 +1,6 @@
 from argparse import Namespace
 from xml.dom import ValidationErr
-from snp_haplotype import main
+from snp_haplotype import main, header_to_dict
 import pandas as pd
 import pytest
 import json
@@ -77,8 +77,9 @@ def setup_test_data(split_by_embryo=False):
             else False,  # arg_dictionary["consanguineous"],
             testing=True,
             trio_only=False,
-            header_info=json.loads(arg_dictionary["header_info"]),
+            header_info=header_to_dict(arg_dictionary["header_info"]),
         )
+
         run_data_dictionary[run_name] = args
         # This dictionary needs to be ammended when passed to the function testing the embryo categorising.
         # We require an entry for each embryo so the mark.parametrize function can create the tests correctly.

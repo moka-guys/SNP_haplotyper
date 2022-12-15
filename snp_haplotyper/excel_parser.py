@@ -4,6 +4,7 @@ from openpyxl.utils import get_column_interval
 import pandas as pd
 import re
 import subprocess
+import config as config
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(
@@ -112,7 +113,7 @@ def parse_excel_input(input_file):
             df = load_workbook_range(
                 dn.attr_text.split("!")[1].replace("$", ""), data_entry_sheet
             )
-            argument_dict[input_name] = df.dropna()
+            argument_dict[input_name] = df.dropna(how="all")  # Remove empty rows
         else:
             # Process cell locations in the format data_entry!$B$31 or data_entry!$F$22:$L$22 (merged cells)
             cell_location = dn.attr_text.split(":")[0].split("!")[1].replace("$", "")
@@ -204,17 +205,37 @@ def parse_excel_input(input_file):
         female_partner_status = partner1_type
         female_partner_col = partner1_column_name
 
-    python_location = (
-        "S:\Genetics_Data2\Array\Software\python-3.10.0-embed-amd64\python.exe"
-    )
-    snp_haplotype_script = "placeholder"
-    output_folder = "."
-
     output_prefix = input_file
 
+    if mode_of_inheritance == "autosomal_dominant":
+        female_partner_status = female_partner_status.split("_")[0]
+        male_partner_status = male_partner_status.split("_")[0]
+    elif mode_of_inheritance == "autosomal_recessive":
+        female_partner_status = (
+            "carrier"
+            if female_partner_status == "carrier_partner"
+            else female_partner_status
+        )
+        male_partner_status = (
+            "carrier"
+            if male_partner_status == "carrier_partner"
+            else male_partner_status
+        )
+    elif mode_of_inheritance == "x_linked":
+        female_partner_status = (
+            "carrier"
+            if female_partner_status == "carrier_female_partner"
+            else female_partner_status
+        )
+        male_partner_status = (
+            "unaffected"
+            if male_partner_status == "unaffected_male_partner"
+            else male_partner_status
+        )
+
     cmd = (
-        f" {python_location} -i {snp_haplotype_script}"
-        f" --input_file {input_file} --output_folder {output_folder}"
+        f" {config.python_location} -i {config.snp_haplotype_script}"
+        f" --input_file {input_file} --output_folder {config.output_folder}"
         f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
         f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
         f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
@@ -234,15 +255,16 @@ def parse_excel_input(input_file):
         cmd = cmd + f" --trio_only"
 
     # Add header info to cmd string
-    cmd = cmd + (
-        f' --header {{"PRU":"{pru}", "Hospital Number":"{female_partner_hosp_num}", "Biopsy Number":"{biopsy_number}"}}'
+    cmd = (
+        cmd
+        + f" --header 'PRU:{pru},Hospital No:{female_partner_hosp_num},Biopsy No:{biopsy_number}'"
     )
 
     # Run SNP haplotyping script. (if statement to allow for future development of mode dependent arguments, currently no difference)
     # TODO if not required remove if statement
-    if mode_of_inheritance == "Autosomal_Dominant":
+    if mode_of_inheritance == "autosomal_dominant":
         subprocess.run(cmd, shell=True)
-    elif mode_of_inheritance == "Autosomal_Recessive":
+    elif mode_of_inheritance == "autosomal_recessive":
         subprocess.run(cmd, shell=True)
     elif mode_of_inheritance == "x_linked":
         subprocess.run(cmd, shell=True)
