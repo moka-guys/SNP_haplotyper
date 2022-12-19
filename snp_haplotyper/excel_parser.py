@@ -5,7 +5,11 @@ import pandas as pd
 import re
 import os
 import subprocess
+import sys
 import config as config
+
+# Add the directory containing this script to the PYTHOPATH
+sys.path.append(os.path.dirname(__file__))
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(
@@ -313,7 +317,7 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
         # Create command to run snp_haplotype.py
         cmd = (
             f" {config.python_location} {config.snp_haplotype_script}"
-            f" --input_file {input_file} --output_folder {config.output_folder}/"
+            f" --input_file '{os.path.join(config.input_folder, input_file + '.txt')}' --output_folder '{config.output_folder}'/"
             f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
             f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
             f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
