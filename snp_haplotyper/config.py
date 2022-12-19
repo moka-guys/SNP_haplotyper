@@ -17,9 +17,24 @@ stream_results = False
 allow_autosomal_dominant_cases = True
 allow_autosomal_recessive_cases = True
 allow_x_linked_cases = True
-allow_consanguineous_cases = True
+allow_consanguineous_cases = False
 allow_trio_only_analysis = False
 
 # The following flag adds a warning to the report if the version of BASHer used to generate it
 # is still in development
 released_to_production = False
+
+
+# Filepaths used by the excel_parser.py script
+# python_location = (
+#     "S:\Genetics_Data2\Array\Software\python-3.10.0-embed-amd64\python.exe"
+# )
+
+python_location = "/home/graeme/miniconda3/envs/python3.10env/bin/python"
+
+snp_haplotype_script = (
+    "/home/graeme/Desktop/SNP_haplotyper/snp_haplotyper/snp_haplotype.py"
+)
+output_folder = "/home/graeme/Desktop/SNP_haplotyper/output"
+
+input_folder = "/home/graeme/Desktop/SNP_haplotyper/input"
