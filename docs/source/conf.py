@@ -55,7 +55,7 @@ myst_enable_extensions = [
     "dollarmath",
     "html_admonition",
     "html_image",
-    "linkify",
+    # "linkify",
     "replacements",
     "smartquotes",
     "substitution",
@@ -71,7 +71,7 @@ templates_path = ["_templates"]
 exclude_patterns = []
 
 # Tell read the docs to use the index.rst file as the master doc
-master_doc = "index"
+master_doc = "source/index"
 
 # -- Options for HTML output -------------------------------------------------
 
