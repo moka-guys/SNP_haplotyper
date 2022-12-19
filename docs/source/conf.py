@@ -71,7 +71,7 @@ templates_path = ["_templates"]
 exclude_patterns = []
 
 # Tell read the docs to use the index.rst file as the master doc
-master_doc = "source/index"
+master_doc = "index"
 
 # -- Options for HTML output -------------------------------------------------
 
