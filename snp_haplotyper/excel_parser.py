@@ -317,12 +317,12 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
         # Create command to run snp_haplotype.py
         cmd = (
             f" {config.python_location} {config.snp_haplotype_script}"
-            f" --input_file '{os.path.join(config.input_folder, input_file + '.txt')}' --output_folder '{config.output_folder}'/"
-            f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
-            f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
-            f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
-            f" --reference {reference_column_name} --reference_status {ref_status}"
-            f" --reference_relationship {ref_relationship}"
+            f" --input_file '{config.input_folder + input_file}' --output_folder '{config.output_folder}'/"
+            f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance.lower()}"
+            f" --male_partner {male_partner_col} --male_partner_status {male_partner_status.lower()}"
+            f" --female_partner {female_partner_col} --female_partner_status {female_partner_status.lower()}"
+            f" --reference {reference_column_name} --reference_status {ref_status.lower()}"
+            f" --reference_relationship {ref_relationship.lower()}"
             f" --gene_symbol {gene_symbol} --gene_start {gene_start}"
             f" --gene_end {gene_end} --chr {chromosome}"
         )
