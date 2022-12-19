@@ -229,6 +229,7 @@ parser.add_argument(
 parser.add_argument(
     "--header_info",
     type=str,
+    required=True,
     help="Pass a string to populate the report header. A field will be created for each entry field_title=field_value separated by ';', for example 'PRU=1234;Hospital No=1234;Biopsy No=111' will produce 3 fields in the header with the titles PRU, Hospital No, and Biopsy No.",
 )
 
