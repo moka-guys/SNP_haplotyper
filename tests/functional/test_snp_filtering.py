@@ -73,8 +73,8 @@ def setup_test_data(split_by_embryo=False):
             gene_end=int(arg_dictionary["gene_end"]),
             chr=arg_dictionary["chr"],
             consanguineous=True
-            if "consanguineous" in arg_dictionary
-            else False,  # arg_dictionary["consanguineous"],
+            if "consanguineous" in arg_dictionary == "yes"
+            else False,
             testing=True,
             trio_only=False,
             header_info=header_to_dict(arg_dictionary["header_info"]),
