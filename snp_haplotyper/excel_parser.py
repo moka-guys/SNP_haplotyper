@@ -150,7 +150,7 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
     gene_start = argument_dict["gene_start"]
     input_file = argument_dict["input_file"]
     maternal_mutation = argument_dict["maternal_mutation"]
-    mode_of_inheritance = argument_dict["mode_of_inheritance"]
+    mode_of_inheritance = argument_dict["mode_of_inheritance"].lower()
     multi_analysis = argument_dict["multi_analysis"]
     paste_gene = argument_dict[
         "paste_gene"
@@ -160,10 +160,10 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
     pgd_worksheet_denovo = argument_dict["pgd_worksheet_denovo"]
     pru = argument_dict["pru"]
     reference = argument_dict["reference"]
-    ref_relationship = argument_dict["ref_relationship"]
-    ref_relationship_to_couple = argument_dict["ref_relationship_to_couple"]
+    ref_relationship = argument_dict["ref_relationship"].lower()
+    ref_relationship_to_couple = argument_dict["ref_relationship_to_couple"].lower()
     ref_seq = argument_dict["ref_seq"]
-    ref_status = argument_dict["ref_status"]
+    ref_status = argument_dict["ref_status"].lower()
     template_version = argument_dict["template_version"]
 
     embryo_data_df = argument_dict["embryo_data"]
@@ -173,6 +173,9 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
         "embryo_sex",
         "embryo_column_name",
     ]
+
+    # Ensure that "embryo_sex" is in lowercase
+    embryo_data_df["embryo_sex"] = embryo_data_df["embryo_sex"].str.lower()
 
     # Filter embryo data to only include embryos from the current biopsy
     filtered_embryo_data_df = embryo_data_df[
@@ -219,14 +222,14 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
     partner2_sex = partner2_sex.lower()
 
     if partner1_sex == "male" and partner2_sex == "female":
-        male_partner_status = partner1_type
+        male_partner_status = partner1_type.lower()
         male_partner_col = partner1_column_name
-        female_partner_status = partner2_type
+        female_partner_status = partner2_type.lower()
         female_partner_col = partner2_column_name
     elif partner1_sex == "female" and partner2_sex == "male":
-        male_partner_status = partner2_type
+        male_partner_status = partner2_type.lower()
         male_partner_col = partner2_column_name
-        female_partner_status = partner1_type
+        female_partner_status = partner1_type.lower()
         female_partner_col = partner1_column_name
 
     output_prefix = os.path.splitext(os.path.basename(input_file))[0]
@@ -318,11 +321,11 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
         cmd = (
             f" {config.python_location} {config.snp_haplotype_script}"
             f" --input_file '{config.input_folder + input_file}' --output_folder '{config.output_folder}'/"
-            f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance.lower()}"
-            f" --male_partner {male_partner_col} --male_partner_status {male_partner_status.lower()}"
-            f" --female_partner {female_partner_col} --female_partner_status {female_partner_status.lower()}"
-            f" --reference {reference_column_name} --reference_status {ref_status.lower()}"
-            f" --reference_relationship {ref_relationship.lower()}"
+            f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
+            f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
+            f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
+            f" --reference {reference_column_name} --reference_status {ref_status}"
+            f" --reference_relationship {ref_relationship}"
             f" --gene_symbol {gene_symbol} --gene_start {gene_start}"
             f" --gene_end {gene_end} --chr {chromosome}"
         )
