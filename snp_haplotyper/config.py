@@ -16,7 +16,7 @@ stream_results = False
 # to skip the analysis of other modes of inheritance
 allow_autosomal_dominant_cases = True
 allow_autosomal_recessive_cases = True
-allow_x_linked_cases = True
+allow_x_linked_cases = False
 allow_consanguineous_cases = False
 allow_trio_only_analysis = False
 
@@ -36,5 +36,3 @@ snp_haplotype_script = (
     "/home/graeme/Desktop/SNP_haplotyper/snp_haplotyper/snp_haplotype.py"
 )
 output_folder = "/home/graeme/Desktop/SNP_haplotyper/output"
-
-input_folder = "/home/graeme/Desktop/SNP_haplotyper/input"

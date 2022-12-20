@@ -161,7 +161,11 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
     pru = argument_dict["pru"]
     reference = argument_dict["reference"]
     ref_relationship = argument_dict["ref_relationship"].lower()
-    ref_relationship_to_couple = argument_dict["ref_relationship_to_couple"]
+    ref_relationship_to_couple = (
+        None
+        if argument_dict["ref_relationship_to_couple"] is None
+        else argument_dict["ref_relationship_to_couple"].lower()
+    )
     ref_seq = argument_dict["ref_seq"]
     ref_status = argument_dict["ref_status"].lower()
     template_version = argument_dict["template_version"]
@@ -260,6 +264,18 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
             else male_partner_status
         )
 
+    # Standardise reference relationship for passing to other functions
+    lookup_dict = {
+        "son": "child",
+        "daughter": "child",
+        "mother": "grandparent",
+        "father": "grandparent",
+        "embryo": "embryo",
+        "prenatal": "prenatal",
+    }
+
+    ref_relationship = lookup_dict[ref_relationship]
+
     # Export data as dictionary to be used in other functions & testing
     excel_import = {}
     excel_import["biopsy_number"] = biopsy_number
@@ -320,7 +336,7 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
         # Create command to run snp_haplotype.py
         cmd = (
             f" {config.python_location} {config.snp_haplotype_script}"
-            f" --input_file '{config.input_folder + input_file}' --output_folder '{config.output_folder}'/"
+            f" --input_file '{config.input_folder + input_file}' --output_folder '{config.output_folder}'"
             f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
             f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
             f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
