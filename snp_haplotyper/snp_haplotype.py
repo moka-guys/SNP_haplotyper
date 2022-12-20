@@ -1553,7 +1553,9 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     else:
         # Produce human readable HTML report
-        with open(f"{args.output_folder}{args.output_prefix}.html", "w") as f:
+        with open(
+            os.path.join(args.output_folder, args.output_prefix + ".html"), "w"
+        ) as f:
             f.write(html_string)
 
 
