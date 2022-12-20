@@ -12,6 +12,7 @@ import os
 
 # Add the directory containing this script to the PYTHOPATH
 sys.path.append(os.path.dirname(__file__))
+mod_path = Path(__file__).parent
 
 # Import mode of inheritance specific code
 from autosomal_dominant_logic import autosomal_dominant_analysis
@@ -1203,9 +1204,9 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     number_snps_imported = df.shape[0]
 
     # Import mapping of Affy IDs to dbSNP rs IDs
-    affy_2_rs_ids_df = pd.read_csv(
-        "test_data/AffyID2rsid.txt", delimiter="\t", low_memory=False
-    )
+    mod_path = Path(__file__).parent
+    rsid_data_path = (mod_path / "../test_data/AffyID2rsid.txt").resolve()
+    affy_2_rs_ids_df = pd.read_csv(rsid_data_path, delimiter="\t", low_memory=False)
 
     # Assign the correct partner to 'affected' and 'unaffected'
     if args.mode_of_inheritance == "autosomal_dominant":
