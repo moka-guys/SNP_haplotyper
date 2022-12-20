@@ -264,17 +264,19 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
             else male_partner_status
         )
 
-    # Standardise reference relationship for passing to other functions
     lookup_dict = {
         "son": "child",
         "daughter": "child",
         "mother": "grandparent",
         "father": "grandparent",
-        "embryo": "embryo",
-        "prenatal": "prenatal",
     }
-
-    ref_relationship = lookup_dict[ref_relationship]
+    if ref_relationship in [
+        "son",
+        "daughter",
+        "mother",
+        "father",
+    ]:
+        ref_relationship = lookup_dict[ref_relationship]
 
     # Export data as dictionary to be used in other functions & testing
     excel_import = {}
