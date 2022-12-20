@@ -338,7 +338,7 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
         # Create command to run snp_haplotype.py
         cmd = (
             f" {config.python_location} {config.snp_haplotype_script}"
-            f" --input_file '{os.path.join(config.input_folder, input_file)}' --output_folder '{config.output_folder}'"
+            f' --input_file "{os.path.join(config.input_folder, input_file)}" --output_folder "{config.output_folder}"'
             f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
             f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
             f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
@@ -350,8 +350,8 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
 
         if trio_only == False:
             cmd = cmd + (
-                f" --embryo_ids {' '.join(filtered_embryo_data_df.embryo_column_name.to_list())}"
-                f" --embryo_sex {' '.join(filtered_embryo_data_df.embryo_sex.to_list())}"
+                f' --embryo_ids {" ".join(filtered_embryo_data_df.embryo_column_name.to_list())}'
+                f' --embryo_sex {" ".join(filtered_embryo_data_df.embryo_sex.to_list())}'
             )
 
         else:
@@ -360,7 +360,7 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
         # Add header info to cmd string
         cmd = (
             cmd
-            + f" --header 'PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}'"
+            + f' --header "PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}"'
         )
 
         print(cmd)

@@ -45,7 +45,7 @@ parser = argparse.ArgumentParser(description="SNP Haplotying from SNP Array data
 parser.add_argument(
     "-i",
     "--input_file",
-    type=argparse.FileType("r"),
+    type=str,
     help="Input txt file containing SNP Array output",
 )
 
