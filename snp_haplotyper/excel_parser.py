@@ -345,6 +345,8 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
             + f" --header 'PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}'"
         )
 
+        print(cmd)
+
         # Run SNP haplotyping script. (if statement to allow for future development of mode dependent arguments, currently no difference)
         # TODO if not required remove if statement
         if mode_of_inheritance == "autosomal_dominant":
