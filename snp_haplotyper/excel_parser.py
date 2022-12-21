@@ -113,7 +113,6 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
     data_entry_sheet = wb["data_entry"]
 
     for dn in wb.defined_names.definedName:
-        print(dn)
         # TODO Add to logger when implemented
         # print(dn.name)
         # print(dn.attr_text)
@@ -362,8 +361,6 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
             cmd
             + f' --header "PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}"'
         )
-
-        print(cmd)
 
         # Run SNP haplotyping script. (if statement to allow for future development of mode dependent arguments, currently no difference)
         # TODO if not required remove if statement
