@@ -12,6 +12,7 @@ import os
 
 # Add the directory containing this script to the PYTHOPATH
 sys.path.append(os.path.dirname(__file__))
+mod_path = Path(__file__).parent
 
 # Import mode of inheritance specific code
 from autosomal_dominant_logic import autosomal_dominant_analysis
@@ -44,7 +45,7 @@ parser = argparse.ArgumentParser(description="SNP Haplotying from SNP Array data
 parser.add_argument(
     "-i",
     "--input_file",
-    type=argparse.FileType("r"),
+    type=str,
     help="Input txt file containing SNP Array output",
 )
 
@@ -228,8 +229,9 @@ parser.add_argument(
 
 parser.add_argument(
     "--header_info",
-    type=json.loads,
-    help='Pass a string in the format of a dictionary to populate the report header. A field will be created for each key provided, for example \'{"PRU":"1234", "Hospital No":"1234", "Biopsy No":"111"}\' will produce 3 fields in the header.',
+    type=str,
+    required=True,
+    help="Pass a string to populate the report header. A field will be created for each entry field_title=field_value separated by ';', for example 'PRU=1234;Hospital No=1234;Biopsy No=111' will produce 3 fields in the header with the titles PRU, Hospital No, and Biopsy No.",
 )
 
 # If no arguments are provided, print the help message
@@ -237,6 +239,21 @@ parser.add_argument(
 # if len(sys.argv) < 2:
 #     parser.print_help()
 #     parser.exit()
+
+
+def header_to_dict(header_str):
+    """
+    Converts a string of header_info into a dictionary
+    Args:
+        header_info (str): A string in the key=value pairs like "PRU=1234;Hospital No=1234;Biopsy No:111", where the keys will be the titles of the fields in the header
+    Returns:
+        dict: A dictionary of the header info with field titles as keys and values as values
+    """
+    if header_str is None:
+        return None
+    else:
+        d = dict(x.split("=") for x in header_str.split(";"))
+        return d
 
 
 def add_rsid_column(df, affy_2_rs_ids_df):
@@ -1187,9 +1204,9 @@ def main(args=None):  # default argument allows pytest to override argparse for 
     number_snps_imported = df.shape[0]
 
     # Import mapping of Affy IDs to dbSNP rs IDs
-    affy_2_rs_ids_df = pd.read_csv(
-        "test_data/AffyID2rsid.txt", delimiter="\t", low_memory=False
-    )
+    mod_path = Path(__file__).parent
+    rsid_data_path = (mod_path / "../test_data/AffyID2rsid.txt").resolve()
+    affy_2_rs_ids_df = pd.read_csv(rsid_data_path, delimiter="\t", low_memory=False)
 
     # Assign the correct partner to 'affected' and 'unaffected'
     if args.mode_of_inheritance == "autosomal_dominant":
@@ -1442,7 +1459,10 @@ def main(args=None):  # default argument allows pytest to override argparse for 
         header_html = header_html + f"</tr> </table>"
         return header_html
 
-    header_html = dict2html(args.header_info)
+    if type(args.header_info) is dict:
+        header_html = args.header_info
+    else:
+        header_html = dict2html(header_to_dict(args.header_info))
 
     if config.released_to_production == True:
         warning_text = ""
@@ -1533,7 +1553,9 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
     else:
         # Produce human readable HTML report
-        with open(f"{args.output_folder}{args.output_prefix}.html", "w") as f:
+        with open(
+            os.path.join(args.output_folder, args.output_prefix + ".html"), "w"
+        ) as f:
             f.write(html_string)
 
 

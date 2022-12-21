@@ -3,7 +3,13 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_interval
 import pandas as pd
 import re
+import os
 import subprocess
+import sys
+import config as config
+
+# Add the directory containing this script to the PYTHOPATH
+sys.path.append(os.path.dirname(__file__))
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(
@@ -13,12 +19,10 @@ parser = argparse.ArgumentParser(
 # File input/output data
 parser.add_argument(
     "-i",
-    "--input_file",
+    "--input_spreadsheet",
     type=str,
     help="Excel file containing SNP Array meta data",
 )
-
-args = parser.parse_args()
 
 
 def load_workbook_range(range_string, worksheet):
@@ -34,7 +38,7 @@ def load_workbook_range(range_string, worksheet):
     return pd.DataFrame(data_rows, columns=get_column_interval(col_start, col_end))
 
 
-def parse_excel_input(input_file):
+def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
     """
     Imports the following defined cells/ranges from the provided excel file:
         biopsy_number
@@ -80,7 +84,13 @@ def parse_excel_input(input_file):
         pgd_worksheet
         pgd_worksheet_denovo
         pru
-        reference
+        reference  - range of cells containing refernce details:
+            reference_sex
+            reference_forename
+            reference_surname
+            reference_dob
+            reference_DNA_number
+            reference_column_name
         ref_relationship
         ref_relationship_to_couple
         ref_seq
@@ -88,7 +98,7 @@ def parse_excel_input(input_file):
         template_version
     """
     wb = load_workbook(
-        filename=input_file,
+        filename=input_spreadsheet,
         keep_vba=False,
         data_only=True,
         keep_links=True,
@@ -107,12 +117,17 @@ def parse_excel_input(input_file):
         # print(dn.name)
         # print(dn.attr_text)
         input_name = dn.name
-        if input_name in ["embryo_data", "partner1_details", "partner2_details"]:
+        if input_name in [
+            "embryo_data",
+            "partner1_details",
+            "partner2_details",
+            "reference",
+        ]:
             # Import excel ranges
             df = load_workbook_range(
                 dn.attr_text.split("!")[1].replace("$", ""), data_entry_sheet
             )
-            argument_dict[input_name] = df.dropna()
+            argument_dict[input_name] = df.dropna(how="all")  # Remove empty rows
         else:
             # Process cell locations in the format data_entry!$B$31 or data_entry!$F$22:$L$22 (merged cells)
             cell_location = dn.attr_text.split(":")[0].split("!")[1].replace("$", "")
@@ -134,7 +149,7 @@ def parse_excel_input(input_file):
     gene_start = argument_dict["gene_start"]
     input_file = argument_dict["input_file"]
     maternal_mutation = argument_dict["maternal_mutation"]
-    mode_of_inheritance = argument_dict["mode_of_inheritance"]
+    mode_of_inheritance = argument_dict["mode_of_inheritance"].lower()
     multi_analysis = argument_dict["multi_analysis"]
     paste_gene = argument_dict[
         "paste_gene"
@@ -144,10 +159,14 @@ def parse_excel_input(input_file):
     pgd_worksheet_denovo = argument_dict["pgd_worksheet_denovo"]
     pru = argument_dict["pru"]
     reference = argument_dict["reference"]
-    ref_relationship = argument_dict["ref_relationship"]
-    ref_relationship_to_couple = argument_dict["ref_relationship_to_couple"]
+    ref_relationship = argument_dict["ref_relationship"].lower()
+    ref_relationship_to_couple = (
+        None
+        if argument_dict["ref_relationship_to_couple"] is None
+        else argument_dict["ref_relationship_to_couple"].lower()
+    )
     ref_seq = argument_dict["ref_seq"]
-    ref_status = argument_dict["ref_status"]
+    ref_status = argument_dict["ref_status"].lower()
     template_version = argument_dict["template_version"]
 
     embryo_data_df = argument_dict["embryo_data"]
@@ -157,6 +176,9 @@ def parse_excel_input(input_file):
         "embryo_sex",
         "embryo_column_name",
     ]
+
+    # Ensure that "embryo_sex" is in lowercase
+    embryo_data_df["embryo_sex"] = embryo_data_df["embryo_sex"].str.lower()
 
     # Filter embryo data to only include embryos from the current biopsy
     filtered_embryo_data_df = embryo_data_df[
@@ -189,67 +211,175 @@ def parse_excel_input(input_file):
         partner2_column_name,
     ) = argument_dict["partner2_details"].values.tolist()[0]
 
+    (
+        reference_sex,
+        reference_forename,
+        reference_surname,
+        reference_dob,
+        reference_DNA_number,
+        reference_column_name,
+    ) = argument_dict["reference"].values.tolist()[0]
+
     # Clean imported data
     partner1_sex = partner1_sex.lower()
     partner2_sex = partner2_sex.lower()
 
     if partner1_sex == "male" and partner2_sex == "female":
-        male_partner_status = partner1_type
+        male_partner_status = partner1_type.lower()
         male_partner_col = partner1_column_name
-        female_partner_status = partner2_type
+        female_partner_status = partner2_type.lower()
         female_partner_col = partner2_column_name
     elif partner1_sex == "female" and partner2_sex == "male":
-        male_partner_status = partner2_type
+        male_partner_status = partner2_type.lower()
         male_partner_col = partner2_column_name
-        female_partner_status = partner1_type
+        female_partner_status = partner1_type.lower()
         female_partner_col = partner1_column_name
 
-    python_location = (
-        "S:\Genetics_Data2\Array\Software\python-3.10.0-embed-amd64\python.exe"
-    )
-    snp_haplotype_script = "placeholder"
-    output_folder = "."
+    output_prefix = os.path.splitext(os.path.basename(input_file))[0]
 
-    output_prefix = input_file
-
-    cmd = (
-        f" {python_location} -i {snp_haplotype_script}"
-        f" --input_file {input_file} --output_folder {output_folder}"
-        f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
-        f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
-        f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
-        f" --reference {reference} --reference_status {ref_status}"
-        f" --reference_relationship {ref_relationship}"
-        f" --gene_symbol {gene_symbol} --gene_start {gene_start}"
-        f" --gene_end {gene_end} --chr {chromosome}"
-    )
-
-    if trio_only == False:
-        cmd = cmd + (
-            f" --embryo_ids {' '.join(filtered_embryo_data_df.embryo_column_name.to_list())}"
-            f" --embryo_sex {' '.join(filtered_embryo_data_df.embryo_sex.to_list())}"
+    if mode_of_inheritance == "autosomal_dominant":
+        female_partner_status = female_partner_status.split("_")[0]
+        male_partner_status = male_partner_status.split("_")[0]
+    elif mode_of_inheritance == "autosomal_recessive":
+        female_partner_status = (
+            "carrier"
+            if female_partner_status == "carrier_partner"
+            else female_partner_status
+        )
+        male_partner_status = (
+            "carrier"
+            if male_partner_status == "carrier_partner"
+            else male_partner_status
+        )
+    elif mode_of_inheritance == "x_linked":
+        female_partner_status = (
+            "carrier"
+            if female_partner_status == "carrier_female_partner"
+            else female_partner_status
+        )
+        male_partner_status = (
+            "unaffected"
+            if male_partner_status == "unaffected_male_partner"
+            else male_partner_status
         )
 
-    else:
-        cmd = cmd + f" --trio_only"
+    lookup_dict = {
+        "son": "child",
+        "daughter": "child",
+        "mother": "grandparent",
+        "father": "grandparent",
+    }
+    if ref_relationship in [
+        "son",
+        "daughter",
+        "mother",
+        "father",
+    ]:
+        ref_relationship = lookup_dict[ref_relationship]
 
-    # Add header info to cmd string
-    cmd = cmd + (
-        f' --header {{"PRU":"{pru}", "Hospital Number":"{female_partner_hosp_num}", "Biopsy Number":"{biopsy_number}"}}'
-    )
+    # Export data as dictionary to be used in other functions & testing
+    excel_import = {}
+    excel_import["biopsy_number"] = biopsy_number
+    excel_import["chromosome"] = chromosome
+    excel_import["consanguineous"] = consanguineous
+    excel_import["de_novo"] = de_novo
+    excel_import["disease"] = disease
+    excel_import["disease_omim"] = disease_omim
+    excel_import["biopsy_no"] = biopsy_number
+    excel_import["embryo_data"] = embryo_data_df
+    excel_import["exclusion"] = exclusion
+    excel_import["female_partner_hosp_num"] = female_partner_hosp_num
+    excel_import["flanking_region_size"] = flanking_region_size
+    excel_import["gene"] = gene_symbol
+    excel_import["gene_end"] = gene_end
+    excel_import["gene_omim"] = gene_omim
+    excel_import["gene_start"] = gene_start
+    excel_import["input_file"] = input_file
+    excel_import["maternal_mutation"] = maternal_mutation
+    excel_import["mode_of_inheritance"] = mode_of_inheritance
+    excel_import["multi_analysis"] = multi_analysis
+    excel_import["partner1_type"] = partner1_type
+    excel_import["partner1_sex"] = partner1_sex
+    excel_import["partner1_forename"] = partner1_forename
+    excel_import["partner1_surname"] = partner1_surname
+    excel_import["partner1_dob"] = partner1_dob
+    excel_import["partner1_DNA_number"] = partner1_DNA_number
+    excel_import["partner1_column_name"] = partner1_column_name
+    excel_import["partner2_type"] = partner2_type
+    excel_import["partner2_sex"] = partner2_sex
+    excel_import["partner2_forename"] = partner2_forename
+    excel_import["partner2_surname"] = partner2_surname
+    excel_import["partner2_dob"] = partner2_dob
+    excel_import["partner2_DNA_number"] = partner2_DNA_number
+    excel_import["partner2_column_name"] = partner2_column_name
+    excel_import["male_partner_status"] = male_partner_status
+    excel_import["male_partner_col"] = male_partner_col
+    excel_import["female_partner_status"] = female_partner_status
+    excel_import["female_partner_col"] = female_partner_col
+    excel_import["paste_gene"] = paste_gene
+    excel_import["paternal_mutation"] = paternal_mutation
+    excel_import["pgd_worksheet"] = pgd_worksheet
+    excel_import["pgd_worksheet_denovo"] = pgd_worksheet_denovo
+    excel_import["pru"] = pru
+    excel_import["reference_sex"] = reference_sex
+    excel_import["reference_forename"] = reference_forename
+    excel_import["reference_surname"] = reference_surname
+    excel_import["reference_dob"] = reference_dob
+    excel_import["reference_DNA_number"] = reference_DNA_number
+    excel_import["reference_column_name"] = reference_column_name
+    excel_import["ref_relationship"] = ref_relationship
+    excel_import["ref_relationship_to_couple"] = ref_relationship_to_couple
+    excel_import["ref_seq"] = ref_seq
+    excel_import["ref_status"] = ref_status
+    excel_import["template_version"] = template_version
 
-    # Run SNP haplotyping script. (if statement to allow for future development of mode dependent arguments, currently no difference)
-    # TODO if not required remove if statement
-    if mode_of_inheritance == "Autosomal_Dominant":
-        subprocess.run(cmd, shell=True)
-    elif mode_of_inheritance == "Autosomal_Recessive":
-        subprocess.run(cmd, shell=True)
-    elif mode_of_inheritance == "x_linked":
-        subprocess.run(cmd, shell=True)
+    if run_snp_haplotyper_flag == True:
+        # Create command to run snp_haplotype.py
+        cmd = (
+            f" {config.python_location} {config.snp_haplotype_script}"
+            f' --input_file "{os.path.join(config.input_folder, input_file)}" --output_folder "{config.output_folder}"'
+            f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
+            f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
+            f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
+            f" --reference {reference_column_name} --reference_status {ref_status}"
+            f" --reference_relationship {ref_relationship}"
+            f" --gene_symbol {gene_symbol} --gene_start {gene_start}"
+            f" --gene_end {gene_end} --chr {chromosome}"
+        )
+
+        if trio_only == False:
+            cmd = cmd + (
+                f' --embryo_ids {" ".join(filtered_embryo_data_df.embryo_column_name.to_list())}'
+                f' --embryo_sex {" ".join(filtered_embryo_data_df.embryo_sex.to_list())}'
+            )
+
+        else:
+            cmd = cmd + f" --trio_only"
+
+        # Add header info to cmd string
+        cmd = (
+            cmd
+            + f' --header "PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}"'
+        )
+
+        # Run SNP haplotyping script. (if statement to allow for future development of mode dependent arguments, currently no difference)
+        # TODO if not required remove if statement
+        if mode_of_inheritance == "autosomal_dominant":
+            subprocess.run(cmd, shell=True)
+        elif mode_of_inheritance == "autosomal_recessive":
+            subprocess.run(cmd, shell=True)
+        elif mode_of_inheritance == "x_linked":
+            subprocess.run(cmd, shell=True)
+
+    return excel_import
 
 
-def main():
-    parse_excel_input(args.input_file)
+def main(args=None):
+    if args is None:
+        args = parser.parse_args()
+
+    # Function run with true flag to run snp_haplotype.py
+    excel_import = parse_excel_input(args.input_spreadsheet, True)
 
 
 if __name__ == "__main__":
