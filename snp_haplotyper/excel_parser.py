@@ -266,16 +266,20 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
     lookup_dict = {
         "son": "child",
         "daughter": "child",
+        "prenatal": "child",
+        "embryo": "child",
         "mother": "grandparent",
         "father": "grandparent",
     }
-    if ref_relationship in [
+    if ref_relationship.lower() in [
         "son",
         "daughter",
+        "prenatal",
+        "embryo",
         "mother",
         "father",
     ]:
-        ref_relationship = lookup_dict[ref_relationship]
+        ref_relationship = lookup_dict[ref_relationship.lower()]
 
     # Export data as dictionary to be used in other functions & testing
     excel_import = {}
