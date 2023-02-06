@@ -1138,9 +1138,7 @@ def add_embryo_sex_to_column_name(html_string, embryo_ids, embryo_sex):
     return html_string
 
 
-def main(args=None):  # default argument allows pytest to override argparse for testing
-    if args is None:
-        args = parser.parse_args()
+def main(args):
 
     # Check config.py file to see which paramters are currently supported.
     # Typically this is used when the script has been validated for some modes of inheritance
@@ -1560,4 +1558,5 @@ def main(args=None):  # default argument allows pytest to override argparse for 
 
 
 if __name__ == "__main__":
-    main()
+    args = parser.parse_args()
+    main(args)
