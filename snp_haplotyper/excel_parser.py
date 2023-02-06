@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import config as config
+import snp_haplotype
 
 # Add the directory containing this script to the PYTHOPATH
 sys.path.append(os.path.dirname(__file__))
@@ -334,53 +335,52 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
     excel_import["template_version"] = template_version
 
     if run_snp_haplotyper_flag == True:
-        # Create command to run snp_haplotype.py
-        cmd = (
-            f" {config.python_location} {config.snp_haplotype_script}"
-            f' --input_file "{os.path.join(config.input_folder, input_file)}" --output_folder "{config.output_folder}"'
-            f" --output_prefix {output_prefix} --mode_of_inheritance {mode_of_inheritance}"
-            f" --male_partner {male_partner_col} --male_partner_status {male_partner_status}"
-            f" --female_partner {female_partner_col} --female_partner_status {female_partner_status}"
-            f" --reference {reference_column_name} --reference_status {ref_status}"
-            f" --reference_relationship {ref_relationship}"
-            f" --gene_symbol {gene_symbol} --gene_start {gene_start}"
-            f" --gene_end {gene_end} --chr {chromosome}"
-        )
+        # TODO: Call as module rather than subprocess
+        # Create an argparse and populate it with the required arguments for passing to snp_haplotyper
+        args = argparse.Namespace()
+        args.mode_of_inheritance = mode_of_inheritance
+        args.input_file = os.path.join(config.input_folder, input_file)
+        args.output_folder = config.output_folder
+        args.output_prefix = output_prefix
+        args.mode_of_inheritance = mode_of_inheritance
+        args.male_partner = male_partner_col
+        args.male_partner_status = male_partner_status
+        args.female_partner = female_partner_col
+        args.female_partner_status = female_partner_status
+        args.reference = reference_column_name
+        args.reference_status = ref_status
+        args.reference_relationship = ref_relationship
+        args.gene_symbol = gene_symbol
+        args.gene_start = gene_start
+        args.gene_end = gene_end
+        args.chromosome = chromosome
 
+        # If analysis is being done for embryos add that data as well
         if trio_only == False:
-            cmd = cmd + (
-                f' --embryo_ids {" ".join(filtered_embryo_data_df.embryo_column_name.to_list())}'
-                f' --embryo_sex {" ".join(filtered_embryo_data_df.embryo_sex.to_list())}'
-            )
-
+            args.trio_only == False
+            args.embryo_ids = filtered_embryo_data_df.embryo_column_name.to_list()
+            args.embryo_sex = filtered_embryo_data_df.embryo_sex.to_list()
         else:
-            cmd = cmd + f" --trio_only"
+            args.trio_only = True
 
         # Add header info to cmd string
-        cmd = (
-            cmd
-            + f' --header "PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}"'
+        args.header = (
+            f"PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}"
         )
 
-        # Run SNP haplotyping script. (if statement to allow for future development of mode dependent arguments, currently no difference)
-        # TODO if not required remove if statement
-        if mode_of_inheritance == "autosomal_dominant":
-            subprocess.run(cmd, shell=True)
-        elif mode_of_inheritance == "autosomal_recessive":
-            subprocess.run(cmd, shell=True)
-        elif mode_of_inheritance == "x_linked":
-            subprocess.run(cmd, shell=True)
+        # Run snp_haplotype.py with args
+        snp_haplotype.main(args)
 
     return excel_import
 
+    # TODO: Convert namespace to json stream to stdout
 
-def main(args=None):
-    if args is None:
-        args = parser.parse_args()
 
+def main(args):
     # Function run with true flag to run snp_haplotype.py
     excel_import = parse_excel_input(args.input_spreadsheet, True)
 
 
 if __name__ == "__main__":
-    main()
+    args = parser.parse_args()
+    main(args)
