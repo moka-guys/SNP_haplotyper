@@ -35,4 +35,4 @@ snp_haplotype_script = (
 )
 output_folder = "/home/graeme/Desktop/SNP_haplotyper/output"
 
-input_folder = ""
+input_folder = "/home/graeme/Desktop/Moved_docs"
