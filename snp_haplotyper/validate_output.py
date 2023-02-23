@@ -1,47 +1,56 @@
 def lookup_df_result(df, value_column, **lookup_values):
-    total = 0
+    # Filter df on all the user provided criteria
+    filter_criteria = []
     for lookup_colname, lookup_value in lookup_values.items():
-        cell_values = df.query(
-            f'{lookup_colname}.str.contains("{lookup_value}")', engine="python"
-        )[value_column].sum()
-        total = total + cell_values
+        if lookup_colname == "snp_inherited_from":
+            filter_criteria.append(f'{lookup_colname}.str.startswith("{lookup_value}")')
+        else:
+            filter_criteria.append(f'{lookup_colname}.str.contains("{lookup_value}")')
+    filter_string = " and ".join(filter_criteria)
+    print(filter_string)
+    total = df.query(filter_string, engine="python")[value_column].sum()
     return total
 
 
 def validate_snp_results(
-    mode, sample_id, summary_snps_by_region, informative_snps_by_region, all_validation
+    mode,
+    sample_id,
+    number_snps_imported,
+    summary_snps_by_region,
+    informative_snps_by_region,
+    all_validation,
 ):
     validation = all_validation[sample_id]
     assert mode == validation["mode"]
     assert sample_id == validation["sample_id"]
-    # assert results["num_snps"] == validation["num_snps"] TODO replicate this code
+    assert number_snps_imported == validation["num_snps"]
 
-    # Test contents of summary_snps_by_region dataframe which is used to make the summary_snps_table in the report
-    # These tests are the same for all modes of inheritance
-    assert (
-        lookup_df_result(summary_snps_by_region, "snp_count", gene_distance="start")
-        == validation["info_snps_upstream_2mb"]
-    )
-    assert (
-        lookup_df_result(
-            summary_snps_by_region, "snp_count", gene_distance="within_gene"
+    if mode == "autosomal_dominant":
+        # Test contents of summary_snps_by_region dataframe which is used to make the summary_snps_table in the report
+        # These tests are the same for all modes of inheritance
+        assert (
+            lookup_df_result(summary_snps_by_region, "snp_count", gene_distance="start")
+            == validation["info_snps_upstream_2mb"]
         )
-        == validation["info_snps_in_gene"]
-    )
-    assert (
-        lookup_df_result(summary_snps_by_region, "snp_count", gene_distance="end")
-        == validation["info_snps_downstream_2mb"]
-    )
-    assert (
-        lookup_df_result(
-            summary_snps_by_region, "snp_count", gene_distance="total_info_snps"
+        assert (
+            lookup_df_result(
+                summary_snps_by_region, "snp_count", gene_distance="within_gene"
+            )
+            == validation["info_snps_in_gene"]
         )
-        == validation["total_info_snps"]
-    )
+        assert (
+            lookup_df_result(summary_snps_by_region, "snp_count", gene_distance="end")
+            == validation["info_snps_downstream_2mb"]
+        )
+        assert (
+            lookup_df_result(
+                summary_snps_by_region, "snp_count", gene_distance="total_snps"
+            )
+            == validation["total_info_snps"]
+        )
 
-    # Test contents of informative_snps_by_region dataframe which is used to make the informative_snps_table in the report
-    # These tests are different depending on the mode of inheritance
-    if mode == "autosomal_dominant" or mode == "x_linked":
+        # Test contents of informative_snps_by_region dataframe which is used to make the informative_snps_table in the report
+        # These tests are different depending on the mode of inheritance
         assert (
             lookup_df_result(
                 informative_snps_by_region,
@@ -97,6 +106,29 @@ def validate_snp_results(
             == validation["low_risk_snps_downstream_2mb"]
         )
     elif mode == "autosomal_recessive":
+        # Test contents of summary_snps_by_region dataframe which is used to make the summary_snps_table in the report
+        # These tests are the same for all modes of inheritance
+        assert (
+            lookup_df_result(summary_snps_by_region, "snp_count", gene_distance="start")
+            == validation["info_snps_upstream_2mb"]
+        )
+        assert (
+            lookup_df_result(
+                summary_snps_by_region, "snp_count", gene_distance="within_gene"
+            )
+            == validation["info_snps_in_gene"]
+        )
+        assert (
+            lookup_df_result(summary_snps_by_region, "snp_count", gene_distance="end")
+            == validation["info_snps_downstream_2mb"]
+        )
+        assert (
+            summary_snps_by_region["snp_count"].sum()
+            == validation["info_snps_upstream_2mb"]
+            + validation["info_snps_in_gene"]
+            + validation["info_snps_downstream_2mb"]
+        )
+
         assert (
             lookup_df_result(
                 informative_snps_by_region,
@@ -222,7 +254,7 @@ def validate_snp_results(
 def validate_embryo_results(
     mode, sample_id, embryo_id, embryo_count_data_df, all_validation
 ):
-    validation = all_validation[sample_id]
+    validation = all_validation[sample_id + "_" + embryo_id]
     assert mode == validation["mode"]
     assert sample_id == validation["sample_id"]
 
@@ -230,7 +262,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="upstream",
                 risk_category="high_risk",
             )
@@ -239,7 +271,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="within_gene",
                 risk_category="high_risk",
             )
@@ -248,7 +280,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="downstream",
                 risk_category="high_risk",
             )
@@ -257,7 +289,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="upstream",
                 risk_category="low_risk",
             )
@@ -266,7 +298,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="within_gene",
                 risk_category="low_risk",
             )
@@ -275,7 +307,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="downstream",
                 risk_category="low_risk",
             )
@@ -285,7 +317,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="upstream",
                 snp_inherited_from="female_partner",
                 risk_category="high_risk",
@@ -295,7 +327,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="within_gene",
                 snp_inherited_from="female_partner",
                 risk_category="high_risk",
@@ -305,7 +337,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="downstream",
                 snp_inherited_from="female_partner",
                 risk_category="high_risk",
@@ -315,7 +347,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="upstream",
                 snp_inherited_from="female_partner",
                 risk_category="low_risk",
@@ -325,7 +357,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="within_gene",
                 snp_inherited_from="female_partner",
                 risk_category="low_risk",
@@ -335,7 +367,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="downstream",
                 snp_inherited_from="female_partner",
                 risk_category="low_risk",
@@ -345,7 +377,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="upstream",
                 snp_inherited_from="male_partner",
                 risk_category="high_risk",
@@ -355,8 +387,8 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
-                snp_position="within_genes",
+                embryo_id + ".rhchp",
+                snp_position="within_gene",
                 snp_inherited_from="male_partner",
                 risk_category="high_risk",
             )
@@ -365,7 +397,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="downstream",
                 snp_inherited_from="male_partner",
                 risk_category="high_risk",
@@ -375,7 +407,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="upstream",
                 snp_inherited_from="male_partner",
                 risk_category="low_risk",
@@ -385,7 +417,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="within_gene",
                 snp_inherited_from="male_partner",
                 risk_category="low_risk",
@@ -395,7 +427,7 @@ def validate_embryo_results(
         assert (
             lookup_df_result(
                 embryo_count_data_df,
-                embryo_id,
+                embryo_id + ".rhchp",
                 snp_position="downstream",
                 snp_inherited_from="male_partner",
                 risk_category="low_risk",

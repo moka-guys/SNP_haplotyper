@@ -1047,22 +1047,62 @@ def summarise_snps_per_embryo_pretty(
         # gene_distance and risk category. size() tells the function to count the number of occurrences
         # rather than say sum(). reset_index() converts it from a groupby object with two indexes,
         # gene_distance and risk_category into one index of "gene_distance, risk_category".
-        if counter == 0:
-            output_df = (
-                df.groupby(["gene_distance", f"{embryo}_risk_category"])
-                .size()
-                .reset_index()
-            )
-            output_df.columns = ["gene_distance", "risk_category", embryo]
-            counter = 1
-        elif counter > 0:
-            temp_df = (
-                df.groupby(["gene_distance", f"{embryo}_risk_category"])
-                .size()
-                .reset_index()
-            )
-            temp_df.columns = ["gene_distance", "risk_category", embryo]
-            output_df[embryo] = temp_df[embryo].values
+        if "snp_inherited_from" in df:
+            if counter == 0:
+                output_df = (
+                    df.groupby(
+                        [
+                            "gene_distance",
+                            "snp_inherited_from",
+                            f"{embryo}_risk_category",
+                        ],
+                    )
+                    .size()
+                    .reset_index()
+                )
+                output_df.columns = [
+                    "gene_distance",
+                    "snp_inherited_from",
+                    "risk_category",
+                    embryo,
+                ]
+                counter = 1
+            elif counter > 0:
+                temp_df = (
+                    df.groupby(
+                        [
+                            "gene_distance",
+                            "snp_inherited_from",
+                            f"{embryo}_risk_category",
+                        ],
+                    )
+                    .size()
+                    .reset_index()
+                )
+                temp_df.columns = [
+                    "gene_distance",
+                    "risk_category",
+                    "snp_inherited_from",
+                    embryo,
+                ]
+                output_df[embryo] = temp_df[embryo].values
+        else:
+            if counter == 0:
+                output_df = (
+                    df.groupby(["gene_distance", f"{embryo}_risk_category"])
+                    .size()
+                    .reset_index()
+                )
+                output_df.columns = ["gene_distance", "risk_category", embryo]
+                counter = 1
+            elif counter > 0:
+                temp_df = (
+                    df.groupby(["gene_distance", f"{embryo}_risk_category"])
+                    .size()
+                    .reset_index()
+                )
+                temp_df.columns = ["gene_distance", "risk_category", embryo]
+                output_df[embryo] = temp_df[embryo].values
 
     # Add new column- 'upstream', 'downstream', or 'within_gene'
     output_df = annotate_snp_position(output_df)
@@ -1555,6 +1595,16 @@ def main(args):
             os.path.join(args.output_folder, args.output_prefix + ".html"), "w"
         ) as f:
             f.write(html_string)
+
+    return (
+        args.mode_of_inheritance,
+        args.output_prefix,
+        number_snps_imported,
+        summary_snps_by_region,
+        informative_snps_by_region,
+        embryo_count_data_df,
+        html_string,
+    )
 
 
 if __name__ == "__main__":
