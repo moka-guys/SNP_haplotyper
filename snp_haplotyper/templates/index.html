@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>BASHer Web App</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>BASHer Web App</h1>
+    </div>
+
+    <div class="container">
+
+        {% if basher_state == "initial" %}
+        <div class="alert alert-dark" role="alert">
+            <h4 class="alert-heading">Welcome to BASHer</h4>
+            <p>Please select the sample sheet for your analysis and the related SNP array output files below, then click
+                the "Run BASHer" button.</p>
+        </div>
+        <div class="container">
+            <h4>BASHer File Upload</h4>
+            <form action="{{ url_for('form') }}" method="post" enctype="multipart/form-data">
+                {{ form.csrf_token }}
+                <div class="row">
+                    <div class="col-sm-6 form-group">
+                        <label>Upload Sample Sheet:</label>
+                        <input type="file" name="sample_sheet" class="form-control-file">
+                    </div>
+                    <div class="col-sm-6 form-group">
+                        <label>Upload one or more SNP files:</label>
+                        <input type="file" name="snp_array_files" class="form-control-file" multiple>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg btn-block" id="runBASHer">Run BASHer</button>
+            </form>
+        </div>
+
+        {%elif basher_state == "started" %}
+        <div class="alert alert-success" role="alert">
+            <h4 class="alert-heading">BASHer Analysis Complete</h4>
+            <p>You submitted the Sample Sheet: {{ sample_sheet_name }}</p>
+            <p style="color:lime;">{{ sample_sheet_name }}</p>
+            <p>You submitted the following SNP array files:</p>
+            <p style="color:lime;">{{ snp_array_file_names }}</p>
+            <hr>
+            <h4>The following BASHer Report can be downloaded to your computer using the button below:</h4>
+            <p style="color:lime;">{{ report_name }}</p>
+            <br>
+            <a class="btn btn-success" href="{{url_for('download')}}">Download</a>
+            <hr>
+            <p class="mb-0">If you have any issues with this tool please raise a ticket with Genome Support.</p>
+        </div>
+    </div>
+
+    {%elif basher_state == "finished" %}
+
+    <div class="alert alert-success" role="alert">
+        <h4 class="alert-heading">BASHer Analysis Completed!</h4>
+        <p>The BASHer Report can be downloaded to your computer using the button below.</p>
+        <br>
+        <a class="btn btn-success" href="{{url_for('download')}}">Download Report</a>
+        <hr>
+        <p class="mb-0">If you have any issues with this tool please raise a ticket with Genome Support.</p>
+    </div>
+
+    {%elif basher_state == "failed" %}
+
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">WARNING!</h4>
+        <p>BASHer has failed with the following error:</p>
+        <hr>
+        <p class="mb-0"> ERROR: <br> If you require any help please raise a ticket with Genome Support.
+        </p>
+    </div>
+    {%endif %}
+    </div>
+
+
+</body>
