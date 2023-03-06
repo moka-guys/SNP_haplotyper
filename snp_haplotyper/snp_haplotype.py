@@ -4,6 +4,7 @@ from jinja2 import Environment, PackageLoader
 import json
 import pandas as pd
 from pathlib import Path
+import pdfkit
 import numpy as np
 from datetime import datetime
 
@@ -20,16 +21,10 @@ from autosomal_recessive_logic import autosomal_recessive_analysis
 import config as config
 
 # Imports variables for genome_build, allow_autosomal_dominant_cases, allow_autosomal_recessive_cases,
-# allow_x_linked_cases,allow_cosanguineous_cases, stream_results, basher_version,
-# released_to_production
+# allow_x_linked_cases,allow_consanguineous_cases, basher_version, released_to_production
 
 from x_linked_logic import x_linked_analysis
 from snp_plot import plot_results, summarise_snps_per_embryo
-from stream_output import (
-    stream_autosomal_dominant_output,
-    stream_autosomal_recessive_output,
-    stream_x_linked_output,
-)
 
 from exceptions import ArgumentInputError, InvalidParameterSelectedError
 
@@ -210,14 +205,6 @@ parser.add_argument(
         "y",
     ],
     help="Chromosome of ROI/gene",
-)
-
-
-parser.add_argument(
-    "--testing",
-    action=argparse.BooleanOptionalAction,
-    default=False,
-    help="Flag to produce JSON output easily parsed by pytest and prevent HTML reports being produced",
 )
 
 parser.add_argument(
@@ -1178,6 +1165,26 @@ def add_embryo_sex_to_column_name(html_string, embryo_ids, embryo_sex):
     return html_string
 
 
+# convert header dictionary into html
+def dict2html(header_dictionary):
+    """
+    Converts a dictionary of header into an html table for displaying in the report.
+    Flexible way of allowing the user to add any information they want to the report header.
+
+    Args:
+        header_dictionary (dict): Dictionary of header information
+        For example: {"Analysis Name": "test", "Analysis Date": "2020-01-01"}
+
+    Returns:
+        header_html (str): HTML table of header information
+    """
+    header_html = f'<h2> Analysis Details </h2> <table style="width:100%"><tr>'
+    for key in header_dictionary:
+        header_html = header_html + f"<td><b>{key}:</b> {header_dictionary[key]}</td>"
+    header_html = header_html + f"</tr> </table>"
+    return header_html
+
+
 def main(args):
 
     # Check config.py file to see which paramters are currently supported.
@@ -1314,53 +1321,56 @@ def main(args):
         args.mode_of_inheritance,
     )
 
-    # Categorise embryo alleles
-    embryo_category_df = categorise_embryo_alleles(
-        results_df,
-        args.male_partner,
-        args.female_partner,
-        args.embryo_ids,
-        args.embryo_sex,
-        args.mode_of_inheritance,
-        args.consanguineous,
-    )
+    # DO not calculate embryo results for pre-cases and trio_only analysis is required
+    if args.trio_only == True:
 
-    # Summarise embryo results by risk category and SNP position
-    embryo_snps_summary_df = summarise_snps_per_embryo(
-        embryo_category_df,
-        args.embryo_ids,
-        args.mode_of_inheritance,
-    )
-
-    embryo_count_data_df = summarise_snps_per_embryo_pretty(
-        embryo_category_df,
-        args.embryo_ids,
-    )
-
-    summary_embryo_df = embryo_count_data_df.groupby(by=["risk_category"]).sum(
-        numeric_only=True
-    )
-
-    # Summarise embryo results by risk category and SNP position - used for streamming X-linked embryo data
-    embryo_stream_output_df = (
-        embryo_count_data_df.groupby(["risk_category", "snp_position"])
-        .sum()
-        .reset_index()
-    )
-    # Concatenate risk category and SNP position to create a unique index
-    embryo_stream_output_df = embryo_stream_output_df.set_index(
-        embryo_stream_output_df.risk_category.str.cat(
-            embryo_stream_output_df.snp_position, sep=","
+        # Categorise embryo alleles
+        embryo_category_df = categorise_embryo_alleles(
+            results_df,
+            args.male_partner,
+            args.female_partner,
+            args.embryo_ids,
+            args.embryo_sex,
+            args.mode_of_inheritance,
+            args.consanguineous,
         )
-    )
-    # Drop risk category and SNP position columns as they are now redundant
-    embryo_stream_output_df = embryo_stream_output_df.drop(
-        ["snp_position", "risk_category"], axis=1
-    )
-    # Group by risk category and SNP position and sum the counts
-    summary_embryo_by_region_df = embryo_count_data_df.groupby(
-        by=["risk_category", "gene_distance"]
-    ).sum(numeric_only=True)
+
+        # Summarise embryo results by risk category and SNP position
+        embryo_snps_summary_df = summarise_snps_per_embryo(
+            embryo_category_df,
+            args.embryo_ids,
+            args.mode_of_inheritance,
+        )
+
+        embryo_count_data_df = summarise_snps_per_embryo_pretty(
+            embryo_category_df,
+            args.embryo_ids,
+        )
+
+        summary_embryo_df = embryo_count_data_df.groupby(by=["risk_category"]).sum(
+            numeric_only=True
+        )
+
+        # Summarise embryo results by risk category and SNP position - used for streamming X-linked embryo data
+        embryo_stream_output_df = (
+            embryo_count_data_df.groupby(["risk_category", "snp_position"])
+            .sum()
+            .reset_index()
+        )
+        # Concatenate risk category and SNP position to create a unique index
+        embryo_stream_output_df = embryo_stream_output_df.set_index(
+            embryo_stream_output_df.risk_category.str.cat(
+                embryo_stream_output_df.snp_position, sep=","
+            )
+        )
+        # Drop risk category and SNP position columns as they are now redundant
+        embryo_stream_output_df = embryo_stream_output_df.drop(
+            ["snp_position", "risk_category"], axis=1
+        )
+        # Group by risk category and SNP position and sum the counts
+        summary_embryo_by_region_df = embryo_count_data_df.groupby(
+            by=["risk_category", "gene_distance"]
+        ).sum(numeric_only=True)
     ##############################################################################
 
     # Produce report
@@ -1476,27 +1486,6 @@ def main(args):
 
     env = Environment(loader=PackageLoader("snp_haplotype", "templates"))
 
-    # convert header dictionary into html
-    def dict2html(header_dictionary):
-        """
-        Converts a dictionary of header into an html table for displaying in the report.
-        Flexible way of allowing the user to add any information they want to the report header.
-
-        Args:
-            header_dictionary (dict): Dictionary of header information
-            For example: {"Analysis Name": "test", "Analysis Date": "2020-01-01"}
-
-        Returns:
-            header_html (str): HTML table of header information
-        """
-        header_html = f'<h2> Analysis Details </h2> <table style="width:100%"><tr>'
-        for key in header_dictionary:
-            header_html = (
-                header_html + f"<td><b>{key}:</b> {header_dictionary[key]}</td>"
-            )
-        header_html = header_html + f"</tr> </table>"
-        return header_html
-
     if type(args.header_info) is dict:
         header_html = args.header_info
     else:
@@ -1535,66 +1524,15 @@ def main(args):
         "nocall_percentages_table": nocall_percentages_table,
         "report_date": datetime.today().strftime("%Y-%m-%d %H:%M:%S"),
         "summary_snps_table": summary_snps_table,
-        "summary_embryo_table": summary_embryo_table,
-        "summary_embryo_by_region_table": summary_embryo_by_region_table,
+        "summary_embryo_table": summary_embryo_table if args.trio_only == False else "",
+        "summary_embryo_by_region_table": summary_embryo_by_region_table
+        if args.trio_only == False
+        else "",
         "html_text_for_plots": html_text_for_plots,
         "warning": warning_text,  # Warning text, for example if the tool is not released to production
     }
 
     html_string = template.render(place_holder_values)
-
-    # Stream machine readable JSON output to stdout for testing
-    if (args.testing == True) | (config.stream_results == True):
-
-        export_json_data_as_csv(
-            "test_data/embryo_validation_data.json",
-            "test_data/embryo_validation_data.csv",
-        )
-        export_json_data_as_csv(
-            "test_data/informative_snp_validation.json",
-            "test_data/informative_snp_validation.csv",
-        )
-
-        if args.mode_of_inheritance == "autosomal_dominant":
-            informative_snp_data, embryo_cat_data = stream_autosomal_dominant_output(
-                args.mode_of_inheritance,
-                informative_snps_by_region,
-                embryo_snps_summary_df,
-                number_snps_imported,
-                args.output_prefix,
-            )
-        elif args.mode_of_inheritance == "autosomal_recessive":
-            informative_snp_data, embryo_cat_data = stream_autosomal_recessive_output(
-                args.mode_of_inheritance,
-                informative_snps_by_region,
-                embryo_snps_summary_df,
-                number_snps_imported,
-                args.output_prefix,
-            )
-        elif args.mode_of_inheritance == "x_linked":
-            informative_snp_data, embryo_cat_data = stream_x_linked_output(
-                args.mode_of_inheritance,
-                informative_snps_by_region,
-                embryo_stream_output_df,
-                number_snps_imported,
-                args.output_prefix,
-            )
-
-        json.dump(
-            {
-                "informative_snp_data": informative_snp_data,
-                "embryo_cat_json": embryo_cat_data,
-            },
-            sys.stdout,
-            indent=4,
-        )
-
-    else:
-        # Produce human readable HTML report
-        with open(
-            os.path.join(args.output_folder, args.output_prefix + ".html"), "w"
-        ) as f:
-            f.write(html_string)
 
     return (
         args.mode_of_inheritance,
@@ -1609,4 +1547,29 @@ def main(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    main(args)
+    (
+        mode_of_inheritance,
+        sample_id,
+        number_snps_imported,
+        summary_snps_by_region,
+        informative_snps_by_region,
+        embryo_count_data_df,
+        html_string,
+    ) = main(args)
+
+    # Save HTML report to file in output folder, including timestamp in filename
+
+    timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
+    with open(
+        os.path.join(args.output_folder, args.output_prefix + "_" + timestr + ".html"),
+        "w",
+    ) as f:
+        f.write(html_string)
+
+    # Convert HTML report to PDF TODO change formatting to suit PDF
+    pdfkit.from_string(
+        html_string,
+        os.path.join(
+            args.output_folder, args.output_prefix + "_summary_" + timestr + ".pdf"
+        ),
+    )
