@@ -359,7 +359,7 @@ def filter_out_nocalls(df, male_partner, female_partner, reference):
 # TODO standardise the order of fp/mp args across functions
 
 
-def calculate_qc_metrics(df, male_partner, female_partner, reference, embryo_ids):
+def calculate_qc_metrics(df, male_partner, female_partner, reference, embryo_ids=None):
     """Calculate QC metrics based on the number of NoCalls per sample (measure of DNA quality)
 
     Calculate QC metrics based on the number of NoCalls per sample which can be used as a metric of DNA quality.
@@ -396,13 +396,14 @@ def calculate_qc_metrics(df, male_partner, female_partner, reference, embryo_ids
         df[df[reference] == "AB"].shape[0],
         df[df[reference] == "NoCall"].shape[0],
     ]
-    for embryo in embryo_ids:
-        qc_df[embryo] = [
-            df[df[embryo] == "AA"].shape[0],
-            df[df[embryo] == "BB"].shape[0],
-            df[df[embryo] == "AB"].shape[0],
-            df[df[embryo] == "NoCall"].shape[0],
-        ]
+    if embryo_ids is not None:
+        for embryo in embryo_ids:
+            qc_df[embryo] = [
+                df[df[embryo] == "AA"].shape[0],
+                df[df[embryo] == "BB"].shape[0],
+                df[df[embryo] == "AB"].shape[0],
+                df[df[embryo] == "NoCall"].shape[0],
+            ]
     # Clean up dataframe
     qc_df = qc_df.reset_index()
     qc_df = qc_df.rename(
@@ -1272,10 +1273,15 @@ def main(args):
     # Add column of dbSNP rsIDs
     df = add_rsid_column(df, affy_2_rs_ids_df)
 
-    # Calculate qc metrics before filtering out Nocalls
-    qc_df = calculate_qc_metrics(
-        df, args.male_partner, args.female_partner, args.reference, args.embryo_ids
-    )
+    # Calculate qc metrics before filtering out Nocalls TODO: remove dependency on embryo.ids
+    if args.trio_only == True:
+        qc_df = calculate_qc_metrics(
+            df, args.male_partner, args.female_partner, args.reference, None
+        )
+    else:
+        qc_df = calculate_qc_metrics(
+            df, args.male_partner, args.female_partner, args.reference, args.embryo_ids
+        )
 
     # Calculate NoCall percentages
 
@@ -1322,7 +1328,7 @@ def main(args):
     )
 
     # DO not calculate embryo results for pre-cases and trio_only analysis is required
-    if args.trio_only == True:
+    if args.trio_only == False:
 
         # Categorise embryo alleles
         embryo_category_df = categorise_embryo_alleles(
@@ -1482,7 +1488,11 @@ def main(args):
                 args.mode_of_inheritance,
             )
 
-    html_text_for_plots = "<br>".join(html_list_of_plots)
+        html_text_for_plots = "<br>".join(html_list_of_plots)
+
+    elif args.trio_only == True:
+        html_text_for_plots = ""
+        embryo_count_data_df = None
 
     env = Environment(loader=PackageLoader("snp_haplotype", "templates"))
 
@@ -1553,7 +1563,7 @@ if __name__ == "__main__":
         number_snps_imported,
         summary_snps_by_region,
         informative_snps_by_region,
-        embryo_count_data_df,
+        summary_embryo_df,
         html_string,
     ) = main(args)
 

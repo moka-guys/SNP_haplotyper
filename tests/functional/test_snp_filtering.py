@@ -45,49 +45,71 @@ def setup_test_data(split_by_embryo=False):
             else:
                 arg_dictionary[dict_key] = dict_values
 
-        # Ensure that embryo_ids are a list even if only a single embryo is present
-        if isinstance(arg_dictionary["embryo_ids"], str):
-            embryo_ids_list = [arg_dictionary["embryo_ids"]]
-        else:
-            embryo_ids_list = arg_dictionary["embryo_ids"]
+        if "trio_only" in arg_dictionary:
 
-        if isinstance(arg_dictionary["embryo_sex"], str):
-            embryo_sex_list = [arg_dictionary["embryo_sex"]]
+            args = Namespace(
+                input_file=arg_dictionary["input_file"],
+                output_prefix=arg_dictionary["output_prefix"],
+                mode_of_inheritance=arg_dictionary["mode_of_inheritance"],
+                male_partner=arg_dictionary["male_partner"],
+                male_partner_status=arg_dictionary["male_partner_status"],
+                female_partner=arg_dictionary["female_partner"],
+                female_partner_status=arg_dictionary["female_partner_status"],
+                reference=arg_dictionary["reference"],
+                reference_status=arg_dictionary["reference_status"],
+                reference_relationship=arg_dictionary["reference_relationship"],
+                gene_symbol=arg_dictionary["gene_symbol"],
+                gene_start=int(arg_dictionary["gene_start"]),
+                gene_end=int(arg_dictionary["gene_end"]),
+                chr=arg_dictionary["chr"],
+                consanguineous=True if "consanguineous" in arg_dictionary else False,
+                testing=True,
+                trio_only=True,
+                header_info=header_to_dict(arg_dictionary["header_info"]),
+            )
         else:
-            embryo_sex_list = arg_dictionary["embryo_sex"]
+            # Ensure that embryo_ids are a list even if only a single embryo is present
+            if isinstance(arg_dictionary["embryo_ids"], str):
+                embryo_ids_list = [arg_dictionary["embryo_ids"]]
+            else:
+                embryo_ids_list = arg_dictionary["embryo_ids"]
 
-        args = Namespace(
-            input_file=arg_dictionary["input_file"],
-            output_prefix=arg_dictionary["output_prefix"],
-            mode_of_inheritance=arg_dictionary["mode_of_inheritance"],
-            male_partner=arg_dictionary["male_partner"],
-            male_partner_status=arg_dictionary["male_partner_status"],
-            female_partner=arg_dictionary["female_partner"],
-            female_partner_status=arg_dictionary["female_partner_status"],
-            reference=arg_dictionary["reference"],
-            reference_status=arg_dictionary["reference_status"],
-            reference_relationship=arg_dictionary["reference_relationship"],
-            embryo_ids=embryo_ids_list,
-            embryo_sex=embryo_sex_list,
-            gene_symbol=arg_dictionary["gene_symbol"],
-            gene_start=int(arg_dictionary["gene_start"]),
-            gene_end=int(arg_dictionary["gene_end"]),
-            chr=arg_dictionary["chr"],
-            consanguineous=True
-            if "consanguineous" in arg_dictionary == "yes"
-            else False,
-            testing=True,
-            trio_only=False,
-            header_info=header_to_dict(arg_dictionary["header_info"]),
-        )
+            if isinstance(arg_dictionary["embryo_sex"], str):
+                embryo_sex_list = [arg_dictionary["embryo_sex"]]
+            else:
+                embryo_sex_list = arg_dictionary["embryo_sex"]
+
+            args = Namespace(
+                input_file=arg_dictionary["input_file"],
+                output_prefix=arg_dictionary["output_prefix"],
+                mode_of_inheritance=arg_dictionary["mode_of_inheritance"],
+                male_partner=arg_dictionary["male_partner"],
+                male_partner_status=arg_dictionary["male_partner_status"],
+                female_partner=arg_dictionary["female_partner"],
+                female_partner_status=arg_dictionary["female_partner_status"],
+                reference=arg_dictionary["reference"],
+                reference_status=arg_dictionary["reference_status"],
+                reference_relationship=arg_dictionary["reference_relationship"],
+                embryo_ids=embryo_ids_list,
+                embryo_sex=embryo_sex_list,
+                gene_symbol=arg_dictionary["gene_symbol"],
+                gene_start=int(arg_dictionary["gene_start"]),
+                gene_end=int(arg_dictionary["gene_end"]),
+                chr=arg_dictionary["chr"],
+                consanguineous=True if "consanguineous" in arg_dictionary else False,
+                testing=True,
+                trio_only=False,
+                header_info=header_to_dict(arg_dictionary["header_info"]),
+            )
 
         run_data_dictionary[run_name] = args
         # This dictionary needs to be ammended when passed to the function testing the embryo categorising.
         # We require an entry for each embryo so the mark.parametrize function can create the tests correctly.
-        for embryo_id in embryo_ids_list:
-            run_data_per_embryo_dictionary[
-                run_name + "_" + embryo_id.replace(".rhchp", "")
-            ] = args
+        if args.trio_only == False:
+            for embryo_id in embryo_ids_list:
+                run_data_per_embryo_dictionary[
+                    run_name + "_" + embryo_id.replace(".rhchp", "")
+                ] = args
 
     if split_by_embryo:
         return run_data_per_embryo_dictionary
@@ -117,7 +139,9 @@ def test_informative_snps(name):
 
     validate_snp_results(
         mode_of_inheritance,
-        sample_id,
+        sample_id.replace("_precase", "").replace(
+            "_with_embryo", ""
+        ),  # Remove any suffixes from the sample_id which will not be present in the validation data
         number_snps_imported,
         summary_snps_by_region,
         informative_snps_by_region,

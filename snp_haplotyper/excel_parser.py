@@ -2,6 +2,7 @@ import argparse
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_interval
 import pandas as pd
+from pathlib import Path
 import re
 import os
 import subprocess
@@ -25,6 +26,16 @@ parser.add_argument(
     help="Excel file containing SNP Array meta data",
 )
 
+parser.add_argument(
+    "-s",
+    "--snp_array_files",
+    type=str,
+    help="SNP Array text files",
+    required=False,
+    nargs="?",  # Allows for 0 or more arguments
+    default=None,  # Default value if no arguments are provided
+)
+
 
 def load_workbook_range(range_string, worksheet):
     """
@@ -39,7 +50,7 @@ def load_workbook_range(range_string, worksheet):
     return pd.DataFrame(data_rows, columns=get_column_interval(col_start, col_end))
 
 
-def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
+def parse_excel_input(input_spreadsheet, snp_aray_files=None):
     """
     Imports the following defined cells/ranges from the provided excel file:
         biopsy_number
@@ -136,7 +147,7 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
             argument_dict[input_name] = cell_value
 
     biopsy_number = argument_dict["biopsy_number"]
-    chromosome = argument_dict["chromosome"]
+    chr = argument_dict["chromosome"]
     consanguineous = argument_dict["consanguineous"]
     de_novo = argument_dict["de_novo"]
     disease = argument_dict["disease"]
@@ -236,7 +247,13 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
         female_partner_status = partner1_type.lower()
         female_partner_col = partner1_column_name
 
-    output_prefix = os.path.splitext(os.path.basename(input_file))[0]
+    # TODO rationalise output prefix - input_file or input_spreadsheet - move cleanup of names into test function?
+    output_prefix = (
+        os.path.splitext(os.path.basename(input_spreadsheet))[0]
+        .replace("excel_test_Autosomal_Dominant_", "")
+        .replace("excel_test_Autosomal_Recessive_", "")
+        .replace("excel_test_X_linked_", "")
+    )
 
     if mode_of_inheritance == "autosomal_dominant":
         female_partner_status = female_partner_status.split("_")[0]
@@ -267,21 +284,25 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
     lookup_dict = {
         "son": "child",
         "daughter": "child",
+        "prenatal": "child",
+        "embryo": "child",
         "mother": "grandparent",
         "father": "grandparent",
     }
-    if ref_relationship in [
+    if ref_relationship.lower() in [
         "son",
         "daughter",
+        "prenatal",
+        "embryo",
         "mother",
         "father",
     ]:
-        ref_relationship = lookup_dict[ref_relationship]
+        ref_relationship = lookup_dict[ref_relationship.lower()]
 
     # Export data as dictionary to be used in other functions & testing
     excel_import = {}
     excel_import["biopsy_number"] = biopsy_number
-    excel_import["chromosome"] = chromosome
+    excel_import["chr"] = chr
     excel_import["consanguineous"] = consanguineous
     excel_import["de_novo"] = de_novo
     excel_import["disease"] = disease
@@ -334,53 +355,70 @@ def parse_excel_input(input_spreadsheet, run_snp_haplotyper_flag=True):
     excel_import["ref_status"] = ref_status
     excel_import["template_version"] = template_version
 
-    if run_snp_haplotyper_flag == True:
-        # TODO: Call as module rather than subprocess
-        # Create an argparse and populate it with the required arguments for passing to snp_haplotyper
-        args = argparse.Namespace()
-        args.mode_of_inheritance = mode_of_inheritance
-        args.input_file = os.path.join(config.input_folder, input_file)
-        args.output_folder = config.output_folder
-        args.output_prefix = output_prefix
-        args.mode_of_inheritance = mode_of_inheritance
-        args.male_partner = male_partner_col
-        args.male_partner_status = male_partner_status
-        args.female_partner = female_partner_col
-        args.female_partner_status = female_partner_status
-        args.reference = reference_column_name
-        args.reference_status = ref_status
-        args.reference_relationship = ref_relationship
-        args.gene_symbol = gene_symbol
-        args.gene_start = gene_start
-        args.gene_end = gene_end
-        args.chromosome = chromosome
+    # The user can specify the SNP array text files in both the provided template and the via the command line
+    # If a SNP array text file is specified in both the template and the command line the two files must be the same
+    # If a SNP array text file is specified in the template but not the command line, the file specified in the template will be used
 
-        # If analysis is being done for embryos add that data as well
-        if trio_only == False:
-            args.trio_only == False
-            args.embryo_ids = filtered_embryo_data_df.embryo_column_name.to_list()
-            args.embryo_sex = filtered_embryo_data_df.embryo_sex.to_list()
-        else:
-            args.trio_only = True
+    # TODO support multiple SNP array files
+    if snp_aray_files is not None:
+        input_filepath = snp_aray_files
+    else:
+        input_filepath = os.path.join(config.input_folder, input_file)
 
-        # Add header info to cmd string
-        args.header = (
-            f"PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}"
-        )
+    # TODO: Call as module rather than subprocess
+    # Create an argparse and populate it with the required arguments for passing to snp_haplotyper
+    args = argparse.Namespace()
+    args.mode_of_inheritance = mode_of_inheritance
+    args.input_file = os.path.join(config.input_folder, input_filepath)
+    args.output_folder = config.output_folder
+    args.output_prefix = output_prefix
+    args.mode_of_inheritance = mode_of_inheritance
+    args.male_partner = male_partner_col
+    args.male_partner_status = male_partner_status
+    args.female_partner = female_partner_col
+    args.female_partner_status = female_partner_status
+    args.reference = reference_column_name
+    args.reference_status = ref_status
+    args.reference_relationship = ref_relationship
+    args.gene_symbol = gene_symbol
+    args.gene_start = gene_start
+    args.gene_end = gene_end
+    args.chr = chr
+    args.consanguineous = True if consanguineous == "yes" else False
 
-        # Run snp_haplotype.py with args
-        snp_haplotype.main(args)
+    # If analysis is being done for embryos add that data as well
+    if trio_only == False:
+        args.trio_only = False
+        args.embryo_ids = filtered_embryo_data_df.embryo_column_name.to_list()
+        args.embryo_sex = filtered_embryo_data_df.embryo_sex.to_list()
+    else:
+        args.trio_only = True
 
-    return excel_import
+    # Add header info to cmd string
+    args.header_info = (
+        f"PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}"
+    )
 
-    # TODO: Convert namespace to json stream to stdout
+    # Returns
+    # (
+    #     mode_of_inheritance,
+    #     sample_id,
+    #     number_snps_imported,
+    #     summary_snps_by_region,
+    #     informative_snps_by_region,
+    #     embryo_count_data_df,
+    #     html_string,
+    # )
+
+    return snp_haplotype.main(args)
 
 
-def main(args):
+def main(excel_parser_args):
     # Function run with true flag to run snp_haplotype.py
-    excel_import = parse_excel_input(args.input_spreadsheet, True)
+    excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
+    return excel_import
 
 
 if __name__ == "__main__":
-    args = parser.parse_args()
-    main(args)
+    excel_parser_args = parser.parse_args()
+    main(excel_parser_args)

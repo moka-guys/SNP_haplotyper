@@ -33,7 +33,7 @@ def read_csv_files(file_paths: list[str]) -> list[pd.DataFrame]:
 
     dfs = []
     for file_path in file_paths:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, sep="\t")
         dfs.append(df)
     return dfs
 
@@ -53,6 +53,23 @@ def check_input_dfs(dfs: list[pd.DataFrame]) -> None:
             "Probeset IDs are not identical for all input files. Check you have not mixed SNP arrays data."
         )
 
+    # Check that the only duplicated columns between dataframes are "Probeset ID", "Chr" and "Position"
+    # This is to check that duplicate files have not been provided.
+    for df in dfs:
+        if df.columns.duplicated().any():
+            if not all(
+                x
+                in [
+                    "Probeset ID",
+                    "Chr",
+                    "Position",
+                ]
+                for x in df.columns[df.columns.duplicated()]
+            ):
+                raise ValueError(
+                    "Duplicate columns found in input files. Check you have not provided duplicate files."
+                )
+
 
 def merge_array_files(dfs_to_merge: list[pd.DataFrame]) -> pd.DataFrame:
     """Merges SNP array files into one file.  Due to limitations with the software used the
@@ -66,7 +83,7 @@ def merge_array_files(dfs_to_merge: list[pd.DataFrame]) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Merged dataframe.
     """
-
+    check_input_dfs(dfs_to_merge)
     result = dfs_to_merge[0]
     for df in dfs_to_merge[1:]:
         result = pd.merge(
