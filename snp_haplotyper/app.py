@@ -9,23 +9,26 @@ import random
 from wtforms import FileField, SubmitField, MultipleFileField
 from werkzeug.utils import secure_filename
 
+import logging
+
+log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logger = logging.getLogger("BASHer_logger")
+
+# To override the default severity of logging
+logger.setLevel("DEBUG")
+
 
 app = Flask(__name__)
-app.config["UPLOAD_FOLDER"] = "./uploads/tmp_folder"
+app.config["UPLOAD_FOLDER"] = os.environ["UPLOAD_FOLDER"]  # Set in docker-compose.yml
 app.config["SECRET_KEY"] = "catchmeifyoucan"
 app.config["UPLOAD_EXTENSIONS"] = [".txt", ".csv", ".xlsm", ".xlsx"]
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # File has to be less than 2MB
-app.config.update(
-    CELERY_CONFIG={
-        "broker_url": "redis://localhost:6379",
-        "result_backend": "redis://localhost:6379",
-    }
-)
 
 
-def call_basher(sample_sheet):
+def call_basher(sample_sheet, snp_array_files):
     args = Namespace(
         input_spreadsheet=sample_sheet,
+        input_files=snp_array_files,  # One or more SNP array files
     )
     (
         mode_of_inheritance,
@@ -53,18 +56,41 @@ def form(basher_state="initial"):
     chgDetail = dict()
 
     if request.method == "POST" and chgForm.validate_on_submit():
+        # Use FileHandler() to log to a file
+        timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
+        file_handler = logging.FileHandler(f"{timestr}_basher_.log")
+        formatter = logging.Formatter(log_format)
+        file_handler.setFormatter(formatter)
+
+        # Don't forget to add the file handler
+        logger.addHandler(file_handler)
+
         sample_sheet = chgForm.sample_sheet.data
-        x = SampleSheetUp.upload(sample_sheet)
-        chgDetail["sample_sheet"] = x
+        input_sheet = SampleSheetUp.upload(sample_sheet)
+        chgDetail["sample_sheet"] = input_sheet
 
         snp_array_files = chgForm.snp_array_files.data
-        y = SnpArrayUp.upload(snp_array_files)
-        chgDetail["snp_array_files"] = y
+        input_files = SnpArrayUp.upload(snp_array_files)
+        chgDetail["snp_array_files"] = input_files
         basher_state = "started"
 
-        sample_id, html_report = call_basher(x)
-        timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
-        session["report_name"] = f"{sample_id}_{timestr}.html"
+        # Get the file names of the uploaded files
+        input_sheet_basename = os.path.basename(input_sheet)
+        input_files_basenames = [os.path.basename(x) for x in input_files]
+
+        # Create the paths to the uploaded files
+        input_sheet_tmp_path = os.path.join(
+            app.config["UPLOAD_FOLDER"], input_sheet_basename
+        )
+
+        input_files_tmp_paths = [
+            os.path.join(app.config["UPLOAD_FOLDER"], x) for x in input_files_basenames
+        ]
+
+        sample_id, html_report = call_basher(
+            input_sheet_tmp_path, input_files_tmp_paths
+        )
+        session["report_name"] = f"{sample_id}_{timestr}"
         session["report_path"] = os.path.join(
             app.config["UPLOAD_FOLDER"],
             session["report_name"],
@@ -74,6 +100,7 @@ def form(basher_state="initial"):
             "w",
         ) as f:
             f.write(html_report)
+        logger.info(f"Saved HTML report for {sample_id}")
 
         return render_template(
             "index.html",
@@ -81,7 +108,7 @@ def form(basher_state="initial"):
             basher_state=basher_state,
             sample_sheet_name=sample_sheet.filename,
             snp_array_file_names=snp_array_files[0].filename,
-            report_name=session["report_name"],
+            report_name=f'{session["report_name"]}.html',
         )
 
     return render_template(
@@ -161,7 +188,7 @@ class SnpArrayUpload:
 @app.route("/download")
 def download():
     report_path = session["report_path"]
-    file_name = session["report_name"]
+    file_name = f'{session["report_name"]}.html'
     return send_file(
         report_path, download_name=file_name, mimetype="text/html", as_attachment=True
     )

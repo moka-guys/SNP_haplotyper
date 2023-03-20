@@ -2,6 +2,7 @@ import argparse
 from io import IOBase
 from jinja2 import Environment, PackageLoader
 import json
+import os
 import pandas as pd
 from pathlib import Path
 import pdfkit
@@ -9,7 +10,10 @@ import numpy as np
 from datetime import datetime
 
 import sys
-import os
+
+import logging
+
+logger = logging.getLogger("BASHer_logger")
 
 # Add the directory containing this script to the PYTHOPATH
 sys.path.append(os.path.dirname(__file__))
@@ -32,6 +36,9 @@ from exceptions import ArgumentInputError, InvalidParameterSelectedError
 # TODO Check telomeric/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
 # TODO Add support for no embryos (just TRIOs being run to check if enough informative SNPs)
 # TODO Add ADO % to table
+
+# Import environment variables set by docker-compose
+UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER")
 
 # Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(description="SNP Haplotying from SNP Array data")
@@ -1192,6 +1199,8 @@ def main(args):
     # Typically this is used when the script has been validated for some modes of inheritance
     # and we want to ensure that the script is not run for other, unvalidated, modes of inheritance.
 
+    logger.info(f"snp_haplotyper version: called successfully.")
+
     if (
         config.allow_autosomal_dominant_cases == False
         and args.mode_of_inheritance == "autosomal_dominant"
@@ -1248,6 +1257,10 @@ def main(args):
     )
 
     number_snps_imported = df.shape[0]
+
+    logger.info(
+        f"Number of SNPs imported from SNP Array File = {number_snps_imported}."
+    )
 
     # Import mapping of Affy IDs to dbSNP rs IDs
     mod_path = Path(__file__).parent
@@ -1327,7 +1340,7 @@ def main(args):
         args.mode_of_inheritance,
     )
 
-    # DO not calculate embryo results for pre-cases and trio_only analysis is required
+    # Do not calculate embryo results for pre-cases and trio_only analysis is required
     if args.trio_only == False:
 
         # Categorise embryo alleles
@@ -1341,7 +1354,7 @@ def main(args):
             args.consanguineous,
         )
 
-        # Summarise embryo results by risk category and SNP position
+        # Summarise embryo results by risk category and SNP position #TODO check if still needed
         embryo_snps_summary_df = summarise_snps_per_embryo(
             embryo_category_df,
             args.embryo_ids,
@@ -1357,26 +1370,15 @@ def main(args):
             numeric_only=True
         )
 
-        # Summarise embryo results by risk category and SNP position - used for streamming X-linked embryo data
-        embryo_stream_output_df = (
-            embryo_count_data_df.groupby(["risk_category", "snp_position"])
-            .sum()
-            .reset_index()
-        )
-        # Concatenate risk category and SNP position to create a unique index
-        embryo_stream_output_df = embryo_stream_output_df.set_index(
-            embryo_stream_output_df.risk_category.str.cat(
-                embryo_stream_output_df.snp_position, sep=","
-            )
-        )
-        # Drop risk category and SNP position columns as they are now redundant
-        embryo_stream_output_df = embryo_stream_output_df.drop(
-            ["snp_position", "risk_category"], axis=1
-        )
-        # Group by risk category and SNP position and sum the counts
-        summary_embryo_by_region_df = embryo_count_data_df.groupby(
-            by=["risk_category", "gene_distance"]
-        ).sum(numeric_only=True)
+        # Group by risk category and SNP position (and snp_inherited_from for AR) and sum the counts
+        if args.mode_of_inheritance == "autosomal_recessive":
+            summary_embryo_by_region_df = embryo_count_data_df.groupby(
+                by=["snp_inherited_from", "risk_category", "gene_distance"]
+            ).sum(numeric_only=True)
+        else:
+            summary_embryo_by_region_df = embryo_count_data_df.groupby(
+                by=["risk_category", "gene_distance"]
+            ).sum(numeric_only=True)
     ##############################################################################
 
     # Produce report
@@ -1427,9 +1429,6 @@ def main(args):
     # Initiate list to hold HTML for each plot produced below
     html_list_of_plots = []
 
-    # Produce plot for trios
-    # TODO: Add option to produce plot for embryos only
-
     # Do not produce plots for embryos if only a trio is being run
     if (
         args.trio_only == False
@@ -1445,10 +1444,26 @@ def main(args):
             summary_embryo_table, args.embryo_ids, args.embryo_sex
         )
 
-        # summary_embryo_by_region_df = embryo_snps_summary_df.set_index("embryo_id")
-        # summary_embryo_by_region_df = summary_embryo_by_region_df.transpose()
+        # Filter out any rows for NoCall, MisCall, ADO, or uninformative SNPs so as not to clutter the report tables with unnecessary detail as per user feedback
+        concise_embryo_df = summary_embryo_by_region_df[
+            np.in1d(
+                summary_embryo_by_region_df.index.get_level_values("risk_category"),
+                ["high_risk", "low_risk"],
+            )
+        ]
+
+        if args.mode_of_inheritance == "autosomal_recessive":
+            concise_embryo_df = concise_embryo_df[
+                np.in1d(
+                    concise_embryo_df.index.get_level_values("snp_inherited_from"),
+                    [
+                        "male_partner",
+                        "female_partner",
+                    ],  # Filters out uninformative SNPs which may have been allocated to ADO
+                )
+            ]
         summary_embryo_by_region_table = produce_html_table(
-            summary_embryo_by_region_df,
+            concise_embryo_df,
             "summary_embryo_by_region_table",
             True,
         )
@@ -1488,7 +1503,7 @@ def main(args):
                 args.mode_of_inheritance,
             )
 
-        html_text_for_plots = "<br>".join(html_list_of_plots)
+        html_text_for_plots = "<br><hr><br>" + "<br><hr><br>".join(html_list_of_plots)
 
     elif args.trio_only == True:
         html_text_for_plots = ""

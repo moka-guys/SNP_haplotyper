@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/BASHer/snp_haplotyper
+    ports:
+      - 5000:5000
+      - 5678:5678
+    environment:
+      - FLASK_APP=/BASHer/snp_haplotyper/snp_haplotyper/app.py
+      - FLASK_DEBUG=1
+      - FLASK_ENV=development
+      - PYTHONPATH=/BASHer/snp_haplotyper/snp_haplotyper
+      - UPLOAD_FOLDER=/BASHer/snp_haplotyper/snp_haplotyper/uploads/tmp_folder

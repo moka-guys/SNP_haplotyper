@@ -4,11 +4,14 @@ from openpyxl.utils import get_column_interval
 import pandas as pd
 from pathlib import Path
 import re
+import logging
 import os
 import subprocess
 import sys
 import config as config
 import snp_haplotype
+
+logger = logging.getLogger("BASHer_logger")
 
 # Add the directory containing this script to the PYTHOPATH
 sys.path.append(os.path.dirname(__file__))
@@ -363,13 +366,20 @@ def parse_excel_input(input_spreadsheet, snp_aray_files=None):
     if snp_aray_files is not None:
         input_filepath = snp_aray_files
     else:
-        input_filepath = os.path.join(config.input_folder, input_file)
+        # Check whether environment variable is set
+        if "UPLOAD_FOLDER" in os.environ:
+            # If docker-compose has set the environment variable, use the path specified in the environment variable
+            input_filepath = os.path.join(
+                os.environ["UPLOAD_FOLDER"], os.path.basename(input_file)
+            )
+        else:
+            # If we are running outside of docker-compose, use the path specified in the config file
+            input_filepath = input_file
 
-    # TODO: Call as module rather than subprocess
     # Create an argparse and populate it with the required arguments for passing to snp_haplotyper
     args = argparse.Namespace()
     args.mode_of_inheritance = mode_of_inheritance
-    args.input_file = os.path.join(config.input_folder, input_filepath)
+    args.input_file = input_filepath
     args.output_folder = config.output_folder
     args.output_prefix = output_prefix
     args.mode_of_inheritance = mode_of_inheritance
