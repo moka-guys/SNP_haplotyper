@@ -58,8 +58,9 @@ def form(basher_state="initial"):
 
     if request.method == "POST" and chgForm.validate_on_submit():
         # Use FileHandler() to log to a file
-        timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
-        file_handler = logging.FileHandler(f"{timestr}_basher.log")
+        session["timestr"] = datetime.now().strftime("%Y%m%d-%H%M%S")
+        os.mkdir(os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"]))
+        file_handler = logging.FileHandler(f'{session["timestr"]}_basher.log')
         formatter = logging.Formatter(log_format)
         file_handler.setFormatter(formatter)
 
@@ -84,7 +85,10 @@ def form(basher_state="initial"):
             )
             df = merge_array_files.main(input_files)
             df.to_csv(
-                os.path.join(app.config["UPLOAD_FOLDER"], merged_file_name), sep="\t"
+                os.path.join(
+                    app.config["UPLOAD_FOLDER"], session["timestr"], merged_file_name
+                ),
+                sep="\t",
             )
             input_file = merged_file_name
         else:
@@ -99,15 +103,15 @@ def form(basher_state="initial"):
 
         # Create the paths to the uploaded files
         input_sheet_tmp_path = os.path.join(
-            app.config["UPLOAD_FOLDER"], input_sheet_basename
+            app.config["UPLOAD_FOLDER"], session["timestr"], input_sheet_basename
         )
 
         input_file_tmp_path = os.path.join(
-            app.config["UPLOAD_FOLDER"], input_file_basename
+            app.config["UPLOAD_FOLDER"], session["timestr"], input_file_basename
         )
 
         sample_id, html_report = call_basher(input_sheet_tmp_path, input_file_tmp_path)
-        session["report_name"] = f"{sample_id}_{timestr}"
+        session["report_name"] = f'{sample_id}_{session["timestr"]}'
         session["report_path"] = os.path.join(
             app.config["UPLOAD_FOLDER"],
             session["report_name"],
@@ -156,6 +160,7 @@ class SampleSheetUpload:
             file.save(
                 os.path.join(
                     app.config["UPLOAD_FOLDER"],
+                    session["timestr"],
                     secure_file_name,
                 )
             )
@@ -163,6 +168,7 @@ class SampleSheetUpload:
             return str(
                 os.path.join(
                     app.config["UPLOAD_FOLDER"],
+                    session["timestr"],
                     secure_file_name,
                 )
             )
@@ -192,6 +198,7 @@ class SnpArrayUpload:
                 file.save(
                     os.path.join(
                         app.config["UPLOAD_FOLDER"],
+                        session["timestr"],
                         secure_file_name,
                     )
                 )
@@ -199,6 +206,7 @@ class SnpArrayUpload:
                     str(
                         os.path.join(
                             app.config["UPLOAD_FOLDER"],
+                            session["timestr"],
                             secure_file_name,
                         )
                     )
