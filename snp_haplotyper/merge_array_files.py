@@ -1,6 +1,12 @@
 import argparse
 import pandas as pd
 
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 # parse command line arguments
 parser = argparse.ArgumentParser()
 
@@ -83,7 +89,7 @@ def merge_array_files(dfs_to_merge: list[pd.DataFrame]) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Merged dataframe.
     """
-    check_input_dfs(dfs_to_merge)
+    # check_input_dfs(dfs_to_merge)
     result = dfs_to_merge[0]
     for df in dfs_to_merge[1:]:
         result = pd.merge(

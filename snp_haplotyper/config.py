@@ -12,7 +12,7 @@ basher_version = "1.0.0"
 allow_autosomal_dominant_cases = True
 allow_autosomal_recessive_cases = True
 allow_x_linked_cases = True
-allow_consanguineous_cases = False
+allow_consanguineous_cases = True
 allow_trio_only_analysis = True
 
 # The following flag adds a warning to the report if the version of BASHer used to generate it

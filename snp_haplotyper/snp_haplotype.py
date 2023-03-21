@@ -253,13 +253,10 @@ def header_to_dict(header_str):
 def add_rsid_column(df, affy_2_rs_ids_df):
 
     """Provides dbsnp rsIDs
-
     New column created in the dataframe, df, matching the probes_set IDs to dbSNP rsIDs.
-
     Args:
         df (dataframe): A dataframe with a "probeset_id" column
         affy_2_rs_ids_df (dataframe): A dataframe with columns "probeset_id" & "rsID" used to map between the 2 identifiers
-
     Returns:
         dataframe: Original dataframe, df, with columns for "rsID" added next to the "probeset_id" column (these columns are now the 1st columns of the dataframe)
     """
@@ -275,12 +272,10 @@ def add_rsid_column(df, affy_2_rs_ids_df):
 
 def export_json_data_as_csv(input_json, output_csv):
     """Import a JSON file and save the data as a CSV
-
     Imports a simple JSON file and exports it as a CSV file.
     Used to import test data from JSON files (informative_snp_validation.json, embryo_validation_data.json,
     launch.json) and export it as human readable CSV.  These CSV can be shared with Genomic Scientists during
     the validation process.
-
     Args:
         input_json (string): The path to a JSON file
         output_csv (string): The path and filename for the output csv file
@@ -294,15 +289,12 @@ def export_json_data_as_csv(input_json, output_csv):
 
 def annotate_distance_from_gene(df, chr, start, end):
     """Annotates the probeset based on the provided genomic co-ordinates
-
     New column created, "gene_distance", in the dataframe, df, annotating the region the SNP is in. SNPs allocated to "within_gene", "0-1MB_from_start", "1-2MB_from_start", "0-1MB_from_end", and "1-2MB_from_end",
-
     Args:
         df (dataframe): A dataframe with a "probeset_id" column and the feature's genomic co-ordinates,  "Position"
         chr (string):  The chromsome the gene of interest is on
         start (int): The start coordinate of the gene (1-based)
         end (int): The end coordinate of the gene (1-based)
-
     Returns:
         dataframe: Original dataframe, df, with "gene_distance" column added characterising the probeset in relation to the gene of interest
     """
@@ -341,18 +333,14 @@ def annotate_distance_from_gene(df, chr, start, end):
 
 def filter_out_nocalls(df, male_partner, female_partner, reference):
     """Filters out no calls
-
     If the male partner, female partner, or reference has "NoCall" for a probeset then this probeset should be filtered out.
-
     Args:
         df (dataframe): A dataframe with the SNP array data
         male_partner (string):  Column name representing the data for the male partner
         female_partner (string):  Column name representing the data for the female partner
         reference (string):  Column name representing the data for the reference
-
     Returns:
         dataframe: Original dataframe, df, with any rows where the male partner, female partner or reference has a "NoCall" filtered out
-
     """
     filtered_df = df[
         (df[male_partner] != "NoCall")
@@ -368,19 +356,15 @@ def filter_out_nocalls(df, male_partner, female_partner, reference):
 
 def calculate_qc_metrics(df, male_partner, female_partner, reference, embryo_ids=None):
     """Calculate QC metrics based on the number of NoCalls per sample (measure of DNA quality)
-
     Calculate QC metrics based on the number of NoCalls per sample which can be used as a metric of DNA quality.
-
     Args:
         df (dataframe): A dataframe with the SNP array data
         male_partner (string):  Column name representing the data for the male partner
         female_partner (string):  Column name representing the data for the female partner
         reference (string):  Column name representing the data for the reference
         embryo_ids (list): List of column names representing the data for 1>n embryo samples
-
     Returns:
         dataframe: Dataframe summarising the number of NoCalls per sample
-
     """
     # Initiate dataframe
     qc_df = pd.DataFrame(index=["AA", "BB", "AB", "NoCall"])
@@ -421,10 +405,8 @@ def calculate_qc_metrics(df, male_partner, female_partner, reference, embryo_ids
 
 def calculate_nocall_percentages(df):
     """Calculate the percentage of nocalls
-
     Takes a dataframe produced from calculate_qc_metrics() and calculates
     the % of nocalls per sample.
-
     Args:
         df (dataframe): A dataframe produced by calculate_qc_metrics()
     Returns:
@@ -453,21 +435,17 @@ def detect_miscall_or_ado(
     male_partner_haplotype, female_partner_haplotype, embryo_haplotype
 ):
     """QC identify miscalls or ADOs (Allele Drop Outs)
-
     Takes the haplotypes for the male partner, female partner and embryo and calculates whether
     it indicates a miscall or ADO (Allele dropout) in the embryo for that SNP.
-
     The definition of a miscall is any haplotype in the embryo which is inconsistent
     with the haplotype of the parents i.e. Parents "AA", "BB" and an embryo "AA". This is due
     to technical error in the measurement.  NOTE: that the miscall could be in any one of the
     trio even though it is recorded under the embryo.
-
     The definition of ADO (Allele dropout) is used when there is a suspected biological origin for the
     mismatch in haplotypes, due to uniparental inheritance of the allele i.e Parents AA, BB and an embryo AA,
     the B allele has dropped out.  NOTE: that the ADO could have occured in any of the trio even though it is
     recorded under the embryo.  It is expected that the Genomic Scientist will look at the SNP plots and
     use their judgement as to whether allele dropout is observed.
-
     Args:
         male_partner_haplotype (string): Either "AA", "BB", "AB", or "NoCall"
         female_partner_haplotype (string): Either "AA", "BB", "AB", or "NoCall"
@@ -554,7 +532,6 @@ def detect_miscall_or_ado(
 
 def snps_by_region(df, mode_of_inheritance):
     """Summarise the number of SNPs by regions around the gene of interest
-
     Takes a results_df dataframe produced from either autosomal_dominant_analysis(),
     autosomal_recessive_analysis(), or x_linked_analysis() and counts
     the SNPs per "gene_distance":
@@ -570,11 +547,9 @@ def snps_by_region(df, mode_of_inheritance):
     for x-linked three columns are produced for where the embryo SNP is female_AB, male_AA, or male_BB,
     for autosomal recessive cases an "snp_inherited_from" is also added to show which partner the SNP
     is inherited from .
-
     Args:
         df (dataframe): A dataframe produced by either autosomal_dominant_analysis(),
     autosomal_dominant_analysis(), or x_linked_analysis()
-
     Returns:
         dataframe: Dataframe summarising the SNPs per genome region with additional columns for each relevant haplotype in the embryo.
     """
@@ -800,7 +775,6 @@ def categorise_embryo_alleles(
     consanguineous,
 ):
     """For each embryo this fuction categorises their SNPs
-
     Note the usable/informative genotypes for each mode of inheritance are hardcoded into this function.
     These have been defined with the PGD team. Note genotypes are defined as usable based on whether we
     can trace the inheritance from a parent AND if it's shared by an affected/unaffected reference and NOT
@@ -808,7 +782,6 @@ def categorise_embryo_alleles(
     if performing SNV analysis would be interested in homozygous sites but these sites are not informative
     in this application - only heterozygous sites allow us to determine who an allele was inherited from and
     if it's shared by the reference.
-
     Args:
         df (dataframe): A results_df dataframe produce
         male_partner (string):
@@ -977,7 +950,6 @@ def categorise_embryo_alleles(
 def annotate_snp_position(df):
     """For a dataframe with a "gene_distance" column this adds a "snp_position" column.  This is useful for summarising
     data in the column,
-
     Args:
         df (dataframe): A dataframe with "gene_distance" column with category values in the range:
             "1-2MB_from_start",
@@ -985,7 +957,6 @@ def annotate_snp_position(df):
             "within_gene",
             "0-1MB_from_end",
             "1-2MB_from_end",
-
     Returns:
         dataframe: Dataframe with new column "snp_position", with the category values "upstream", "within_gene", and "downstream".
     """
@@ -1019,7 +990,6 @@ def summarise_snps_per_embryo_pretty(
     This function groups a results data frame by gene_distance and risk category, and then sums the number of SNPs in each category.
     It then adds a new column to the dataframe, "snp_position", which is either "upstream", "downstream", or "within_gene".
     Where upstream is 0-2MB from the start of the gene (5' direction) and downstream is 0-2MB from the end of the gene in the 3' direction.
-
     Args:
         df (dataframe): A dataframe with "gene_distance" column with category values in the range:
             "1-2MB_from_start",
@@ -1133,13 +1103,10 @@ def produce_html_table(
     include_total=False,
 ):
     """HTML table for pandas dataframe
-
     Converts a pandas dataframe into an HTML table ready for inclusion in an HTML report
-
     Args:
         df (dataframe): A dataframe which requires rendering as HTML for inclusion in the HTML report
         table_identifier (string): Sets id attribute for the table in the HTML
-
     Returns:
         String: HTML formated table with the provide table_id used to set the HTML table id attribute.
     """
@@ -1155,12 +1122,10 @@ def produce_html_table(
 def add_embryo_sex_to_column_name(html_string, embryo_ids, embryo_sex):
     """
     Annotated any table with with embryo data with the sex of the embryos
-
     Args:
         html_string (string): A HTML formated table with embryo ID column names
         embryo_ids (list): A list of embryo IDs
         embryo_sex (list): A list of embryo sexes coressponding to the embryo ids
-
     Returns:
         String: HTML formated table with the column headings annotated with the embryo sex.
     """
@@ -1178,11 +1143,9 @@ def dict2html(header_dictionary):
     """
     Converts a dictionary of header into an html table for displaying in the report.
     Flexible way of allowing the user to add any information they want to the report header.
-
     Args:
         header_dictionary (dict): Dictionary of header information
         For example: {"Analysis Name": "test", "Analysis Date": "2020-01-01"}
-
     Returns:
         header_html (str): HTML table of header information
     """

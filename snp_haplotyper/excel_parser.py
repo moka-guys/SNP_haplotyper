@@ -31,7 +31,7 @@ parser.add_argument(
 
 parser.add_argument(
     "-s",
-    "--snp_array_files",
+    "--snp_array_file",
     type=str,
     help="SNP Array text files",
     required=False,
@@ -53,7 +53,7 @@ def load_workbook_range(range_string, worksheet):
     return pd.DataFrame(data_rows, columns=get_column_interval(col_start, col_end))
 
 
-def parse_excel_input(input_spreadsheet, snp_aray_files=None):
+def parse_excel_input(input_spreadsheet, snp_array_file=None):
     """
     Imports the following defined cells/ranges from the provided excel file:
         biopsy_number
@@ -362,19 +362,20 @@ def parse_excel_input(input_spreadsheet, snp_aray_files=None):
     # If a SNP array text file is specified in both the template and the command line the two files must be the same
     # If a SNP array text file is specified in the template but not the command line, the file specified in the template will be used
 
-    # TODO support multiple SNP array files
-    if snp_aray_files is not None:
-        input_filepath = snp_aray_files
+    # Check whether a SNP array text file has been specified on the commandline, if they have then check
+    # it against that provided in the template. If they are different, raise an error
+    if snp_array_file is not None:
+        input_file = snp_array_file
+
+    # Check whether environment variable is set
+    if "UPLOAD_FOLDER" in os.environ:
+        # If docker-compose has set the environment variable, use the path specified in the environment variable
+        input_filepath = os.path.join(
+            os.environ["UPLOAD_FOLDER"], os.path.basename(input_file)
+        )
     else:
-        # Check whether environment variable is set
-        if "UPLOAD_FOLDER" in os.environ:
-            # If docker-compose has set the environment variable, use the path specified in the environment variable
-            input_filepath = os.path.join(
-                os.environ["UPLOAD_FOLDER"], os.path.basename(input_file)
-            )
-        else:
-            # If we are running outside of docker-compose, use the path specified in the config file
-            input_filepath = input_file
+        # If we are running outside of docker-compose, use the path specified in the config file
+        input_filepath = input_file
 
     # Create an argparse and populate it with the required arguments for passing to snp_haplotyper
     args = argparse.Namespace()
@@ -425,7 +426,12 @@ def parse_excel_input(input_spreadsheet, snp_aray_files=None):
 
 def main(excel_parser_args):
     # Function run with true flag to run snp_haplotype.py
-    excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
+    if excel_parser_args.input_file is None:
+        excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
+    else:
+        excel_import = parse_excel_input(
+            excel_parser_args.input_spreadsheet, excel_parser_args.input_file
+        )
     return excel_import
 
 
