@@ -627,7 +627,8 @@ def test_merging_input_files():
 
 
 @pytest.mark.handling_multiple_input_files
-def test_multifile_input_columns():
+def test_multifile_input_columns_duplicates():
+    # Test that the input files have the same columns, pytest will fail if any exception is raised
     with pytest.raises(Exception):
         merge_array_files_main(
             [
