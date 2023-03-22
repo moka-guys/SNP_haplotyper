@@ -14,13 +14,16 @@ def setup_test_data(split_by_embryo=False):
     with open(json_file_path, "r") as j:
         launch_contents = json.loads(j.read())
 
-    # Remove the "Python: Remote Attach" configuration from the list as it is not intended for testing
-    for dict in launch_contents["configurations"]:
-        if dict["name"] == "Python: Remote Attach":
-            # Delete dict from the list
-            launch_contents["configurations"].remove(dict)
-
     run_data_df = pd.json_normalize(launch_contents["configurations"])
+
+    run_data_df = run_data_df.drop(
+        ["pathMappings", "connect.host", "connect.port"], axis=1
+    )
+
+    # Run configurations are filtered to exclue docker specific configurations
+    run_data_df = run_data_df.drop(
+        run_data_df[run_data_df.name == "Python: Remote Attach"].index
+    )
 
     # Run configurations are filtered by the "purpose" field to exclude configurations that are not intended for testing
     run_data_df = run_data_df[
