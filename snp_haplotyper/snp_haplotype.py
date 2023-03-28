@@ -420,8 +420,8 @@ def calculate_nocall_percentages(df):
         numeric_nocall_df = nocall.drop("call_type", axis=1)
         numeric_df = df.drop("call_type", axis=1)
         # Calculate the percentage of NoCalls
-        nocall_percentage = numeric_nocall_df / numeric_df.sum(
-            axis=0, numeric_only=True
+        nocall_percentage = (
+            numeric_nocall_df / numeric_df.sum(axis=0, numeric_only=True) * 100
         )
         # Add descriptive column
         nocall_percentage.insert(0, "call_type", "NoCall")
@@ -1389,9 +1389,6 @@ def main(args):
     else:
         pass  # TODO raise exception
 
-    # Initiate list to hold HTML for each plot produced below
-    html_list_of_plots = []
-
     # Do not produce plots for embryos if only a trio is being run
     if (
         args.trio_only == False
@@ -1436,7 +1433,7 @@ def main(args):
         )
 
         if args.mode_of_inheritance == "autosomal_dominant":
-            html_list_of_plots = html_list_of_plots + plot_results(
+            html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
                 embryo_category_df,
                 embryo_snps_summary_df,
                 args.embryo_ids,
@@ -1446,7 +1443,7 @@ def main(args):
                 args.mode_of_inheritance,
             )
         elif args.mode_of_inheritance == "autosomal_recessive":
-            html_list_of_plots = html_list_of_plots + plot_results(
+            html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
                 embryo_category_df,
                 embryo_snps_summary_df,
                 args.embryo_ids,
@@ -1456,7 +1453,7 @@ def main(args):
                 args.mode_of_inheritance,
             )
         elif args.mode_of_inheritance == "x_linked":
-            html_list_of_plots = html_list_of_plots + plot_results(
+            html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
                 embryo_category_df,
                 embryo_snps_summary_df,
                 args.embryo_ids,
@@ -1466,10 +1463,16 @@ def main(args):
                 args.mode_of_inheritance,
             )
 
-        html_text_for_plots = "<br><hr><br>" + "<br><hr><br>".join(html_list_of_plots)
+        html_text_for_plots = "<br><hr><br>" + "<br><hr><br>".join(
+            html_list_of_dynamic_plots
+        )
+        pdf_text_for_plots = "<br><hr><br>" + "<br><hr><br>".join(
+            html_list_of_static_plots
+        )
 
     elif args.trio_only == True:
         html_text_for_plots = ""
+        pdf_text_for_plots = ""
         embryo_count_data_df = None
 
     env = Environment(loader=PackageLoader("snp_haplotype", "templates"))
@@ -1520,7 +1523,13 @@ def main(args):
         "warning": warning_text,  # Warning text, for example if the tool is not released to production
     }
 
-    html_string = template.render(place_holder_values)
+    for file_type in ["html", "pdf"]:
+        if file_type == "html":
+            place_holder_values["html_text_for_plots"] = html_text_for_plots
+            html_string = template.render(place_holder_values)
+        elif file_type == "pdf":
+            place_holder_values["html_text_for_plots"] = pdf_text_for_plots
+            pdf_string = template.render(place_holder_values)
 
     return (
         args.mode_of_inheritance,
@@ -1530,6 +1539,7 @@ def main(args):
         informative_snps_by_region,
         embryo_count_data_df,
         html_string,
+        pdf_string,
     )
 
 
@@ -1543,6 +1553,7 @@ if __name__ == "__main__":
         informative_snps_by_region,
         summary_embryo_df,
         html_string,
+        pdf_string,
     ) = main(args)
 
     # Save HTML report to file in output folder, including timestamp in filename
@@ -1556,7 +1567,7 @@ if __name__ == "__main__":
 
     # Convert HTML report to PDF TODO change formatting to suit PDF
     pdfkit.from_string(
-        html_string,
+        pdf_string,
         os.path.join(
             args.output_folder, args.output_prefix + "_summary_" + timestr + ".pdf"
         ),

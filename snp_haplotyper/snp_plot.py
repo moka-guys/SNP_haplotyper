@@ -1,6 +1,11 @@
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly as plt
 import pandas as pd
+
+import logging
+
+logger = logging.getLogger("BASHer_logger")
 
 
 def filter_snps_by_partner_sex(
@@ -308,6 +313,7 @@ def plot_results(
     """
 
     plots_as_html = []
+    plots_as_pdf = []
 
     # Create lookup dictionary for embryo sex
     embryo_dict = dict(zip(embryo_ids, embryo_sex))
@@ -558,9 +564,11 @@ def plot_results(
         fig.update_yaxes(range=[-4, 4], showticklabels=False)
         fig.update_layout(
             height=540,
-            width=1800,
+            width=1700,
             title_text=f"Results for {embryo} (Embryo Sex: {embryo_dict[embryo]})",
         )
-        # Convert plot to HTML and add to list of plots for export and insertion in HTML template
+
+        plots_as_pdf.append(plt.io.to_image(fig, format="svg").decode("utf-8"))
         plots_as_html.append(fig.to_html(full_html=False, include_plotlyjs="cdn"))
-    return plots_as_html
+
+    return plots_as_html, plots_as_pdf

@@ -9,6 +9,8 @@ import time
 import random
 from wtforms import FileField, SubmitField, MultipleFileField
 from werkzeug.utils import secure_filename
+import zipfile
+
 
 import logging
 
@@ -29,7 +31,7 @@ app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # File has to be less than 2
 def call_basher(sample_sheet, snp_array_file):
     args = Namespace(
         input_spreadsheet=sample_sheet,
-        input_file=snp_array_file,
+        snp_array_file=snp_array_file,
     )
     (
         mode_of_inheritance,
@@ -39,8 +41,9 @@ def call_basher(sample_sheet, snp_array_file):
         informative_snps_by_region,
         embryo_count_data_df,
         html_string,
+        pdf_string,
     ) = excel_parser.main(args)
-    return sample_id, html_string
+    return sample_id, html_string, pdf_string
 
 
 class ChangeForm(FlaskForm):
@@ -60,7 +63,7 @@ def form(basher_state="initial"):
         # Use FileHandler() to log to a file
         session["timestr"] = datetime.now().strftime("%Y%m%d-%H%M%S")
         os.mkdir(os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"]))
-        file_handler = logging.FileHandler(f'{session["timestr"]}_basher.log')
+        file_handler = logging.FileHandler(f'logs/{session["timestr"]}_basher.log')
         formatter = logging.Formatter(log_format)
         file_handler.setFormatter(formatter)
 
@@ -110,18 +113,27 @@ def form(basher_state="initial"):
             app.config["UPLOAD_FOLDER"], session["timestr"], input_file_basename
         )
 
-        sample_id, html_report = call_basher(input_sheet_tmp_path, input_file_tmp_path)
+        sample_id, html_report, pdf_report = call_basher(
+            input_sheet_tmp_path, input_file_tmp_path
+        )
         session["report_name"] = f'{sample_id}_{session["timestr"]}'
         session["report_path"] = os.path.join(
             app.config["UPLOAD_FOLDER"],
             session["report_name"],
         )
         with open(
-            session["report_path"],
+            f'{session["report_path"]}.html',
             "w",
         ) as f:
             f.write(html_report)
         logger.info(f"Saved HTML report for {sample_id}")
+
+        with open(
+            f'{session["report_path"]}.pdf',
+            "w",
+        ) as f:
+            f.write(pdf_report)
+        logger.info(f"Saved PDF report for {sample_id}")
 
         return render_template(
             "index.html",
@@ -218,9 +230,23 @@ class SnpArrayUpload:
 @app.route("/download")
 def download():
     report_path = session["report_path"]
-    file_name = f'{session["report_name"]}.html'
+    html_file_name = f'{session["report_name"]}.html'
+    pdf_file_name = f'{session["report_name"]}.pdf'
+
+    # Create a zip file with the html and pdf reports
+    with zipfile.ZipFile(f"{report_path}.zip", "w") as zipObj:
+        zipObj.write(f"{report_path}.html", html_file_name)
+        zipObj.write(f"{report_path}.pdf", pdf_file_name)
+
+    # Delete the html and pdf reports
+    os.remove(f"{report_path}.html")
+    os.remove(f"{report_path}.pdf")
+
     return send_file(
-        report_path, download_name=file_name, mimetype="text/html", as_attachment=True
+        f"{report_path}.zip",
+        download_name=f'{session["report_name"]}.zip',
+        mimetype="text/html",
+        as_attachment=True,
     )
 
 
