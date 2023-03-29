@@ -28,7 +28,7 @@ import config as config
 # allow_x_linked_cases,allow_consanguineous_cases, basher_version, released_to_production
 
 from x_linked_logic import x_linked_analysis
-from snp_plot import plot_results, summarise_snps_per_embryo
+from snp_plot import plot_results
 
 from exceptions import ArgumentInputError, InvalidParameterSelectedError
 
@@ -212,6 +212,14 @@ parser.add_argument(
         "y",
     ],
     help="Chromosome of ROI/gene",
+)
+
+parser.add_argument(
+    "-frs",
+    "--flanking_region_size",
+    type=str,
+    choices=["2mb", "3mb"],
+    help="Size of the flanking region either side of the gene",
 )
 
 parser.add_argument(
@@ -1317,13 +1325,6 @@ def main(args):
             args.consanguineous,
         )
 
-        # Summarise embryo results by risk category and SNP position #TODO check if still needed
-        embryo_snps_summary_df = summarise_snps_per_embryo(
-            embryo_category_df,
-            args.embryo_ids,
-            args.mode_of_inheritance,
-        )
-
         embryo_count_data_df = summarise_snps_per_embryo_pretty(
             embryo_category_df,
             args.embryo_ids,
@@ -1432,38 +1433,39 @@ def main(args):
             summary_embryo_by_region_table, args.embryo_ids, args.embryo_sex
         )
 
+        # TODO Remove if statement and just use the autosomal_dominant function
         if args.mode_of_inheritance == "autosomal_dominant":
             html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
                 embryo_category_df,
-                embryo_snps_summary_df,
                 args.embryo_ids,
                 args.embryo_sex,
                 args.gene_start,
                 args.gene_end,
                 args.mode_of_inheritance,
                 embryo_count_data_df,
+                args.flanking_region_size,
             )
         elif args.mode_of_inheritance == "autosomal_recessive":
             html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
                 embryo_category_df,
-                embryo_snps_summary_df,
-                args.embryo_ids,
-                args.embryo_sex,
-                args.gene_splottart,
-                args.gene_end,
-                args.mode_of_inheritance,
-                embryo_count_data_df,
-            )
-        elif args.mode_of_inheritance == "x_linked":
-            html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
-                embryo_category_df,
-                embryo_snps_summary_df,
                 args.embryo_ids,
                 args.embryo_sex,
                 args.gene_start,
                 args.gene_end,
                 args.mode_of_inheritance,
                 embryo_count_data_df,
+                args.flanking_region_size,
+            )
+        elif args.mode_of_inheritance == "x_linked":
+            html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
+                embryo_category_df,
+                args.embryo_ids,
+                args.embryo_sex,
+                args.gene_start,
+                args.gene_end,
+                args.mode_of_inheritance,
+                embryo_count_data_df,
+                args.flanking_region_size,
             )
 
         html_text_for_plots = "<br><hr><br>" + "<br><hr><br>".join(

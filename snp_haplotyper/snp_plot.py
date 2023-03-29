@@ -7,300 +7,16 @@ import logging
 
 logger = logging.getLogger("BASHer_logger")
 
-from annotate_plots import counts_for_plot_annotation
-
-
-def filter_snps_by_partner_sex(
-    df,
-    partner_sex="all",
-):
-    # Check that df is not empty
-    if partner_sex == "all":
-        filtered_df = df
-    else:
-        filtered_df = df[df["snp_inherited_from"] == partner_sex]
-
-    return filtered_df
-
-
-def filter_snps_by_catergory(
-    df,
-    lookup_category,
-    embryo,
-):
-    # Check that df is not empty
-    filtered_df = df[df[f"{embryo}_risk_category"] == lookup_category]
-    return filtered_df
-
-
-def filter_snps_by_region(
-    df,
-    required_region,
-):
-    # Check that df is not empty
-    filtered_df = df[df["gene_distance"].isin(required_region)]
-    return filtered_df
-
-
-def summarise_snps_per_embryo(
-    df,
-    embryo_ids,
-    mode_of_inheritance,
-):
-    """Plots SNP data
-
-    For AD and XL produces a single plotly plot of the gene + 2mb flanking region with SNP information and summaries.
-    For AR a faceted plot is produced further splitting the info by partner theSNP inherited from.
-
-    Args:
-        df:
-        embryo_ids:
-        mode_of_inheritance:
-    Returns:
-
-    """
-    if mode_of_inheritance == "autosomal_dominant" or mode_of_inheritance == "x_linked":
-        summary_snps_for_embryos_df = pd.DataFrame(
-            columns=[
-                "embryo_id",
-                "total_high_risk_snps",
-                "downstream_2mb_high_risk_snps",
-                "within_gene_high_risk_snps",
-                "upstream_2mb_high_risk_snps",
-                "total_low_risk_snps",
-                "downstream_2mb_low_risk_snps",
-                "within_gene_low_risk_snps",
-                "upstream_2mb_low_risk_snps",
-            ]
-        )
-    elif mode_of_inheritance == "autosomal_recessive":
-        # For AR cases create dataframe with "snp_inherited_from" info
-        summary_snps_for_embryos_df = pd.DataFrame(
-            columns=[
-                "embryo_id",
-                "total_high_risk_snps",
-                "downstream_2mb_high_risk_snps",
-                "within_gene_high_risk_snps",
-                "upstream_2mb_high_risk_snps",
-                "total_low_risk_snps",
-                "downstream_2mb_low_risk_snps",
-                "within_gene_low_risk_snps",
-                "upstream_2mb_low_risk_snps",
-                "total_male_high_risk_snps",
-                "downstream_2mb_male_high_risk_snps",
-                "within_gene_male_high_risk_snps",
-                "upstream_2mb_male_high_risk_snps",
-                "total_female_high_risk_snps",
-                "downstream_2mb_female_high_risk_snps",
-                "within_gene_female_high_risk_snps",
-                "upstream_2mb_female_high_risk_snps",
-                "downstream_2mb_male_low_risk_snps",
-                "within_gene_male_low_risk_snps",
-                "upstream_2mb_male_low_risk_snps",
-                "total_female_low_risk_snps",
-                "downstream_2mb_female_low_risk_snps",
-                "within_gene_female_low_risk_snps",
-                "upstream_2mb_female_low_risk_snps",
-            ]
-        )
-
-    for embryo in embryo_ids:
-        # Filter dataframes required to calculate summary
-        total_high_risk_snps_df = filter_snps_by_catergory(
-            df,
-            "high_risk",
-            embryo,
-        )
-        upstream_2mb_high_risk_snps_df = filter_snps_by_region(
-            total_high_risk_snps_df,
-            [
-                "0-1MB_from_start",
-                "1-2MB_from_start",
-            ],
-        )
-        within_gene_high_risk_snps_df = filter_snps_by_region(
-            total_high_risk_snps_df,
-            [
-                "within_gene",
-            ],
-        )
-        downstream_2mb_high_risk_snps_df = filter_snps_by_region(
-            total_high_risk_snps_df,
-            [
-                "0-1MB_from_end",
-                "1-2MB_from_end",
-            ],
-        )
-        total_low_risk_snps_df = filter_snps_by_catergory(
-            df,
-            "low_risk",
-            embryo,
-        )
-        upstream_2mb_low_risk_snps_df = filter_snps_by_region(
-            total_low_risk_snps_df,
-            [
-                "0-1MB_from_start",
-                "1-2MB_from_start",
-            ],
-        )
-        within_gene_low_risk_snps_df = filter_snps_by_region(
-            total_low_risk_snps_df,
-            [
-                "within_gene",
-            ],
-        )
-        downstream_2mb_low_risk_snps_df = filter_snps_by_region(
-            total_low_risk_snps_df,
-            [
-                "0-1MB_from_end",
-                "1-2MB_from_end",
-            ],
-        )
-
-        # Count SNPs for each condition
-        total_high_risk_snps = len(total_high_risk_snps_df)
-        upstream_2mb_high_risk_snps = len(upstream_2mb_high_risk_snps_df)
-        within_gene_high_risk_snps = len(within_gene_high_risk_snps_df)
-        downstream_2mb_high_risk_snps = len(downstream_2mb_high_risk_snps_df)
-        total_low_risk_snps = len(total_low_risk_snps_df)
-        upstream_2mb_low_risk_snps = len(upstream_2mb_low_risk_snps_df)
-        within_gene_low_risk_snps = len(within_gene_low_risk_snps_df)
-        downstream_2mb_low_risk_snps = len(downstream_2mb_low_risk_snps_df)
-
-        # For AR cases calculate values for each partner using "snp_inherited_from" info
-        if mode_of_inheritance == "autosomal_recessive":
-
-            total_male_high_risk_snps = len(
-                filter_snps_by_partner_sex(total_high_risk_snps_df, "male_partner")
-            )
-            downstream_2mb_male_high_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    downstream_2mb_high_risk_snps_df, "male_partner"
-                )
-            )
-            within_gene_male_high_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    within_gene_high_risk_snps_df, "male_partner"
-                )
-            )
-            upstream_2mb_male_high_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    upstream_2mb_high_risk_snps_df, "male_partner"
-                )
-            )
-            total_female_high_risk_snps = len(
-                filter_snps_by_partner_sex(total_high_risk_snps_df, "female_partner")
-            )
-            downstream_2mb_female_high_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    downstream_2mb_high_risk_snps_df, "female_partner"
-                )
-            )
-            within_gene_female_high_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    within_gene_high_risk_snps_df, "female_partner"
-                )
-            )
-            upstream_2mb_female_high_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    upstream_2mb_high_risk_snps_df, "female_partner"
-                )
-            )
-            downstream_2mb_male_low_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    downstream_2mb_low_risk_snps_df, "male_partner"
-                )
-            )
-            within_gene_male_low_risk_snps = len(
-                filter_snps_by_partner_sex(within_gene_low_risk_snps_df, "male_partner")
-            )
-            upstream_2mb_male_low_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    upstream_2mb_low_risk_snps_df, "male_partner"
-                )
-            )
-            total_female_low_risk_snps = len(
-                filter_snps_by_partner_sex(total_low_risk_snps_df, "female_partner")
-            )
-            downstream_2mb_female_low_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    downstream_2mb_low_risk_snps_df, "female_partner"
-                )
-            )
-            within_gene_female_low_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    within_gene_low_risk_snps_df, "female_partner"
-                )
-            )
-            upstream_2mb_female_low_risk_snps = len(
-                filter_snps_by_partner_sex(
-                    upstream_2mb_low_risk_snps_df, "female_partner"
-                )
-            )
-
-        # Populate summary dataframe
-        row = [
-            embryo,
-            total_high_risk_snps,
-            downstream_2mb_high_risk_snps,
-            within_gene_high_risk_snps,
-            upstream_2mb_high_risk_snps,
-            total_low_risk_snps,
-            downstream_2mb_low_risk_snps,
-            within_gene_low_risk_snps,
-            upstream_2mb_low_risk_snps,
-        ]
-
-        # For AR cases include values for each partner as calculated above
-        if mode_of_inheritance == "autosomal_recessive":
-            row = [
-                embryo,
-                total_high_risk_snps,
-                downstream_2mb_high_risk_snps,
-                within_gene_high_risk_snps,
-                upstream_2mb_high_risk_snps,
-                total_low_risk_snps,
-                downstream_2mb_low_risk_snps,
-                within_gene_low_risk_snps,
-                upstream_2mb_low_risk_snps,
-                total_male_high_risk_snps,
-                downstream_2mb_male_high_risk_snps,
-                within_gene_male_high_risk_snps,
-                upstream_2mb_male_high_risk_snps,
-                total_female_high_risk_snps,
-                downstream_2mb_female_high_risk_snps,
-                within_gene_female_high_risk_snps,
-                upstream_2mb_female_high_risk_snps,
-                downstream_2mb_male_low_risk_snps,
-                within_gene_male_low_risk_snps,
-                upstream_2mb_male_low_risk_snps,
-                total_female_low_risk_snps,
-                downstream_2mb_female_low_risk_snps,
-                within_gene_female_low_risk_snps,
-                upstream_2mb_female_low_risk_snps,
-            ]
-
-        summary_snps_for_embryos_df = pd.concat(
-            [
-                summary_snps_for_embryos_df,
-                pd.DataFrame([dict(zip(summary_snps_for_embryos_df.columns, row))]),
-            ],
-            ignore_index=True,
-            axis=0,
-        )
-
-    return summary_snps_for_embryos_df
-
 
 def plot_results(
     df,
-    summary_df,
     embryo_ids,
     embryo_sex,
     gene_start,
     gene_end,
     mode_of_inheritance,
     embryo_count_data_df,
+    flanking_region_size,
 ):
     """Plots SNP data
 
@@ -314,7 +30,12 @@ def plot_results(
     Returns:
 
     """
+    if flanking_region_size == "2mb":
+        flanking_region_size = 2000000
+    elif flanking_region_size == "3mb":
+        flanking_region_size = 3000000
 
+    # Create lists to store plots as html and pdf
     plots_as_html = []
     plots_as_pdf = []
 
@@ -420,7 +141,7 @@ def plot_results(
         )
         # add downstream line for 2mb flanking region lines
         fig.add_vline(
-            x=gene_start - 2000000,
+            x=gene_start - flanking_region_size,
             line_width=3,
             line_dash="dash",
             line_color="green",
@@ -430,7 +151,7 @@ def plot_results(
         )
         # add upstream line for 2mb flanking region lines
         fig.add_vline(
-            x=gene_end + 2000000,
+            x=gene_end + flanking_region_size,
             line_width=3,
             line_dash="dash",
             line_color="green",
@@ -440,44 +161,34 @@ def plot_results(
         )
         # Set reasonable axis size
         fig.update_xaxes(
-            range=[gene_start - 2100000, gene_end + 2100000], exponentformat="none"
+            range=[
+                gene_start - (flanking_region_size + 100000),
+                gene_end + (flanking_region_size + 100000),
+            ],
+            exponentformat="none",
         )
 
         # Functions to add SNP count annotations to plot
-        # TODO will refactor to reduce code duplication as calculated in main script
-        # x = counts_for_plot_annotation(
-        #    mode_of_inheritance, embryo, embryo_count_data_df
-        # )
-        # Get counts for each risk category per region
-        def get_counts(summary_df, embryo, multi_category):
-            count = summary_df.loc[
-                summary_df["embryo_id"] == embryo,
-                multi_category,
-            ].item()
-            return count
-
-        # Add SNP count annotations to plot - code gets convoluted here as we have to
         # add annotations to three different types of plots (and AR has three faceted plots)
         def add_snp_count_annotation(
             facet_row,
-            embryo,
-            summary_df,
             annotation_name_high_risk,
             annotation_name_low_risk,
             upstream_high_sum,
-            upstream_low_sum,
             within_gene_high_sum,
-            within_gene_low_sum,
             downstream_high_sum,
+            upstream_low_sum,
+            within_gene_low_sum,
             downstream_low_sum,
+            flanking_region_size,
         ):
             fig.add_trace(
                 go.Scatter(
                     name=annotation_name_high_risk,
                     x=[
-                        gene_start - 1900000,
+                        gene_start - (flanking_region_size - 100000),
                         (gene_start + gene_end) / 2,
-                        gene_end + 1900000,
+                        gene_end + (flanking_region_size - 100000),
                     ],
                     y=[
                         3,
@@ -487,9 +198,9 @@ def plot_results(
                     mode="text",
                     textfont_color="#e60e0e",
                     text=[
-                        get_counts(summary_df, embryo, upstream_high_sum),
-                        get_counts(summary_df, embryo, within_gene_high_sum),
-                        get_counts(summary_df, embryo, downstream_high_sum),
+                        upstream_high_sum,
+                        within_gene_high_sum,
+                        downstream_high_sum,
                     ],
                     textposition="top center",
                 ),
@@ -501,17 +212,17 @@ def plot_results(
                 go.Scatter(
                     name=annotation_name_low_risk,
                     x=[
-                        gene_start - 1900000,
+                        gene_start - (flanking_region_size - 100000),
                         (gene_start + gene_end) / 2,
-                        gene_end + 1900000,
+                        gene_end + (flanking_region_size - 100000),
                     ],
                     y=[-3, -3, -3],
                     mode="text",
                     textfont_color="#0ee60e",
                     text=[
-                        get_counts(summary_df, embryo, upstream_low_sum),
-                        get_counts(summary_df, embryo, within_gene_low_sum),
-                        get_counts(summary_df, embryo, downstream_low_sum),
+                        upstream_low_sum,
+                        within_gene_low_sum,
+                        downstream_low_sum,
                     ],
                     textposition="bottom center",
                 ),
@@ -523,47 +234,50 @@ def plot_results(
             mode_of_inheritance == "x_linked"
             or mode_of_inheritance == "autosomal_dominant"
         ):
+            summary_df = embryo_count_data_df.groupby(
+                ["risk_category", "snp_position"]
+            ).sum()
             add_snp_count_annotation(
                 1,
-                embryo,
-                summary_df,
                 "High_risk count",
                 "Low_risk count",
-                "upstream_2mb_high_risk_snps",
-                "upstream_2mb_low_risk_snps",
-                "within_gene_high_risk_snps",
-                "within_gene_low_risk_snps",
-                "downstream_2mb_high_risk_snps",
-                "downstream_2mb_low_risk_snps",
+                summary_df.at[("high_risk", "upstream"), embryo],
+                summary_df.at[("high_risk", "within_gene"), embryo],
+                summary_df.at[("high_risk", "downstream"), embryo],
+                summary_df.at[("low_risk", "upstream"), embryo],
+                summary_df.at[("low_risk", "within_gene"), embryo],
+                summary_df.at[("low_risk", "downstream"), embryo],
+                flanking_region_size,
             )
         # A faceted 3 plot figure is created for AR so that male and female SNPs can be separated out.
         elif mode_of_inheritance == "autosomal_recessive":
+            summary_df = embryo_count_data_df.groupby(
+                ["risk_category", "snp_position", "snp_inherited_from"]
+            ).sum()
             add_snp_count_annotation(  # Male plot
                 3,
-                embryo,
-                summary_df,
                 "High_risk count male",
                 "Low_risk count male",
-                "upstream_2mb_male_high_risk_snps",
-                "upstream_2mb_male_low_risk_snps",
-                "within_gene_male_high_risk_snps",
-                "within_gene_male_low_risk_snps",
-                "downstream_2mb_male_high_risk_snps",
-                "downstream_2mb_male_low_risk_snps",
+                summary_df.at[("high_risk", "upstream", "male_partner"), embryo],
+                summary_df.at[("high_risk", "within_gene", "male_partner"), embryo],
+                summary_df.at[("high_risk", "downstream", "male_partner"), embryo],
+                summary_df.at[("low_risk", "upstream", "male_partner"), embryo],
+                summary_df.at[("low_risk", "within_gene", "male_partner"), embryo],
+                summary_df.at[("low_risk", "downstream", "male_partner"), embryo],
+                flanking_region_size,
             )
 
             add_snp_count_annotation(  # female plot
                 1,
-                embryo,
-                summary_df,
                 "High_risk count female",
                 "Low_risk count female",
-                "upstream_2mb_female_high_risk_snps",
-                "upstream_2mb_female_low_risk_snps",
-                "within_gene_female_high_risk_snps",
-                "within_gene_female_low_risk_snps",
-                "downstream_2mb_female_high_risk_snps",
-                "downstream_2mb_female_low_risk_snps",
+                summary_df.at[("high_risk", "upstream", "female_partner"), embryo],
+                summary_df.at[("high_risk", "within_gene", "female_partner"), embryo],
+                summary_df.at[("high_risk", "downstream", "female_partner"), embryo],
+                summary_df.at[("low_risk", "upstream", "female_partner"), embryo],
+                summary_df.at[("low_risk", "within_gene", "female_partner"), embryo],
+                summary_df.at[("low_risk", "downstream", "female_partner"), embryo],
+                flanking_region_size,
             )
 
         fig.update_yaxes(range=[-4, 4], showticklabels=False)
