@@ -1433,40 +1433,16 @@ def main(args):
             summary_embryo_by_region_table, args.embryo_ids, args.embryo_sex
         )
 
-        # TODO Remove if statement and just use the autosomal_dominant function
-        if args.mode_of_inheritance == "autosomal_dominant":
-            html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
-                embryo_category_df,
-                args.embryo_ids,
-                args.embryo_sex,
-                args.gene_start,
-                args.gene_end,
-                args.mode_of_inheritance,
-                embryo_count_data_df,
-                args.flanking_region_size,
-            )
-        elif args.mode_of_inheritance == "autosomal_recessive":
-            html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
-                embryo_category_df,
-                args.embryo_ids,
-                args.embryo_sex,
-                args.gene_start,
-                args.gene_end,
-                args.mode_of_inheritance,
-                embryo_count_data_df,
-                args.flanking_region_size,
-            )
-        elif args.mode_of_inheritance == "x_linked":
-            html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
-                embryo_category_df,
-                args.embryo_ids,
-                args.embryo_sex,
-                args.gene_start,
-                args.gene_end,
-                args.mode_of_inheritance,
-                embryo_count_data_df,
-                args.flanking_region_size,
-            )
+        html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
+            embryo_category_df,
+            args.embryo_ids,
+            args.embryo_sex,
+            args.gene_start,
+            args.gene_end,
+            args.mode_of_inheritance,
+            embryo_count_data_df,
+            args.flanking_region_size,
+        )
 
         html_text_for_plots = "<br><hr><br>" + "<br><hr><br>".join(
             html_list_of_dynamic_plots
