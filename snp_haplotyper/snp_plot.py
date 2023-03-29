@@ -7,6 +7,8 @@ import logging
 
 logger = logging.getLogger("BASHer_logger")
 
+from annotate_plots import counts_for_plot_annotation
+
 
 def filter_snps_by_partner_sex(
     df,
@@ -298,6 +300,7 @@ def plot_results(
     gene_start,
     gene_end,
     mode_of_inheritance,
+    embryo_count_data_df,
 ):
     """Plots SNP data
 
@@ -442,7 +445,9 @@ def plot_results(
 
         # Functions to add SNP count annotations to plot
         # TODO will refactor to reduce code duplication as calculated in main script
-
+        # x = counts_for_plot_annotation(
+        #    mode_of_inheritance, embryo, embryo_count_data_df
+        # )
         # Get counts for each risk category per region
         def get_counts(summary_df, embryo, multi_category):
             count = summary_df.loc[

@@ -1441,6 +1441,7 @@ def main(args):
                 args.gene_start,
                 args.gene_end,
                 args.mode_of_inheritance,
+                embryo_count_data_df,
             )
         elif args.mode_of_inheritance == "autosomal_recessive":
             html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
@@ -1448,9 +1449,10 @@ def main(args):
                 embryo_snps_summary_df,
                 args.embryo_ids,
                 args.embryo_sex,
-                args.gene_start,
+                args.gene_splottart,
                 args.gene_end,
                 args.mode_of_inheritance,
+                embryo_count_data_df,
             )
         elif args.mode_of_inheritance == "x_linked":
             html_list_of_dynamic_plots, html_list_of_static_plots = plot_results(
@@ -1461,6 +1463,7 @@ def main(args):
                 args.gene_start,
                 args.gene_end,
                 args.mode_of_inheritance,
+                embryo_count_data_df,
             )
 
         html_text_for_plots = "<br><hr><br>" + "<br><hr><br>".join(
@@ -1565,10 +1568,8 @@ if __name__ == "__main__":
     ) as f:
         f.write(html_string)
 
-    # Convert HTML report to PDF TODO change formatting to suit PDF
+    # Convert HTML report to PDF
     pdfkit.from_string(
         pdf_string,
-        os.path.join(
-            args.output_folder, args.output_prefix + "_summary_" + timestr + ".pdf"
-        ),
+        os.path.join(args.output_folder, args.output_prefix + "_" + timestr + ".pdf"),
     )

@@ -5,6 +5,7 @@ from flask import Flask, render_template, Response, send_file, jsonify, request,
 from flask_wtf import FlaskForm
 import merge_array_files
 import os
+import pdfkit
 import time
 import random
 from wtforms import FileField, SubmitField, MultipleFileField
@@ -128,11 +129,11 @@ def form(basher_state="initial"):
             f.write(html_report)
         logger.info(f"Saved HTML report for {sample_id}")
 
-        with open(
+        # Convert HTML report to PDF
+        pdfkit.from_string(
+            pdf_report,
             f'{session["report_path"]}.pdf',
-            "w",
-        ) as f:
-            f.write(pdf_report)
+        )
         logger.info(f"Saved PDF report for {sample_id}")
 
         return render_template(
