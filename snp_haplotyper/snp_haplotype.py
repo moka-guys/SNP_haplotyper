@@ -295,6 +295,24 @@ def export_json_data_as_csv(input_json, output_csv):
     df.to_csv(output_csv, index=False, encoding="utf-8")
 
 
+# filter dataframe on region of interest
+def filter_dataframe(df, chr, gene_start, gene_end):
+    """
+    Filters a dataframe to only include rows where the SNP is within the region of interest.
+    Args:
+        df (pandas dataframe): Dataframe containing SNP data
+        args.chr (str): Chromosome of interest
+        args.gene_start (int): Start position of gene of interest
+        args.gene_end (int): End position of gene of interest
+    Returns:
+        df (pandas dataframe): Dataframe containing only SNPs within the region of interest
+    """
+    df = df[df["Chr"] == chr]
+    df = df[df["Chr Pos"] >= gene_start]
+    df = df[df["Chr Pos"] <= gene_end]
+    return df
+
+
 def annotate_distance_from_gene(df, chr, start, end):
     """Annotates the probeset based on the provided genomic co-ordinates
     New column created, "gene_distance", in the dataframe, df, annotating the region the SNP is in. SNPs allocated to "within_gene", "0-1MB_from_start", "1-2MB_from_start", "0-1MB_from_end", and "1-2MB_from_end",
@@ -1250,6 +1268,9 @@ def main(args):
             affected_partner_sex = "female_partner"
             unaffected_partner = args.male_partner
             unaffected_partner_sex = "male_partner"
+
+    # Filter out any rows not in the region of interest
+    df = filter_dataframe(df, args.chr, args.gene_start, args.gene_end)
 
     # Add column describing how far the SNP is from the gene of interest
     df = annotate_distance_from_gene(df, args.chr, args.gene_start, args.gene_end)
