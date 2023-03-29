@@ -71,6 +71,7 @@ def setup_test_data(split_by_embryo=False):
                 gene_start=int(arg_dictionary["gene_start"]),
                 gene_end=int(arg_dictionary["gene_end"]),
                 chr=arg_dictionary["chr"],
+                flanking_region_size=arg_dictionary["flanking_region_size"],
                 consanguineous=True if "consanguineous" in arg_dictionary else False,
                 testing=True,
                 trio_only=True,
@@ -105,6 +106,7 @@ def setup_test_data(split_by_embryo=False):
                 gene_start=int(arg_dictionary["gene_start"]),
                 gene_end=int(arg_dictionary["gene_end"]),
                 chr=arg_dictionary["chr"],
+                flanking_region_size=arg_dictionary["flanking_region_size"],
                 consanguineous=True if "consanguineous" in arg_dictionary else False,
                 testing=True,
                 trio_only=False,
@@ -137,6 +139,7 @@ def test_informative_snps(name):
         informative_snps_by_region,
         embryo_count_data_df,
         html_string,
+        pdf_string,
     ) = main(args[name])
     json_file_path = "test_data/informative_snp_validation.json"
 
@@ -171,6 +174,7 @@ def test_embryo_categorization(name):
         informative_snps_by_region,
         embryo_count_data_df,
         html_string,
+        pdf_string,
     ) = main(args[name])
     # Need to select "informative_snp_data" or "embryo_cat_json" as appropriate TODO move into func args
     json_file_path = "test_data/embryo_validation_data.json"
