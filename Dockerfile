@@ -5,10 +5,10 @@ FROM python:3.10.6-slim-buster
 WORKDIR /usr/local/basher
 
 # set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV FLASK_DEBUG 1
-ENV FLASK_ENV development
+#ENV PYTHONDONTWRITEBYTECODE 1
+#ENV PYTHONUNBUFFERED 1
+#ENV FLASK_DEBUG 1
+#ENV FLASK_ENV development
 ENV FLASK_APP /usr/local/basher/snp_haplotyper/app.py
 ENV PYTHONPATH /usr/local/basher/snp_haplotyper
 ENV UPLOAD_FOLDER /var/local/basher/uploads
@@ -17,10 +17,12 @@ ENV UPLOAD_FOLDER /var/local/basher/uploads
 # add and install requirements
 COPY ./requirements.txt .
 RUN pip3 install -r requirements.txt
-RUN pip install debugpy
+#RUN pip install debugpy
 
 # add app
 COPY . .
 
+EXPOSE 5000
+
 # run server
-CMD python -m debugpy --wait-for-client --listen 0.0.0.0:5678 -m flask run --host=0.0.0.0
+CMD ["gunicorn", "snp_haplotyper:app:app"]
