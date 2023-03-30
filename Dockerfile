@@ -25,4 +25,4 @@ COPY . .
 EXPOSE 5000
 
 # run server
-CMD ["gunicorn", "snp_haplotyper:app:app"]
+CMD ["gunicorn", "wsgi:app"]
