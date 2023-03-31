@@ -1,4 +1,5 @@
 import argparse
+from check_inputs import check_input
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_interval
 import pandas as pd
@@ -33,7 +34,7 @@ parser.add_argument(
     "-s",
     "--snp_array_file",
     type=str,
-    help="SNP Array text files",
+    help="SNP Array text files to be processed",
     required=False,
     nargs="?",  # Allows for 0 or more arguments
     default=None,  # Default value if no arguments are provided
@@ -365,17 +366,23 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     # Check whether a SNP array text file has been specified on the commandline, if they have then check
     # it against that provided in the template. If they are different, raise an error
     if snp_array_file is not None:
-        input_file = snp_array_file
-
-    # Check whether environment variable is set
-    if "UPLOAD_FOLDER" in os.environ:
-        # If docker-compose has set the environment variable, use the path specified in the environment variable
-        input_filepath = os.path.join(
-            os.environ["UPLOAD_FOLDER"], os.path.basename(input_file)
-        )
+        if os.path.basename(snp_array_file) != os.path.basename(
+            excel_import["input_file"]
+        ):
+            raise ValueError(
+                "The SNP array text file specified on the command line is different to that specified in the template"
+            )
+        input_filepath = snp_array_file
     else:
-        # If we are running outside of docker-compose, use the path specified in the config file
-        input_filepath = input_file
+        # Check whether environment variable is set
+        if "UPLOAD_FOLDER" in os.environ:
+            # If docker-compose has set the environment variable, use the path specified in the environment variable
+            input_filepath = os.path.join(
+                os.environ["UPLOAD_FOLDER"], os.path.basename(input_file)
+            )
+        else:
+            # If we are running outside of docker-compose, use the path specified in the config file
+            input_filepath = input_file
 
     # Create an argparse and populate it with the required arguments for passing to snp_haplotyper
     args = argparse.Namespace()
@@ -410,28 +417,24 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         f"PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}"
     )
 
-    # Returns
-    # (
-    #     mode_of_inheritance,
-    #     sample_id,
-    #     number_snps_imported,
-    #     summary_snps_by_region,
-    #     informative_snps_by_region,
-    #     embryo_count_data_df,
-    #     html_string,
-    # )
-
-    return snp_haplotype.main(args)
+    # Use check_inputs.py module to ensure the input data is valid
+    if check_input(args, input_filepath) == False:
+        logger.error("Input data is not valid, exiting - check log file for details")
+        sys.exit(1)
+    else:
+        logger.info("Input data from excel template has passed data validation checks")
+        return snp_haplotype.main(args)
 
 
 def main(excel_parser_args):
-    # Function run with true flag to run snp_haplotype.py
-    if excel_parser_args.input_file is None:
+
+    if excel_parser_args.snp_array_file is None:
         excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
     else:
         excel_import = parse_excel_input(
-            excel_parser_args.input_spreadsheet, excel_parser_args.input_file
+            excel_parser_args.input_spreadsheet, excel_parser_args.snp_array_file
         )
+
     return excel_import
 
 

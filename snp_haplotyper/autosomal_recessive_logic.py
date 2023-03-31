@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 from exceptions import ArgumentInputError
 
+import logging
+
+logger = logging.getLogger("BASHer_logger")
+
 
 def autosomal_recessive_analysis(
     df,
@@ -135,5 +139,7 @@ def autosomal_recessive_analysis(
         df["snp_inherited_from"] = np.select(
             conditions, snp_inherited_from, default="uninformative"
         )
-
+    logger.info(
+        f"Completed characterising the SNPs using the Autosomal Recessive logic"
+    )
     return df

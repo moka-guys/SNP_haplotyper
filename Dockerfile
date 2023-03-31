@@ -22,7 +22,6 @@ RUN mkdir -p /var/local/basher/logs/
 RUN mkdir -p /var/local/basher/uploads/
 RUN chmod 777 /var/local/basher/uploads/
 USER $CONTAINER_USER_ID
-#RUN pip install debugpy
 
 # add app
 COPY . .

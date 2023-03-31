@@ -1,11 +1,11 @@
 import argparse
+import numpy as np
 import pandas as pd
 
 
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 # parse command line arguments
 parser = argparse.ArgumentParser()
@@ -54,27 +54,28 @@ def check_input_dfs(dfs: list[pd.DataFrame]) -> None:
     for df in dfs:
         probeset_ids.append(df["Probeset ID"].values)
 
-    if not all(x == probeset_ids[0] for x in probeset_ids):
+    if all([np.array_equal(probeset_ids[0], x) for x in probeset_ids[1:]]) == False:
         raise ValueError(
             "Probeset IDs are not identical for all input files. Check you have not mixed SNP arrays data."
         )
 
     # Check that the only duplicated columns between dataframes are "Probeset ID", "Chr" and "Position"
     # This is to check that duplicate files have not been provided.
+    column_names = []
     for df in dfs:
-        if df.columns.duplicated().any():
-            if not all(
-                x
-                in [
-                    "Probeset ID",
-                    "Chr",
-                    "Position",
-                ]
-                for x in df.columns[df.columns.duplicated()]
-            ):
-                raise ValueError(
-                    "Duplicate columns found in input files. Check you have not provided duplicate files."
-                )
+        # Get all the column names from each dataframe in the list
+        column_names = column_names + list(df.columns.values)
+
+    # Filter out the column names that are expected to be duplicated
+    column_names = list(filter(lambda a: a != "Probeset ID", column_names))
+    column_names = list(filter(lambda a: a != "Chr", column_names))
+    column_names = list(filter(lambda a: a != "Position", column_names))
+
+    # Check that there are no other duplicated columns
+    if len(column_names) != len(set(column_names)):
+        raise ValueError(
+            "Duplicate columns found in input files. Check you have not provided duplicate files."
+        )
 
 
 def merge_array_files(dfs_to_merge: list[pd.DataFrame]) -> pd.DataFrame:
@@ -89,7 +90,7 @@ def merge_array_files(dfs_to_merge: list[pd.DataFrame]) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Merged dataframe.
     """
-    # check_input_dfs(dfs_to_merge)
+    check_input_dfs(dfs_to_merge)
     result = dfs_to_merge[0]
     for df in dfs_to_merge[1:]:
         result = pd.merge(

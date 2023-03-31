@@ -296,20 +296,25 @@ def export_json_data_as_csv(input_json, output_csv):
 
 
 # filter dataframe on region of interest
-def filter_dataframe(df, chr, gene_start, gene_end):
+def filter_dataframe(df, gene_start, gene_end, flanking_region_size):
     """
     Filters a dataframe to only include rows where the SNP is within the region of interest.
     Args:
         df (pandas dataframe): Dataframe containing SNP data
-        args.chr (str): Chromosome of interest
         args.gene_start (int): Start position of gene of interest
         args.gene_end (int): End position of gene of interest
+        args.flanking_region_size (str): Size of flanking region either side of gene of interest "2mb" or "3mb"
     Returns:
         df (pandas dataframe): Dataframe containing only SNPs within the region of interest
     """
-    df = df[df["Chr"] == chr]
-    df = df[df["Chr Pos"] >= gene_start]
-    df = df[df["Chr Pos"] <= gene_end]
+    if flanking_region_size == "2mb":
+        region_start = gene_start - 2000000
+        region_end = gene_end + 2000000
+    elif flanking_region_size == "3mb":
+        region_start = gene_start - 3000000
+        region_end = gene_end + 3000000
+    df = df[df["Position"] >= region_start]
+    df = df[df["Position"] <= region_end]
     return df
 
 
@@ -1270,7 +1275,7 @@ def main(args):
             unaffected_partner_sex = "male_partner"
 
     # Filter out any rows not in the region of interest
-    df = filter_dataframe(df, args.chr, args.gene_start, args.gene_end)
+    df = filter_dataframe(df, args.gene_start, args.gene_end, args.flanking_region_size)
 
     # Add column describing how far the SNP is from the gene of interest
     df = annotate_distance_from_gene(df, args.chr, args.gene_start, args.gene_end)
