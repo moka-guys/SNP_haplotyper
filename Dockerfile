@@ -17,6 +17,11 @@ ENV UPLOAD_FOLDER /var/local/basher/uploads
 # add and install requirements
 COPY ./requirements.txt .
 RUN pip3 install -r requirements.txt
+USER 0 
+RUN mkdir -p /var/local/basher/logs/
+RUN mkdir -p /var/local/basher/uploads/
+RUN chmod 777 /var/local/basher/uploads/
+USER $CONTAINER_USER_ID
 #RUN pip install debugpy
 
 # add app
