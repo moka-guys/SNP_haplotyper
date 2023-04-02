@@ -158,7 +158,8 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     disease_omim = argument_dict["disease_omim"]
     exclusion = argument_dict["exclusion"]
     female_partner_hosp_num = argument_dict["female_partner_hosp_num"]
-    flanking_region_size = argument_dict["flanking_region_size"]
+    # flanking_region_size = argument_dict["flanking_region_size"]
+    flanking_region_size = "2mb"
     gene_symbol = argument_dict["gene"]
     gene_end = argument_dict["gene_end"]
     gene_omim = argument_dict["gene_omim"]
@@ -315,7 +316,8 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     excel_import["embryo_data"] = embryo_data_df
     excel_import["exclusion"] = exclusion
     excel_import["female_partner_hosp_num"] = female_partner_hosp_num
-    excel_import["flanking_region_size"] = flanking_region_size
+    # excel_import["flanking_region_size"] = flanking_region_size TODO - remove this
+    excel_import["flanking_region_size"] = "2mb"
     excel_import["gene"] = gene_symbol
     excel_import["gene_end"] = gene_end
     excel_import["gene_omim"] = gene_omim
@@ -402,6 +404,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     args.gene_start = gene_start
     args.gene_end = gene_end
     args.chr = chr
+    args.flanking_region_size = flanking_region_size
     args.consanguineous = True if consanguineous == "yes" else False
 
     # If analysis is being done for embryos add that data as well
