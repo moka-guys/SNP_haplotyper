@@ -5,7 +5,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.testing
     volumes:
       - .:/BASHer/snp_haplotyper
     ports:

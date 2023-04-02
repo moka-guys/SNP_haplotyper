@@ -53,7 +53,7 @@ class ChangeForm(FlaskForm):
     submit = SubmitField("Run BASHer")
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/basher", methods=["GET", "POST"])
 def form(basher_state="initial"):
     SampleSheetUp = SampleSheetUpload()  # File Upload class - detailed below.
     SnpArrayUp = SnpArrayUpload()  # File Upload class - detailed below.
@@ -64,7 +64,7 @@ def form(basher_state="initial"):
         # Use FileHandler() to log to a file
         session["timestr"] = datetime.now().strftime("%Y%m%d-%H%M%S")
         os.mkdir(os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"]))
-        file_handler = logging.FileHandler(f'logs/{session["timestr"]}_basher.log')
+        file_handler = logging.FileHandler(f"logs/basher.log")
         formatter = logging.Formatter(log_format)
         file_handler.setFormatter(formatter)
 
