@@ -9,8 +9,8 @@ import logging
 import os
 import subprocess
 import sys
-from . import config as config
-from . import snp_haplotype
+import config as config
+import snp_haplotype
 
 logger = logging.getLogger("BASHer_logger")
 

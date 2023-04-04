@@ -362,7 +362,9 @@ def annotate_distance_from_gene(df, chr, start, end):
     return df
 
 
-def filter_out_nocalls(df, male_partner, female_partner, reference):
+def filter_out_nocalls(
+    df, male_partner, female_partner, reference, filter_male_nocalls=True
+):
     """Filters out no calls
     If the male partner, female partner, or reference has "NoCall" for a probeset then this probeset should be filtered out.
     Args:
@@ -370,14 +372,23 @@ def filter_out_nocalls(df, male_partner, female_partner, reference):
         male_partner (string):  Column name representing the data for the male partner
         female_partner (string):  Column name representing the data for the female partner
         reference (string):  Column name representing the data for the reference
+        filter_male_nocalls (boolean): Should male partner NoCalls be filtered for the analysis (for male embryos in x-linked conditions they should be retained)
     Returns:
         dataframe: Original dataframe, df, with any rows where the male partner, female partner or reference has a "NoCall" filtered out
     """
-    filtered_df = df[
-        (df[male_partner] != "NoCall")
-        & (df[female_partner] != "NoCall")
-        & (df[reference] != "NoCall")
-    ]
+    if filter_male_nocalls == True:
+        filtered_df = df[
+            (
+                (df[male_partner] != "NoCall")
+                & (df[female_partner] != "NoCall")
+                & (df[reference] != "NoCall")
+            )
+        ]
+    elif filter_male_nocalls == False:
+        filtered_df = df[
+            ((df[female_partner] != "NoCall") | (df[reference] != "NoCall"))
+        ]
+
     # TODO add logger - how many NoCalls filtered
     return filtered_df
 
