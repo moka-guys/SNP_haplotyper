@@ -1,6 +1,6 @@
 from argparse import Namespace
 from datetime import datetime
-from . import excel_parser
+import excel_parser
 from flask import Flask, render_template, Response, send_file, jsonify, request, session
 from flask_wtf import FlaskForm
 import merge_array_files
