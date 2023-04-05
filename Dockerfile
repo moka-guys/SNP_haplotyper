@@ -28,7 +28,9 @@ RUN apt-get update \
     wkhtmltopdf
 
 # add app
-COPY . .
+COPY ["snp_haplotyper", "requirements.txt", "tests", "wsgi.py", \
+    "pytest.ini", ".vscode", ".gitignore", ".coverage", ".env", "docs", "gunicorn.conf.py", \ 
+    "docker-compose.yml", "Makefile", "./"]
 
 EXPOSE 5000
 
