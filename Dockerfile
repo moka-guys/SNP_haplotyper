@@ -2,7 +2,7 @@
 FROM python:3.10.6-slim-buster
 
 # set working directory
-WORKDIR /usr/local/basher
+WORKDIR /usr/local/basher/snp_haplotyper
 
 # set environment variables
 #ENV PYTHONDONTWRITEBYTECODE 1
@@ -10,7 +10,7 @@ WORKDIR /usr/local/basher
 #ENV FLASK_DEBUG 1
 #ENV FLASK_ENV development
 ENV FLASK_APP /usr/local/basher/snp_haplotyper/app.py
-ENV PYTHONPATH /usr/local/basher/snp_haplotyper
+ENV PYTHONPATH /usr/local/basher/
 ENV UPLOAD_FOLDER /var/local/basher/uploads
 # only for development
 
@@ -23,9 +23,7 @@ RUN mkdir -p /var/local/basher/uploads/
 RUN chmod 777 /var/local/basher/uploads/
 USER $CONTAINER_USER_ID
 
-RUN apt-get update \
-    && apt-get install -y \
-    wkhtmltopdf
+RUN apt-get update && apt-get install -y wkhtmltopdf
 
 # add app
 COPY ["snp_haplotyper", "requirements.txt", "tests", "wsgi.py", \
