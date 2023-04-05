@@ -29,8 +29,7 @@ RUN apt-get update \
 
 # add app
 COPY ["snp_haplotyper", "requirements.txt", "tests", "wsgi.py", \
-    "pytest.ini", ".coverage", "docs", "gunicorn.conf.py", \ 
-    "docker-compose.yml", "Makefile", "./"]
+    "pytest.ini", ".coverage", "docs", "gunicorn.conf.py", "./"]
 
 EXPOSE 5000
 
