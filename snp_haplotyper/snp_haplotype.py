@@ -330,6 +330,10 @@ def annotate_distance_from_gene(df, chr, start, end):
     Returns:
         dataframe: Original dataframe, df, with "gene_distance" column added characterising the probeset in relation to the gene of interest
     """
+    # insure inputs are integers
+    start = int(start)
+    end = int(end)
+
     conditions = [
         (df["Position"] > start) & (df["Position"] <= end),
         (df["Position"] <= start) & (df["Position"] > start - 1000000),
