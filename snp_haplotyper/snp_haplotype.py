@@ -1590,8 +1590,14 @@ if __name__ == "__main__":
     ) as f:
         f.write(html_string)
 
+    options = {"enable-local-file-access": None}
+
     # Convert HTML report to PDF
     pdfkit.from_string(
         pdf_string,
-        os.path.join(args.output_folder, args.output_prefix + "_" + timestr + ".pdf"),
+        os.path.join(
+            args.output_folder,
+            args.output_prefix + "_" + timestr + ".pdf",
+            options=options,
+        ),
     )
