@@ -302,7 +302,7 @@ def filter_dataframe(df, gene_start, gene_end, flanking_region_size):
     Filters a dataframe to only include rows where the SNP is within the region of interest.
     Args:
         df (pandas dataframe): Dataframe containing SNP data
-        args.gene_start (int): Start position of gene of interest
+        int(args.gene_start) (int): Start position of gene of interest
         args.gene_end (int): End position of gene of interest
         args.flanking_region_size (str): Size of flanking region either side of gene of interest "2mb" or "3mb"
     Returns:
@@ -1291,10 +1291,12 @@ def main(args):
             unaffected_partner_sex = "male_partner"
 
     # Filter out any rows not in the region of interest
-    df = filter_dataframe(df, args.gene_start, args.gene_end, args.flanking_region_size)
+    df = filter_dataframe(
+        df, int(args.gene_start), int(args.gene_end), args.flanking_region_size
+    )
 
     # Add column describing how far the SNP is from the gene of interest
-    df = annotate_distance_from_gene(df, args.chr, args.gene_start, args.gene_end)
+    df = annotate_distance_from_gene(df, args.chr, int(args.gene_start), args.gene_end)
 
     # Add column of dbSNP rsIDs
     df = add_rsid_column(df, affy_2_rs_ids_df)
@@ -1479,8 +1481,8 @@ def main(args):
             embryo_category_df,
             args.embryo_ids,
             args.embryo_sex,
-            args.gene_start,
-            args.gene_end,
+            int(args.gene_start),
+            int(args.gene_end),
             args.mode_of_inheritance,
             embryo_count_data_df,
             args.flanking_region_size,
@@ -1519,8 +1521,8 @@ def main(args):
         "mode_of_inheritance": args.mode_of_inheritance,
         "gene_symbol": args.gene_symbol,
         "chromsome": args.chr.upper(),
-        "gene_start": f"{args.gene_start:,}",  # Format with 1000s comma separator
-        "gene_end": f"{args.gene_end:,}",  # Format with 1000s comma separator
+        "gene_start": f"{int(args.gene_start):,}",  # Format with 1000s comma separator
+        "gene_end": f"{int(args.gene_end):,}",  # Format with 1000s comma separator
         "genome_build": config.genome_build,  # Imported from config.py file
         "basher_version": config.basher_version,  # Imported from config.py file
         "input_file": args.input_file.name
