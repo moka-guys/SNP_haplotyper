@@ -64,7 +64,7 @@ def form(basher_state="initial"):
         # Use FileHandler() to log to a file
         session["timestr"] = datetime.now().strftime("%Y%m%d-%H%M%S")
         os.mkdir(os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"]))
-        file_handler = logging.FileHandler(f"logs/basher.log")
+        file_handler = logging.FileHandler(f"/var/local/basher/logs/basher_error.log")
         formatter = logging.Formatter(log_format)
         file_handler.setFormatter(formatter)
 

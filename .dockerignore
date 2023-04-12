@@ -23,5 +23,13 @@
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
+**/test_data/autosomal_dominant
+**test_data/autosomal_recessive
+**test_data/precases
+**test_data/x_linked
+**test_data/*json
+**test_data/*csv
+**test_data/template_test_data
+**uploads/tmp_folder/*
 LICENSE
 README.md

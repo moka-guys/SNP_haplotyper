@@ -30,7 +30,8 @@ def setup_test_data_from_excel(split_by_embryo=False):
                 input_spreadsheet=os.path.join(
                     excel_folder_path,
                     excel_file,
-                )
+                ),
+                snp_array_file=None,
             )
         elif split_by_embryo == True:
             for embryo_id in embryo_data[run_name].embryo_ids:
@@ -39,7 +40,8 @@ def setup_test_data_from_excel(split_by_embryo=False):
                     input_spreadsheet=os.path.join(
                         excel_folder_path,
                         excel_file,
-                    )
+                    ),
+                    snp_array_file=None,
                 )
 
     return run_data_dict
@@ -56,6 +58,7 @@ def test_informative_snps_excel(name):
         informative_snps_by_region,
         embryo_count_data_df,
         html_string,
+        pdf_string,
     ) = excel_parser_main(args[name])
 
     json_file_path = "test_data/informative_snp_validation.json"
@@ -88,6 +91,7 @@ def test_embryo_categorization_excel(name):
         informative_snps_by_region,
         embryo_count_data_df,
         html_string,
+        pdf_string,
     ) = excel_parser_main(args[sample_id])
 
     json_file_path = "test_data/embryo_validation_data.json"

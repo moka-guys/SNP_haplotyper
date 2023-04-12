@@ -36,7 +36,7 @@ parser.add_argument(
     type=str,
     help="SNP Array text files to be processed",
     required=False,
-    nargs="?",  # Allows for 0 or more arguments
+    nargs="+",  # Allows for 0 or more arguments
     default=None,  # Default value if no arguments are provided
 )
 
@@ -316,7 +316,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     excel_import["embryo_data"] = embryo_data_df
     excel_import["exclusion"] = exclusion
     excel_import["female_partner_hosp_num"] = female_partner_hosp_num
-    # excel_import["flanking_region_size"] = flanking_region_size TODO - remove this
+    # excel_import["flanking_region_size"] = flanking_region_size
     excel_import["flanking_region_size"] = "2mb"
     excel_import["gene"] = gene_symbol
     excel_import["gene_end"] = gene_end

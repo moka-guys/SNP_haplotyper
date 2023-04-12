@@ -215,10 +215,11 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-frs",
     "--flanking_region_size",
     type=str,
+    nargs="?",
     choices=["2mb", "3mb"],
+    const="2mb",
     help="Size of the flanking region either side of the gene",
 )
 
@@ -308,11 +309,11 @@ def filter_dataframe(df, gene_start, gene_end, flanking_region_size):
         df (pandas dataframe): Dataframe containing only SNPs within the region of interest
     """
     if flanking_region_size == "2mb":
-        region_start = gene_start - 2000000
-        region_end = gene_end + 2000000
+        region_start = int(gene_start) - 2000000
+        region_end = int(gene_end) + 2000000
     elif flanking_region_size == "3mb":
-        region_start = gene_start - 3000000
-        region_end = gene_end + 3000000
+        region_start = int(gene_start) - 3000000
+        region_end = int(gene_end) + 3000000
     df = df[df["Position"] >= region_start]
     df = df[df["Position"] <= region_end]
     return df
