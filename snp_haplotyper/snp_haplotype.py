@@ -1595,9 +1595,6 @@ if __name__ == "__main__":
     # Convert HTML report to PDF
     pdfkit.from_string(
         pdf_string,
-        os.path.join(
-            args.output_folder,
-            args.output_prefix + "_" + timestr + ".pdf",
-            options=options,
-        ),
+        os.path.join(args.output_folder, args.output_prefix + "_" + timestr + ".pdf"),
+        options=options,
     )
