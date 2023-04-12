@@ -130,11 +130,11 @@ def form(basher_state="initial"):
         logger.info(f"Saved HTML report for {sample_id}")
 
         # Convert HTML report to PDF
-        pdfkit.from_string(
-            pdf_report,
-            f'{session["report_path"]}.pdf',
-        )
-        logger.info(f"Saved PDF report for {sample_id}")
+        # pdfkit.from_string(
+        #     pdf_report,
+        #     f'{session["report_path"]}.pdf',
+        # )
+        # logger.info(f"Saved PDF report for {sample_id}")
 
         return render_template(
             "index.html",
@@ -232,16 +232,16 @@ class SnpArrayUpload:
 def download():
     report_path = session["report_path"]
     html_file_name = f'{session["report_name"]}.html'
-    pdf_file_name = f'{session["report_name"]}.pdf'
+    # pdf_file_name = f'{session["report_name"]}.pdf'
 
     # Create a zip file with the html and pdf reports
     with zipfile.ZipFile(f"{report_path}.zip", "w") as zipObj:
         zipObj.write(f"{report_path}.html", html_file_name)
-        zipObj.write(f"{report_path}.pdf", pdf_file_name)
+        # zipObj.write(f"{report_path}.pdf", pdf_file_name)
 
     # Delete the html and pdf reports
     os.remove(f"{report_path}.html")
-    os.remove(f"{report_path}.pdf")
+    # os.remove(f"{report_path}.pdf")
 
     return send_file(
         f"{report_path}.zip",
