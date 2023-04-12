@@ -231,8 +231,8 @@ class SnpArrayUpload:
 @app.route("/download")
 def download():
     report_path = session["report_path"]
-    html_file_name = f'{session["report_name"]}.html'
-    # pdf_file_name = f'{session["report_name"]}.pdf'
+    html_file_name = f'{session["report_path"]}.html'
+    # pdf_file_name = f'{session["report_path"]}.pdf'
 
     # Create a zip file with the html and pdf reports
     with zipfile.ZipFile(f"{report_path}.zip", "w") as zipObj:
@@ -240,7 +240,7 @@ def download():
         # zipObj.write(f"{report_path}.pdf", pdf_file_name)
 
     # Delete the html and pdf reports
-    os.remove(f"{report_path}.html")
+    # os.remove(f"{report_path}.html")
     # os.remove(f"{report_path}.pdf")
 
     return send_file(
