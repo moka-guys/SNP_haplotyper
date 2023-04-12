@@ -35,6 +35,10 @@ def plot_results(
     elif flanking_region_size == "3mb":
         flanking_region_size = 3000000
 
+    # Ensure that the gene start and end are integers
+    gene_start = int(gene_start)
+    gene_end = int(gene_end)
+
     # Create lists to store plots as html and pdf
     plots_as_html = []
     plots_as_pdf = []
