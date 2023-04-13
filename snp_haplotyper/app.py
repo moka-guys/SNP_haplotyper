@@ -127,7 +127,9 @@ def form(basher_state="initial"):
             "w",
         ) as f:
             f.write(html_report)
-        logger.info(f"Saved HTML report for {sample_id}")
+        logger.info(
+            f"Saved HTML report for {sample_id} at {session['report_path']}.html"
+        )
 
         # Convert HTML report to PDF
         # pdfkit.from_string(
@@ -239,13 +241,15 @@ def download():
         zipObj.write(f"{report_path}.html", html_file_name)
         # zipObj.write(f"{report_path}.pdf", pdf_file_name)
 
+    logger.info(f"Saved zipped reports to {report_path}.zip")
+
     # Delete the html and pdf reports
     # os.remove(f"{report_path}.html")
     # os.remove(f"{report_path}.pdf")
 
     return send_file(
-        f"{report_path}.zip",
-        download_name=f'{session["report_name"]}.zip',
+        f'{session["report_path"]}.html' # f"{report_path}.zip",
+        download_name=f'{session["report_path"]}.html'# f'{session["report_name"]}.zip',
         mimetype="text/html",
         as_attachment=True,
     )
