@@ -248,8 +248,8 @@ def download():
     # os.remove(f"{report_path}.pdf")
 
     return send_file(
-        f'{session["report_path"]}.html' # f"{report_path}.zip",
-        download_name=f'{session["report_path"]}.html'# f'{session["report_name"]}.zip',
+        f'{session["report_path"]}.html',  # f"{report_path}.zip",
+        download_name=f'{session["report_path"]}.html',  # f'{session["report_name"]}.zip',
         mimetype="text/html",
         as_attachment=True,
     )
