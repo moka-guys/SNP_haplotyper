@@ -28,6 +28,9 @@ app.config["SECRET_KEY"] = "catchmeifyoucan"
 app.config["UPLOAD_EXTENSIONS"] = [".txt", ".csv", ".xlsm", ".xlsx"]
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # File has to be less than 2MB
 
+# Set the APPLICATION_ROOT config parameter
+app.config["APPLICATION_ROOT"] = "/basher"
+
 
 def call_basher(sample_sheet, snp_array_file):
     args = Namespace(
@@ -53,7 +56,7 @@ class ChangeForm(FlaskForm):
     submit = SubmitField("Run BASHer")
 
 
-@app.route("/basher", methods=["GET", "POST"])
+@app.route("/", methods=["GET", "POST"])
 def form(basher_state="initial"):
     SampleSheetUp = SampleSheetUpload()  # File Upload class - detailed below.
     SnpArrayUp = SnpArrayUpload()  # File Upload class - detailed below.
