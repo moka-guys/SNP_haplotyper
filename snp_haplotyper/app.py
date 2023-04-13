@@ -120,15 +120,15 @@ def form(basher_state="initial"):
         session["report_name"] = f'{sample_id}_{session["timestr"]}'
         session["report_path"] = os.path.join(
             app.config["UPLOAD_FOLDER"],
-            {session["timestr"]},
+            session["report_name"],
         )
         with open(
-            f'{os.path.join(session["report_path"],session["report_name"])}.html',
+            f'{session["report_path"]}.html',
             "w",
         ) as f:
             f.write(html_report)
         logger.info(
-            f'Saved HTML report for {sample_id} at {os.path.join(session["report_path"],session["report_name"])}.html'
+            f"Saved HTML report for {sample_id} at {session['report_path']}.html"
         )
 
         # Convert HTML report to PDF
@@ -236,30 +236,21 @@ def download():
     # pdf_file_name = f'{session["report_path"]}.pdf'
 
     # Create a zip file with the html and pdf reports
-    with zipfile.ZipFile(
-        f'{os.path.join(session["report_path"],session["report_name"])}.zip', "w"
-    ) as zipObj:
-        zipObj.write(
-            f'{os.path.join(session["report_path"],session["report_name"])}.html',
-            html_file_name,
-        )
+    with zipfile.ZipFile(f'{session["report_path"]}.zip', "w") as zipObj:
+        zipObj.write(f'{session["report_path"]}.html', html_file_name)
         # zipObj.write(f"{session[report_path]}.pdf", pdf_file_name)
 
-    logger.info(
-        f'Saved zipped reports to {os.path.join(session["report_path"],session["report_name"])}.zip'
-    )
+    logger.info(f'Saved zipped reports to {session["report_path"]}.zip')
 
     # Delete the html and pdf reports
     # os.remove(f"{report_path}.html")
     # os.remove(f"{report_path}.pdf")
 
-    logger.info(
-        f'Attempting to download {os.path.join(session["report_path"],session["report_name"])}.html'
-    )
+    logger.info(f'Attempting to download {session["report_path"]}.html')
 
     return send_file(
-        f'{os.path.join(session["report_path"],session["report_name"])}.html',  # f"{report_path}.zip",
-        download_name=f'{os.path.join(session["report_path"],session["report_name"])}.html',  # f'{session["report_name"]}.zip',
+        f'{session["report_path"]}.html',  # f"{report_path}.zip",
+        download_name=f'{session["report_path"]}.html',  # f'{session["report_name"]}.zip',
         mimetype="text/html",
         as_attachment=True,
     )
