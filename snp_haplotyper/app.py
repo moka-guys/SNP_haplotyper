@@ -3,6 +3,7 @@ from datetime import datetime
 import excel_parser
 from flask import Flask, render_template, Response, send_file, jsonify, request, session
 from flask_wtf import FlaskForm
+from flask_session import Session
 import merge_array_files
 import os
 import pdfkit
@@ -23,13 +24,14 @@ logger.setLevel("DEBUG")
 
 
 app = Flask(__name__)
-app.config["UPLOAD_FOLDER"] = os.environ["UPLOAD_FOLDER"]  # Set in docker-compose.yml
+app.config["UPLOAD_FOLDER"] = os.environ["UPLOAD_FOLDER"]
 app.config["SECRET_KEY"] = "catchmeifyoucan"
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = os.environ["SESSION_FILE_DIR"]
 app.config["UPLOAD_EXTENSIONS"] = [".txt", ".csv", ".xlsm", ".xlsx"]
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # File has to be less than 2MB
-
-# Set the APPLICATION_ROOT config parameter
-app.config["APPLICATION_ROOT"] = "/basher"
+app.config.from_object(__name__)
+Session(app)
 
 
 def call_basher(sample_sheet, snp_array_file):
@@ -56,7 +58,7 @@ class ChangeForm(FlaskForm):
     submit = SubmitField("Run BASHer")
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/basher/", methods=["GET", "POST"])
 def form(basher_state="initial"):
     SampleSheetUp = SampleSheetUpload()  # File Upload class - detailed below.
     SnpArrayUp = SnpArrayUpload()  # File Upload class - detailed below.
@@ -135,11 +137,11 @@ def form(basher_state="initial"):
         )
 
         # Convert HTML report to PDF
-        # pdfkit.from_string(
-        #     pdf_report,
-        #     f'{session["report_path"]}.pdf',
-        # )
-        # logger.info(f"Saved PDF report for {sample_id}")
+        pdfkit.from_string(
+            pdf_report,
+            f'{session["report_path"]}.pdf',
+        )
+        logger.info(f"Saved PDF report for {sample_id}")
 
         return render_template(
             "index.html",
@@ -233,27 +235,27 @@ class SnpArrayUpload:
         return file_names
 
 
-@app.route("/download")
+@app.route("/basher/download")
 def download():
-    html_file_name = f'{session["report_path"]}.html'
-    # pdf_file_name = f'{session["report_path"]}.pdf'
+    html_file_name = f'{session["report_name"]}.html'
+    pdf_file_name = f'{session["report_name"]}.pdf'
 
     # Create a zip file with the html and pdf reports
     with zipfile.ZipFile(f'{session["report_path"]}.zip', "w") as zipObj:
         zipObj.write(f'{session["report_path"]}.html', html_file_name)
-        # zipObj.write(f"{session[report_path]}.pdf", pdf_file_name)
+        zipObj.write(f'{session["report_path"]}.pdf', pdf_file_name)
 
     logger.info(f'Saved zipped reports to {session["report_path"]}.zip')
 
     # Delete the html and pdf reports
-    # os.remove(f"{report_path}.html")
-    # os.remove(f"{report_path}.pdf")
+    os.remove(f'{session["report_path"]}.html')
+    os.remove(f'{session["report_path"]}.pdf')
 
     logger.info(f'Attempting to download {session["report_path"]}.html')
 
     return send_file(
-        f'{session["report_path"]}.html',  # f"{report_path}.zip",
-        download_name=f'{session["report_path"]}.html',  # f'{session["report_name"]}.zip',
+        f'{session["report_path"]}.zip',
+        download_name=f'{session["report_path"]}.zip',
         mimetype="text/html",
         as_attachment=True,
     )

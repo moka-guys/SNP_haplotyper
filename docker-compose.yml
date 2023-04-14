@@ -16,4 +16,3 @@ services:
       - FLASK_DEBUG=1
       - FLASK_ENV=development
       - PYTHONPATH=/BASHer/snp_haplotyper/snp_haplotyper
-      - UPLOAD_FOLDER=/BASHer/snp_haplotyper/snp_haplotyper/uploads/tmp_folder
