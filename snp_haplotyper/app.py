@@ -255,7 +255,7 @@ def download():
 
     return send_file(
         f'{session["report_path"]}.zip',
-        download_name=f'{session["report_path"]}.zip',
+        download_name=f'{session["report_name"]}.zip',
         mimetype="text/html",
         as_attachment=True,
     )
