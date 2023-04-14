@@ -30,6 +30,7 @@ app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_FILE_DIR"] = os.environ["SESSION_FILE_DIR"]
 app.config["UPLOAD_EXTENSIONS"] = [".txt", ".csv", ".xlsm", ".xlsx"]
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # File has to be less than 2MB
+app.config["APPLICATION_ROOT"] = "/basher"
 app.config.from_object(__name__)
 Session(app)
 
@@ -58,7 +59,7 @@ class ChangeForm(FlaskForm):
     submit = SubmitField("Run BASHer")
 
 
-@app.route("/basher/", methods=["GET", "POST"])
+@app.route("/", methods=["GET", "POST"])
 def form(basher_state="initial"):
     SampleSheetUp = SampleSheetUpload()  # File Upload class - detailed below.
     SnpArrayUp = SnpArrayUpload()  # File Upload class - detailed below.
@@ -235,7 +236,7 @@ class SnpArrayUpload:
         return file_names
 
 
-@app.route("/basher/download")
+@app.route("/download")
 def download():
     html_file_name = f'{session["report_name"]}.html'
     #    pdf_file_name = f'{session["report_name"]}.pdf'
