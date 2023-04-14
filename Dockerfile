@@ -7,11 +7,12 @@ WORKDIR /usr/local/basher/snp_haplotyper
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-#ENV FLASK_DEBUG 1
-#ENV FLASK_ENV development
-ENV FLASK_APP /usr/local/basher/snp_haplotyper/app.py
-ENV PYTHONPATH /usr/local/basher/snp_haplotyper
-ENV UPLOAD_FOLDER /var/local/basher/uploads
+RUN mkdir -p /var/local/basher/logs/
+RUN mkdir -p /var/local/basher/uploads/
+RUN mkdir -p /var/local/basher/flask_sessions/
+RUN chmod 777 /var/local/basher/logs/
+RUN chmod 777 /var/local/basher/uploads/
+RUN chmod 777 /var/local/basher/flask_sessions/
 # only for development
 
 # add and install requirements
