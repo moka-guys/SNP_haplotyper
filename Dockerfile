@@ -9,6 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 #ENV FLASK_DEBUG 1
 #ENV FLASK_ENV development
+ENV SCRIPT_NAME=/basher
 ENV FLASK_APP /usr/local/basher/snp_haplotyper/app.py
 ENV PYTHONPATH /usr/local/basher/snp_haplotyper
 ENV UPLOAD_FOLDER /var/local/basher/uploads
