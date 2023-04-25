@@ -9,6 +9,7 @@ import os
 import pdfkit
 import time
 import random
+import snp_haplotype
 from wtforms import FileField, SubmitField, MultipleFileField
 from werkzeug.utils import secure_filename
 import zipfile
@@ -35,11 +36,20 @@ app.config.from_object(__name__)
 Session(app)
 
 
-def call_basher(sample_sheet, snp_array_file):
-    args = Namespace(
+def call_excel_parser(sample_sheet, snp_array_file):
+    excel_parser_args = Namespace(
         input_spreadsheet=sample_sheet,
         snp_array_file=snp_array_file,
     )
+    # Get contents of parsed input sheet
+    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser.main(
+        excel_parser_args
+    )
+    return [basher_input_namespace, error_dictionary, input_ok_flag]
+
+
+def call_basher(basher_input_namespace):
+
     (
         mode_of_inheritance,
         sample_id,
@@ -49,7 +59,8 @@ def call_basher(sample_sheet, snp_array_file):
         embryo_count_data_df,
         html_string,
         pdf_string,
-    ) = excel_parser.main(args)
+    ) = snp_haplotype.main(basher_input_namespace)
+
     return sample_id, html_string, pdf_string
 
 
@@ -120,9 +131,12 @@ def form(basher_state="initial"):
             app.config["UPLOAD_FOLDER"], session["timestr"], input_file_basename
         )
 
-        sample_id, html_report, pdf_report = call_basher(
+        basher_input_namespace, error_dictionary, input_ok_flag = call_excel_parser(
             input_sheet_tmp_path, input_file_tmp_path
         )
+
+        sample_id, html_report, pdf_report = call_basher(basher_input_namespace)
+
         session["report_name"] = f'{sample_id}_{session["timestr"]}'
         session["report_path"] = os.path.join(
             app.config["UPLOAD_FOLDER"],

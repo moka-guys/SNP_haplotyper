@@ -2328,6 +2328,16 @@
             ]
         },
         {
+            "name": "migrate_templates",
+            "type": "python",
+            "purpose": [
+                "debug-in-terminal"
+            ],
+            "request": "launch",
+            "program": "snp_haplotyper/excel_templates/migrate_templates.py",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Remote Attach",
             "type": "python",
             "request": "attach",

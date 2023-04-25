@@ -40,6 +40,19 @@ parser.add_argument(
     default=None,  # Default value if no arguments are provided
 )
 
+parser.add_argument(
+    "--run_basher",
+    action="store_true",
+    help="If the flag is set then BASHer is automatically run with the parsed data",
+)
+parser.add_argument(
+    "--parse_excel_only",
+    dest="run_basher",
+    action="store_false",
+    help="If the flag is set then BASHer is not run, and the parsed data is returned",
+)
+parser.set_defaults(run_basher=True)
+
 
 def load_workbook_range(range_string, worksheet):
     """
@@ -430,15 +443,19 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
 
 
 def main(excel_parser_args):
-
-    if excel_parser_args.snp_array_file is None:
-        excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
+    # If the user has specified the run_basher flag, then parse the excel input and run snp_haplotyper
+    if excel_parser_args.run_basher:
+        if excel_parser_args.snp_array_file is None:
+            excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
+        else:
+            excel_import = parse_excel_input(
+                excel_parser_args.input_spreadsheet, excel_parser_args.snp_array_file
+            )
+        snp_haplotype.main(excel_import)
+    # If the user has not specified the run_basher flag, then just parse the excel input
     else:
-        excel_import = parse_excel_input(
-            excel_parser_args.input_spreadsheet, excel_parser_args.snp_array_file
-        )
-
-    return excel_import
+        excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
+        return excel_import
 
 
 if __name__ == "__main__":
