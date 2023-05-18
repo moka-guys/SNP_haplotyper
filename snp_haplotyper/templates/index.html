@@ -6,9 +6,11 @@
     <title>BASHer Web App</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
         integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
 
 </head>
 
@@ -20,6 +22,30 @@
 
     <div class="container">
 
+        {% if errors %}
+        <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading">Spreadsheet Errors:</h4>
+            <ul>
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if file_errors %}
+        <div class="alert alert-warning" role="alert">
+            <h4 class="alert-heading">File Errors:</h4>
+            <ul>
+                {% for field, errors in file_errors.items() %}
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
         {% if basher_state == "initial" %}
         <div class="alert alert-dark" role="alert">
             <h4 class="alert-heading">Welcome to BASHer</h4>
@@ -28,19 +54,19 @@
         </div>
         <div class="container">
             <h4>BASHer File Upload</h4>
-            <form action="{{ url_for('form') }}" method="post" enctype="multipart/form-data">
-                {{ form.csrf_token }}
+            <form action="{{ url_for('basher.form') }}" method="post" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
                 <div class="row">
                     <div class="col-sm-6 form-group">
-                        <label>Upload Sample Sheet:</label>
-                        <input type="file" name="sample_sheet" class="form-control-file">
+                        {{ form.sample_sheet.label }}<br>
+                        {{ form.sample_sheet(class="form-control-file") }}
                     </div>
                     <div class="col-sm-6 form-group">
-                        <label>Upload one or more SNP files:</label>
-                        <input type="file" name="snp_array_files" class="form-control-file" multiple>
+                        {{ form.snp_array_files.label }}<br>
+                        {{ form.snp_array_files(class="form-control-file", multiple=true) }}
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-lg btn-block" id="runBASHer">Run BASHer</button>
+                {{ form.submit(class="btn btn-primary btn-lg btn-block") }}
             </form>
         </div>
 
@@ -55,7 +81,7 @@
             <h4>The following BASHer Report can be downloaded to your computer using the button below:</h4>
             <p style="color:lime;">{{ report_name }}</p>
             <br>
-            <a class="btn btn-success" href="{{url_for('download')}}">Download</a>
+            <a class="btn btn-success" href="{{url_for('basher.download')}}">Download</a>
             <hr>
             <p class="mb-0">If you have any issues with this tool please raise a ticket with Genome Support.</p>
         </div>
@@ -67,7 +93,7 @@
         <h4 class="alert-heading">BASHer Analysis Completed!</h4>
         <p>The BASHer Report can be downloaded to your computer using the button below.</p>
         <br>
-        <a class="btn btn-success" href="{{url_for('download')}}">Download Report</a>
+        <a class="btn btn-success" href="{{url_for('basher.download')}}">Download Report</a>
         <hr>
         <p class="mb-0">If you have any issues with this tool please raise a ticket with Genome Support.</p>
     </div>
@@ -83,6 +109,38 @@
     </div>
     {%endif %}
     </div>
+
+    {% block scripts %}
+    <script>
+        console.log("Script is running");
+        function getFileExtension(filename) {
+            return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
+        }
+
+        function validateFileType(inputElement, allowedExtensions) {
+            const files = inputElement.files;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const extension = getFileExtension(file.name).toLowerCase();
+                if (!allowedExtensions.includes(extension)) {
+                    alert(`Invalid file type for '${file.name}'. Allowed types are: ${allowedExtensions.join(", ")}`);
+                    inputElement.value = "";
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        document.getElementById("sample_sheet").addEventListener("change", function () {
+            validateFileType(this, ["xlsm", "xlsx"]);
+        });
+
+        document.getElementById("snp_array_files").addEventListener("change", function () {
+            validateFileType(this, ["txt", "csv"]);
+        });
+    </script>
+    {% endblock %}
+
 
 
 </body>

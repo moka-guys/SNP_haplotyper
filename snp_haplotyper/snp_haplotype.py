@@ -1568,6 +1568,7 @@ def main(args):
     )
 
 
+# Code when running as a script
 if __name__ == "__main__":
     args = parser.parse_args()
     (

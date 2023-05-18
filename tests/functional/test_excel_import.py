@@ -8,6 +8,7 @@ import json
 from validate_output import validate_snp_results, validate_embryo_results
 
 from excel_parser import main as excel_parser_main
+from snp_haplotype import main as snp_haplotype_main
 from test_snp_filtering import setup_test_data
 
 
@@ -32,6 +33,7 @@ def setup_test_data_from_excel(split_by_embryo=False):
                     excel_file,
                 ),
                 snp_array_file=None,
+                run_basher=False,
             )
         elif split_by_embryo == True:
             for embryo_id in embryo_data[run_name].embryo_ids:
@@ -42,6 +44,7 @@ def setup_test_data_from_excel(split_by_embryo=False):
                         excel_file,
                     ),
                     snp_array_file=None,
+                    run_basher=False,
                 )
 
     return run_data_dict
@@ -49,7 +52,11 @@ def setup_test_data_from_excel(split_by_embryo=False):
 
 @pytest.mark.parametrize("name", setup_test_data_from_excel(False))
 def test_informative_snps_excel(name):
-    args = setup_test_data_from_excel()
+    test_args = setup_test_data_from_excel()
+    basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(
+        test_args[name]
+    )
+
     (
         mode_of_inheritance,
         sample_id,
@@ -59,7 +66,7 @@ def test_informative_snps_excel(name):
         embryo_count_data_df,
         html_string,
         pdf_string,
-    ) = excel_parser_main(args[name])
+    ) = snp_haplotype_main(basher_input_namespace)
 
     json_file_path = "test_data/informative_snp_validation.json"
 
@@ -81,8 +88,12 @@ def test_informative_snps_excel(name):
 
 @pytest.mark.parametrize("name", setup_test_data_from_excel(True))
 def test_embryo_categorization_excel(name):
-    args = setup_test_data_from_excel()
+    test_args = setup_test_data_from_excel()
     sample_id, embryo_id = name.rsplit("_", 1)
+    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(
+        test_args[sample_id]
+    )
+
     (
         mode_of_inheritance,
         sample_id,
@@ -92,7 +103,7 @@ def test_embryo_categorization_excel(name):
         embryo_count_data_df,
         html_string,
         pdf_string,
-    ) = excel_parser_main(args[sample_id])
+    ) = snp_haplotype_main(basher_input_namespace)
 
     json_file_path = "test_data/embryo_validation_data.json"
 

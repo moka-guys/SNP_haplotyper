@@ -8,6 +8,9 @@ services:
       dockerfile: Dockerfile.testing
     volumes:
       - .:/BASHer/snp_haplotyper
+      - /var/local/basher/logs/:/var/local/basher/logs/
+      - /var/local/basher/uploads/:/var/local/basher/uploads/
+
     ports:
       - 5000:5000
       - 5678:5678

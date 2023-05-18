@@ -1,9 +1,11 @@
 import argparse
+import collections
 import numpy as np
 import pandas as pd
 
 
 import logging
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +28,11 @@ parser.add_argument(
 )
 
 
-def read_csv_files(file_paths: list[str]) -> list[pd.DataFrame]:
-
+def read_csv_files(file_paths: List[str]) -> list[pd.DataFrame]:
     """Reads multiple SNP array CSV files into a list of dataframes.
 
     Args:
-        file_paths (list[str]): List of paths to SNP array CSV files.
+        file_paths (List[str]): List of paths to SNP array CSV files.
 
     Returns:
         list[pd.DataFrame]: List of dataframes containing SNP array data.
@@ -45,7 +46,6 @@ def read_csv_files(file_paths: list[str]) -> list[pd.DataFrame]:
 
 
 def check_input_dfs(dfs: list[pd.DataFrame]) -> None:
-
     """Check that the "Probeset ID" column is identical for each dataframe provided.
     To avoid merging samples form different SNP arrays.
     """
@@ -59,22 +59,22 @@ def check_input_dfs(dfs: list[pd.DataFrame]) -> None:
             "Probeset IDs are not identical for all input files. Check you have not mixed SNP arrays data."
         )
 
-    # Check that the only duplicated columns between dataframes are "Probeset ID", "Chr" and "Position"
-    # This is to check that duplicate files have not been provided.
-    column_names = []
-    for df in dfs:
-        # Get all the column names from each dataframe in the list
-        column_names = column_names + list(df.columns.values)
-
-    # Filter out the column names that are expected to be duplicated
-    column_names = list(filter(lambda a: a != "Probeset ID", column_names))
-    column_names = list(filter(lambda a: a != "Chr", column_names))
-    column_names = list(filter(lambda a: a != "Position", column_names))
+    column_names = [col_name for df in dfs for col_name in df.columns.values]
+    column_names = [
+        col_name
+        for col_name in column_names
+        if col_name
+        not in {
+            "Probeset ID",
+            "Chr",
+            "Position",
+        }  # Filter out the column names that are expected to be duplicated
+    ]
 
     # Check that there are no other duplicated columns
     if len(column_names) != len(set(column_names)):
         raise ValueError(
-            "Duplicate columns found in input files. Check you have not provided duplicate files."
+            f"Duplicate columns found in input files, {[item for item, count in collections.Counter(column_names).items() if count > 1]}. Check you have not provided duplicate files."
         )
 
 
@@ -95,15 +95,7 @@ def merge_array_files(dfs_to_merge: list[pd.DataFrame]) -> pd.DataFrame:
     for df in dfs_to_merge[1:]:
         result = pd.merge(
             result,
-            df.loc[
-                :,
-                ~df.columns.isin(
-                    [
-                        "Chr",
-                        "Position",
-                    ]
-                ),
-            ],  # Exclude "Position" and "Chr" columns to avoid duplicating columns in merged dataframe.
+            df.loc[:, ~df.columns.isin(["Chr", "Position"])],
             how="inner",
             on="Probeset ID",
             sort=False,
@@ -113,9 +105,9 @@ def merge_array_files(dfs_to_merge: list[pd.DataFrame]) -> pd.DataFrame:
     return result
 
 
-def write_merged_file(merged_df, merged_df_name: str) -> None:
-    """Writes merged SNP array file to disk.
-
+def write_merged_file(merged_df: pd.DataFrame, merged_df_name: str) -> None:
+    """
+    Writes merged SNP array file to disk.
     Args:
         merged_df (pd.DataFrame): Merged dataframe.
         merged_df_name (str): Merged dataframe name.
@@ -129,8 +121,7 @@ def write_merged_file(merged_df, merged_df_name: str) -> None:
     )
 
 
-# main function
-def main(input_files):
+def main(input_files: List[str]) -> pd.DataFrame:
     input_dfs = read_csv_files(input_files)
     merged_df = merge_array_files(input_dfs)
     return merged_df

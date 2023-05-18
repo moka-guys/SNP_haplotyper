@@ -7,5 +7,9 @@
     "python.envFile": "${workspaceFolder}/.env",
     "python.analysis.extraPaths": [
         "./snp_haplotyper"
-    ]
+    ],
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "python.formatting.provider": "none"
 }

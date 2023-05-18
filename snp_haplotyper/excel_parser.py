@@ -12,7 +12,32 @@ import sys
 import config as config
 import snp_haplotype
 
+
+# Custom error handler which saves errors to a dictionary for feedback to user
+class DictErrorHandler(logging.Handler):
+    def __init__(self, error_dict):
+        super().__init__()
+        self.error_dict = error_dict
+
+    def emit(self, record):
+        if record.levelno == logging.ERROR:
+            error_msg = self.format(record)
+            if error_msg not in self.error_dict:
+                self.error_dict[error_msg] = 0
+            self.error_dict[error_msg] += 1
+
+
+# Create an error dictionary
+error_dict_parser = {}
+
+# Initialize the custom error handler
+dict_error_handler = DictErrorHandler(error_dict_parser)
+
+# Configure the logger to use the custom handler
 logger = logging.getLogger("BASHer_logger")
+logger.setLevel(logging.ERROR)
+logger.addHandler(dict_error_handler)
+
 
 # Add the directory containing this script to the PYTHOPATH
 sys.path.append(os.path.dirname(__file__))
@@ -134,6 +159,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     )
 
     argument_dict = {}
+    error_dict_parser = {}
 
     # Get list of defined ranges from provided excel sheet
     defined_ranges = wb.defined_names
@@ -174,9 +200,9 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     # flanking_region_size = argument_dict["flanking_region_size"]
     flanking_region_size = "2mb"
     gene_symbol = argument_dict["gene"]
-    gene_end = argument_dict["gene_end"]
+    gene_end = int(argument_dict["gene_end"])
     gene_omim = argument_dict["gene_omim"]
-    gene_start = argument_dict["gene_start"]
+    gene_start = int(argument_dict["gene_start"])
     input_file = argument_dict["input_file"]
     maternal_mutation = argument_dict["maternal_mutation"]
     mode_of_inheritance = argument_dict["mode_of_inheritance"].lower()
@@ -200,26 +226,42 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     template_version = argument_dict["template_version"]
 
     embryo_data_df = argument_dict["embryo_data"]
-    embryo_data_df.columns = [
-        "biopsy_no",
-        "embryo_id",
-        "embryo_sex",
-        "embryo_column_name",
-    ]
 
-    # Ensure that "embryo_sex" is in lowercase
-    embryo_data_df["embryo_sex"] = embryo_data_df["embryo_sex"].str.lower()
+    column_names = ["biopsy_no", "embryo_id", "embryo_sex", "embryo_column_name"]
 
-    # Filter embryo data to only include embryos from the current biopsy
-    filtered_embryo_data_df = embryo_data_df[
-        embryo_data_df["biopsy_no"] == biopsy_number
-    ]
+    # Check that the embryo data sheet has the correct columns
+    if len(embryo_data_df.columns) == len(column_names):
+        embryo_data_df.columns = column_names
 
-    # Check if there are any embryos in the current biopsy
-    if filtered_embryo_data_df.empty:
-        trio_only = True
+        # Ensure that "embryo_sex" is in lowercase
+        if "embryo_sex" in embryo_data_df.columns:
+            embryo_data_df["embryo_sex"] = embryo_data_df["embryo_sex"].str.lower()
+        else:
+            logging.error('Key "embryo_sex" is missing from the DataFrame')
+
+        # If data has been passed in for the embryo data sheet, check that the selected biopsy number is in the sheet
+        if (
+            not embryo_data_df.empty
+            and biopsy_number not in embryo_data_df["biopsy_no"]
+        ):
+            logger.error(
+                f"Error: Biopsy number {biopsy_number} is not in the embryo data sheet."
+            )
+        # Filter embryo data to only include embryos from the current biopsy
+        filtered_embryo_data_df = embryo_data_df[
+            embryo_data_df["biopsy_no"] == biopsy_number
+        ]
+
+        # Check if there are any embryos in the current biopsy
+        if filtered_embryo_data_df.empty:
+            trio_only = True
+        else:
+            trio_only = False
+
     else:
-        trio_only = False
+        logger.error(
+            f"Warning: Expected {len(column_names)} columns, {column_names} but got {len(embryo_data_df.columns)} columns."
+        )
 
     (
         partner1_type,
@@ -381,13 +423,38 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     # Check whether a SNP array text file has been specified on the commandline, if they have then check
     # it against that provided in the template. If they are different, raise an error
     if snp_array_file is not None:
-        if os.path.basename(snp_array_file) != os.path.basename(
-            excel_import["input_file"]
-        ):
-            raise ValueError(
-                "The SNP array text file specified on the command line is different to that specified in the template"
+        # Get the base name of the snp_array_file
+        snp_array_file_basename = os.path.basename(snp_array_file)
+
+        # Get the list of input files from the excel_import
+        input_files = [file.strip() for file in excel_import["input_file"].split(",")]
+
+        # Remove the file extensions, sort the filenames, and concatenate the file names
+        merged_name = (
+            "_".join(
+                sorted(
+                    [
+                        os.path.splitext(os.path.basename(file_name))[0]
+                        for file_name in input_files
+                    ]
+                )
             )
+            + "_merged.txt"
+        )
+
+        # Check if the snp_array_file is a merged file
+        is_merged_file = snp_array_file_basename == merged_name
+
+        # Check if the snp_array_file is not one of the input files and it's not a merged file
+        if not is_merged_file and snp_array_file_basename not in [
+            os.path.basename(file_name) for file_name in input_files
+        ]:
+            logger.error(
+                f"The SNP array text file specified on the command line, {snp_array_file_basename} is different to that specified in the template, {input_files} which is converted to {merged_name}."
+            )
+
         input_filepath = snp_array_file
+
     else:
         # Check whether environment variable is set
         if "UPLOAD_FOLDER" in os.environ:
@@ -434,12 +501,18 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     )
 
     # Use check_inputs.py module to ensure the input data is valid
-    if check_input(args, input_filepath) == False:
+    error_dictionary, input_ok_flag = check_input(args, input_filepath)
+
+    if error_dict_parser != {}:
+        input_ok_flag = False
+        error_dictionary.update(error_dict_parser)
+
+    if input_ok_flag == False:
         logger.error("Input data is not valid, exiting - check log file for details")
-        sys.exit(1)
+        # sys.exit(1)
     else:
         logger.info("Input data from excel template has passed data validation checks")
-        return snp_haplotype.main(args)
+    return args, error_dictionary, input_ok_flag
 
 
 def main(excel_parser_args):

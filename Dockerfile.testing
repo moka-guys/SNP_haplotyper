@@ -11,6 +11,8 @@ ENV FLASK_DEBUG 1
 ENV FLASK_APP=/BASHer/snp_haplotyper/snp_haplotyper/app.py
 ENV PYTHONPATH=/BASHer/snp_haplotyper/snp_haplotyper
 ENV SESSION_FILE_DIR /var/local/basher/flask_sessions
+ENV SCRIPT_NAME=/basher
+ENV UPLOAD_FOLDER /var/local/basher/uploads
 ENV FLASK_DEBUG=1 
 # only for development
 
