@@ -138,7 +138,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         pgd_worksheet
         pgd_worksheet_denovo
         pru
-        reference  - range of cells containing refernce details:
+        reference  - range of cells containing reference details:
             reference_sex
             reference_forename
             reference_surname

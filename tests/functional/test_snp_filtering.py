@@ -55,7 +55,6 @@ def setup_test_data(split_by_embryo=False):
                 arg_dictionary[dict_key] = dict_values
 
         if "trio_only" in arg_dictionary:
-
             args = Namespace(
                 input_file=arg_dictionary["input_file"],
                 output_prefix=arg_dictionary["output_prefix"],
