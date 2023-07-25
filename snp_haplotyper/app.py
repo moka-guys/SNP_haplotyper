@@ -43,21 +43,39 @@ logger = logging.getLogger("BASHer_logger")
 logger.setLevel("DEBUG")
 
 
+# Create a new Flask web server instance
 app = Flask(__name__)
+
+# Define the folder where uploaded files will be stored. The folder location is retrieved from an environment variable
 app.config["UPLOAD_FOLDER"] = os.environ["UPLOAD_FOLDER"]
 app.config["SECRET_KEY"] = "catchmeifyoucan"
 app.config["SESSION_TYPE"] = "filesystem"
-app.config["SESSION_PERMANENT"] = True
-app.config["SESSION_FILE_DIR"] = os.environ["SESSION_FILE_DIR"]
-app.config["UPLOAD_EXTENSIONS"] = [".txt", ".csv", ".xlsm", ".xlsx"]
-app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # File has to be less than 2MB
-app.config["APPLICATION_ROOT"] = "/basher"
+app.config[
+    "SESSION_PERMANENT"
+] = True  # Set the session lifetime. If True, the session is permanent until the browser is closed.
+app.config["SESSION_FILE_DIR"] = os.environ[
+    "SESSION_FILE_DIR"
+]  # Define the directory where session files will be stored.
+app.config["UPLOAD_EXTENSIONS"] = [
+    ".txt",
+    ".csv",
+    ".xlsm",
+    ".xlsx",
+]  # List of acceptable upload file extensions
+app.config["MAX_CONTENT_LENGTH"] = (
+    2 * 1024 * 1024
+)  # Set the maximum size of uploaded files to 2MB
+app.config["APPLICATION_ROOT"] = "/basher"  # Set the root URL of the application
 app.config["WTF_CSRF_ENABLED"] = True
 
 app.config.from_object(__name__)
+
+# Create a Blueprint object named "basher" that represents the "basher" component of the application. The URL prefix "/basher" is added to all routes defined in this blueprint.
 basher_bp = Blueprint("basher", __name__, url_prefix="/basher")
 Session(app)
-CORS(app, supports_credentials=True)
+CORS(
+    app, supports_credentials=True
+)  # Enable handling of cross-origin requests - required to run react components
 
 
 class BasherForm(FlaskForm):
@@ -210,6 +228,21 @@ class ChangeForm(FlaskForm):
 @basher_bp.route("/", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
 def form(basher_state="initial"):
+    """
+    This function handles both GET and POST requests to the root ("/basher") of the "basher" blueprint.
+
+    For GET requests, it just returns the main page with an empty form.
+
+    For POST requests, which are initiated by the button in the HTML form, it processes the uploaded files, performs validation,
+    initiates the required logging, manages the session state, calls other functions to parse Excel data and execute 'basher'
+    operations, and finally renders the updated page, either with the result of the operation or with the validation errors.
+
+    Parameters:
+    basher_state (str): The initial state of the basher process. Defaults to "initial".
+
+    Returns:
+    A rendered template of the main page, including the form, the basher state, and any file errors.
+    """
     SampleSheetUp = SampleSheetUpload()  # File Upload class - detailed below.
     SnpArrayUp = SnpArrayUpload()  # File Upload class - detailed below.
     chgForm = ChangeForm()
@@ -395,6 +428,15 @@ class SnpArrayUpload:
 @basher_bp.route("/download", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
 def download():
+    """
+    This function handles both GET and POST requests to the "/download" route of the "basher" blueprint.
+
+    Initiated by a button click in the HTML, it creates a zip file containing the HTML and PDF reports stored in the session.
+    The function then removes the original HTML and PDF reports and sends the zip file to the client as a file download.
+
+    Returns:
+    A file download response containing the zip file with the HTML and PDF reports.
+    """
     html_file_name = f'{session["report_name"]}.html'
     pdf_file_name = f'{session["report_name"]}.pdf'
 

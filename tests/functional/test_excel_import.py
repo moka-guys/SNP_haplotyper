@@ -14,6 +14,24 @@ import re
 
 
 def setup_test_data_from_excel(split_by_embryo=False, version=1):
+    """
+    Creates a dictionary of test data sets based on provided Excel files in specified directories.
+    The dictionary keys are run names, and the values are file paths for each run, stored as Namespace objects.
+
+    If 'split_by_embryo' is set to True, the function will split the data sets based on embryo ids from each run.
+
+    The 'version' parameter determines the folder from which the Excel files are retrieved. Currently supports version 1 and 2.
+
+    Parameters:
+    split_by_embryo (bool, optional): A flag to determine whether to split the data sets by embryo id or not. Defaults to False.
+    version (int, optional): Specifies the version of test data templates to be used. Defaults to 1.
+
+    Raises:
+    ValueError: If an unsupported version number is provided.
+
+    Returns:
+    dict: A dictionary containing the setup test data. Keys are the run names and values are Namespace objects containing the input spreadsheet file path and optional snp_array_file and run_basher values.
+    """
     # We need to get the embryo_ids for each sample from the launch JSON so we can auto generate
     # the test names for each embryo without prereading the excel files
     embryo_data = setup_test_data(False)
@@ -61,6 +79,20 @@ def setup_test_data_from_excel(split_by_embryo=False, version=1):
 
 @pytest.mark.parametrize("name", setup_test_data_from_excel(False, version=1))
 def test_informative_snps_excel_v1(name):
+    """
+    Tests whether the Single Nucleotide Polymorphisms (SNPs) extracted from the provided excel files
+    (version 1) are as expected by comparing them with the validation data.
+
+    The function parameters are parametrized using pytest's mark.parametrize decorator. For each test case,
+    the function parses the excel file, processes the SNPs, and compares them with the expected output stored in a JSON file.
+    If the SNPs extracted do not match the expected SNPs, the test will fail.
+
+    Parameters:
+    name (str): The name of the test case. This name is used to fetch the corresponding excel file for testing.
+
+    Raises:
+    AssertionError: If the actual output does not match the expected output.
+    """
     test_args = setup_test_data_from_excel()
     basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(
         test_args[name]
@@ -97,6 +129,20 @@ def test_informative_snps_excel_v1(name):
 
 @pytest.mark.parametrize("name", setup_test_data_from_excel(False, version=2))
 def test_informative_snps_excel_v2(name):
+    """
+    Tests whether the Single Nucleotide Polymorphisms (SNPs) extracted from the provided excel files
+    (version 2) are as expected by comparing them with the validation data.
+
+    The function parameters are parametrized using pytest's mark.parametrize decorator. For each test case,
+    the function parses the excel file, processes the SNPs, and compares them with the expected output stored in a JSON file.
+    If the SNPs extracted do not match the expected SNPs, the test will fail.
+
+    Parameters:
+    name (str): The name of the test case. This name is used to fetch the corresponding excel file for testing.
+
+    Raises:
+    AssertionError: If the actual output does not match the expected output.
+    """
     test_args = setup_test_data_from_excel()
     basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(
         test_args[name]
@@ -133,6 +179,21 @@ def test_informative_snps_excel_v2(name):
 
 @pytest.mark.parametrize("name", setup_test_data_from_excel(True, version=1))
 def test_embryo_categorization_excel_v1(name):
+    """
+    Tests the categorization of embryos based on the Single Nucleotide Polymorphisms (SNPs)
+    data provided in the excel files (version 1).
+
+    The function parameters are parametrized using pytest's mark.parametrize decorator. For each
+    test case, the function parses the excel file, processes the SNPs, and then compares the
+    embryo categorization results with the expected results stored in a JSON file.
+
+    Parameters:
+    name (str): The name of the test case. The name is used to fetch the corresponding excel file for testing
+    and includes the sample_id and embryo_id.
+
+    Raises:
+    AssertionError: If the actual output does not match the expected output.
+    """
     test_args = setup_test_data_from_excel()
     sample_id, embryo_id = name.rsplit("_", 1)
     (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(
@@ -169,6 +230,21 @@ def test_embryo_categorization_excel_v1(name):
 
 @pytest.mark.parametrize("name", setup_test_data_from_excel(True, version=2))
 def test_embryo_categorization_excel_v2(name):
+    """
+    Tests the categorization of embryos based on the Single Nucleotide Polymorphisms (SNPs)
+    data provided in the excel files (version 2).
+
+    The function parameters are parametrized using pytest's mark.parametrize decorator. For each
+    test case, the function parses the excel file, processes the SNPs, and then compares the
+    embryo categorization results with the expected results stored in a JSON file.
+
+    Parameters:
+    name (str): The name of the test case. The name is used to fetch the corresponding excel file for testing
+    and includes the sample_id and embryo_id.
+
+    Raises:
+    AssertionError: If the actual output does not match the expected output.
+    """
     test_args = setup_test_data_from_excel()
     sample_id, embryo_id = name.rsplit("_", 1)
     (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(

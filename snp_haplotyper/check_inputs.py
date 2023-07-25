@@ -16,6 +16,9 @@ class DictErrorHandler(logging.Handler):
             self.error_dict[error_msg] += 1
 
 
+# TODO I originally had this script called using os - I now have it imported as a module  - so this code is not used to set the error_dict which is now done in app.py
+# I'll keep this code for present as I need to check what the commandline version uses.  Remove as appropriate.
+
 # Create an error dictionary
 error_dict = {}
 

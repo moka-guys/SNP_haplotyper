@@ -260,7 +260,6 @@ def header_to_dict(header_str):
 
 
 def add_rsid_column(df, affy_2_rs_ids_df):
-
     """Provides dbsnp rsIDs
     New column created in the dataframe, df, matching the probes_set IDs to dbSNP rsIDs.
     Args:
@@ -1204,7 +1203,6 @@ def dict2html(header_dictionary):
 
 
 def main(args):
-
     # Check config.py file to see which paramters are currently supported.
     # Typically this is used when the script has been validated for some modes of inheritance
     # and we want to ensure that the script is not run for other, unvalidated, modes of inheritance.
@@ -1296,7 +1294,9 @@ def main(args):
     )
 
     # Add column describing how far the SNP is from the gene of interest
-    df = annotate_distance_from_gene(df, args.chr, int(args.gene_start), args.gene_end)
+    df = annotate_distance_from_gene(
+        df, args.chr, int(args.gene_start), int(args.gene_end)
+    )
 
     # Add column of dbSNP rsIDs
     df = add_rsid_column(df, affy_2_rs_ids_df)
@@ -1357,7 +1357,6 @@ def main(args):
 
     # Do not calculate embryo results for pre-cases and trio_only analysis is required
     if args.trio_only == False:
-
         # Categorise embryo alleles
         embryo_category_df = categorise_embryo_alleles(
             results_df,
@@ -1438,7 +1437,6 @@ def main(args):
     if (
         args.trio_only == False
     ):  # If only a trio is being run do not produce tables/plots for embryos
-
         summary_embryo_table = produce_html_table(
             summary_embryo_df,
             "summary_embryo_table",
