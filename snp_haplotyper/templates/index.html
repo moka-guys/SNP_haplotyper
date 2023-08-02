@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>BASHer Web App</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>BASHer Web App</h1>
+    </div>
+
+    <div class="container">
+
+        {% if errors %}
+        <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading">Spreadsheet Errors:</h4>
+            <ul>
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if file_errors %}
+        <div class="alert alert-warning" role="alert">
+            <h4 class="alert-heading">File Errors:</h4>
+            <ul>
+                {% for field, errors in file_errors.items() %}
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if basher_state == "initial" %}
+        <div class="alert alert-dark" role="alert">
+            <h4 class="alert-heading">Welcome to BASHer</h4>
+            <p>Please select the sample sheet for your analysis and the related SNP array output files below, then click
+                the "Run BASHer" button.</p>
+        </div>
+        <div class="container">
+            <h4>BASHer File Upload</h4>
+            <form action="{{ url_for('basher.form') }}" method="post" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-sm-6 form-group">
+                        {{ form.sample_sheet.label }}<br>
+                        {{ form.sample_sheet(class="form-control-file") }}
+                    </div>
+                    <div class="col-sm-6 form-group">
+                        {{ form.snp_array_files.label }}<br>
+                        {{ form.snp_array_files(class="form-control-file", multiple=true) }}
+                    </div>
+                </div>
+                {{ form.submit(class="btn btn-primary btn-lg btn-block") }}
+            </form>
+        </div>
+
+        {%elif basher_state == "started" %}
+        <div class="alert alert-success" role="alert">
+            <h4 class="alert-heading">BASHer Analysis Complete</h4>
+            <p>You submitted the Sample Sheet: {{ sample_sheet_name }}</p>
+            <p style="color:lime;">{{ sample_sheet_name }}</p>
+            <p>You submitted the following SNP array files:</p>
+            <p style="color:lime;">{{ snp_array_file_names }}</p>
+            <hr>
+            <h4>The following BASHer Report can be downloaded to your computer using the button below:</h4>
+            <p style="color:lime;">{{ report_name }}</p>
+            <br>
+            <a class="btn btn-success" href="{{url_for('basher.download')}}">Download</a>
+            <hr>
+            <p class="mb-0">If you have any issues with this tool please raise a ticket with Genome Support.</p>
+        </div>
+    </div>
+
+    {%elif basher_state == "finished" %}
+
+    <div class="alert alert-success" role="alert">
+        <h4 class="alert-heading">BASHer Analysis Completed!</h4>
+        <p>The BASHer Report can be downloaded to your computer using the button below.</p>
+        <br>
+        <a class="btn btn-success" href="{{url_for('basher.download')}}">Download Report</a>
+        <hr>
+        <p class="mb-0">If you have any issues with this tool please raise a ticket with Genome Support.</p>
+    </div>
+
+    {%elif basher_state == "failed" %}
+
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">WARNING!</h4>
+        <p>BASHer has failed with the following error:</p>
+        <hr>
+        <p class="mb-0"> ERROR: <br> If you require any help please raise a ticket with Genome Support.
+        </p>
+    </div>
+    {%endif %}
+    </div>
+
+    {% block scripts %}
+    <script>
+        console.log("Script is running");
+        function getFileExtension(filename) {
+            return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
+        }
+
+        function validateFileType(inputElement, allowedExtensions) {
+            const files = inputElement.files;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const extension = getFileExtension(file.name).toLowerCase();
+                if (!allowedExtensions.includes(extension)) {
+                    alert(`Invalid file type for '${file.name}'. Allowed types are: ${allowedExtensions.join(", ")}`);
+                    inputElement.value = "";
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        document.getElementById("sample_sheet").addEventListener("change", function () {
+            validateFileType(this, ["xlsm", "xlsx"]);
+        });
+
+        document.getElementById("snp_array_files").addEventListener("change", function () {
+            validateFileType(this, ["txt", "csv"]);
+        });
+    </script>
+    {% endblock %}
+
+
+
+</body>

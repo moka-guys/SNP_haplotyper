@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 from exceptions import ArgumentInputError
 
+import logging
+
+logger = logging.getLogger("BASHer_logger")
+
 
 def autosomal_recessive_analysis(
     df,
@@ -36,10 +40,10 @@ def autosomal_recessive_analysis(
         "high_risk", "low_risk", and "uninformative", and a "snp_inherited_from" column indicating which
         partner the risk is inherited
     """
-    # Cosanguineous samples should always have an affected reference
-    if consanguineous and reference_status == "unaffected":
+    # Consanguineous samples should always have an affected reference
+    if consanguineous == True and reference_status == "unaffected":
         raise ArgumentInputError(
-            "Unexpected Input: unaffected reference status should not be used if Cosanguineous = true, check input parameters"
+            f"Unexpected Input: {reference} {consanguineous} unaffected reference status should not be used if Consanguineous = true, check input parameters"
         )
 
     if reference_status == "affected" or reference_status == "unaffected":
@@ -135,5 +139,7 @@ def autosomal_recessive_analysis(
         df["snp_inherited_from"] = np.select(
             conditions, snp_inherited_from, default="uninformative"
         )
-
+    logger.info(
+        f"Completed characterising the SNPs using the Autosomal Recessive logic"
+    )
     return df

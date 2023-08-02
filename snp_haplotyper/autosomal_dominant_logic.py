@@ -3,6 +3,10 @@ import pandas as pd
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
+import logging
+
+logger = logging.getLogger("BASHer_logger")
+
 
 def autosomal_dominant_analysis(
     df,
@@ -118,5 +122,5 @@ def autosomal_dominant_analysis(
                 "high_risk",  # Criteria_AD8, Option_AD16
             ]
         df["snp_risk_category"] = np.select(conditions, values, default="uninformative")
-
+    logger.info(f"Completed characterising the SNPs using the Autosomal Dominant logic")
     return df
