@@ -267,6 +267,8 @@ def form(basher_state="initial"):
         # Don't forget to add the file handler
         logger.addHandler(file_handler)
 
+        # Saved with the session details to avoid duplicate files from other users/sessions
+        # temporary files are saved so that they can be passed to the backend.
         sample_sheet = chgForm.sample_sheet.data
         input_sheet = SampleSheetUp.upload(sample_sheet)
         chgDetail["sample_sheet"] = input_sheet
@@ -300,7 +302,7 @@ def form(basher_state="initial"):
             input_file = input_files[0]
 
         chgDetail["snp_array_files"] = input_file
-        basher_state = "started"
+        basher_state = "started" # This doesn't refer to the backend starting, rather that the data has been submit and controls the flow in the html
 
         # Get the file names of the uploaded files
         input_sheet_basename = os.path.basename(input_sheet)

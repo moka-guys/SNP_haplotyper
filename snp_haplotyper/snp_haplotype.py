@@ -218,7 +218,7 @@ parser.add_argument(
     "--flanking_region_size",
     type=str,
     nargs="?",
-    choices=["2mb", "3mb"],
+    choices=["2mb", "3mb", "4mb", "5mb", "6mb", "7mb", "8mb", "9mb", "10mb"],
     const="2mb",
     help="Size of the flanking region either side of the gene",
 )
@@ -244,7 +244,7 @@ parser.add_argument(
 #     parser.exit()
 
 
-def header_to_dict(header_str):
+def header_to_dict(header_str):  # TODO keep this function
     """
     Converts a string of header_info into a dictionary
     Args:
@@ -259,7 +259,7 @@ def header_to_dict(header_str):
         return d
 
 
-def add_rsid_column(df, affy_2_rs_ids_df):
+def add_rsid_column(df, affy_2_rs_ids_df):  # TODO remove this function
     """Provides dbsnp rsIDs
     New column created in the dataframe, df, matching the probes_set IDs to dbSNP rsIDs.
     Args:
@@ -296,7 +296,9 @@ def export_json_data_as_csv(input_json, output_csv):
 
 
 # filter dataframe on region of interest
-def filter_dataframe(df, gene_start, gene_end, flanking_region_size):
+def filter_dataframe(
+    df, gene_start, gene_end, flanking_region_size
+):  # TODO remove this function
     """
     Filters a dataframe to only include rows where the SNP is within the region of interest.
     Args:
@@ -318,7 +320,7 @@ def filter_dataframe(df, gene_start, gene_end, flanking_region_size):
     return df
 
 
-def annotate_distance_from_gene(df, chr, start, end):
+def annotate_distance_from_gene(df, chr, start, end):  # TODO remove this function
     """Annotates the probeset based on the provided genomic co-ordinates
     New column created, "gene_distance", in the dataframe, df, annotating the region the SNP is in. SNPs allocated to "within_gene", "0-1MB_from_start", "1-2MB_from_start", "0-1MB_from_end", and "1-2MB_from_end",
     Args:
@@ -840,7 +842,9 @@ def categorise_embryo_alleles(
         dataframe: Dataframe with new column for each embryo annotate with a risk_category.
     """
 
-    embryo_sex_lookup = dict(zip(embryo_ids, embryo_sex))
+    embryo_sex_lookup = dict(
+        zip(embryo_ids, embryo_sex)
+    )  # TODO This has been moved to the class initialization
 
     # Initiate dataframe for results
     embryo_category_df = df[
@@ -1288,20 +1292,20 @@ def main(args):
             unaffected_partner = args.male_partner
             unaffected_partner_sex = "male_partner"
 
-    # Filter out any rows not in the region of interest
+    # Filter out any rows not in the region of interest #TODO Now marked in imported data
     df = filter_dataframe(
         df, int(args.gene_start), int(args.gene_end), args.flanking_region_size
     )
 
-    # Add column describing how far the SNP is from the gene of interest
+    # Add column describing how far the SNP is from the gene of interest #TODO Now done in object
     df = annotate_distance_from_gene(
         df, args.chr, int(args.gene_start), int(args.gene_end)
     )
 
-    # Add column of dbSNP rsIDs
+    # Add column of dbSNP rsIDs  #TODO Now done in object
     df = add_rsid_column(df, affy_2_rs_ids_df)
 
-    # Calculate qc metrics before filtering out Nocalls TODO: remove dependency on embryo.ids
+    # Calculate qc metrics before filtering out Nocalls #TODO Now marked in imported data
     if args.trio_only == True:
         qc_df = calculate_qc_metrics(
             df, args.male_partner, args.female_partner, args.reference, None
@@ -1313,7 +1317,9 @@ def main(args):
 
     # Calculate NoCall percentages
 
-    nocall_percentages = calculate_nocall_percentages(qc_df)
+    nocall_percentages = calculate_nocall_percentages(
+        qc_df
+    )  # TODO Now done in QC calculation
 
     # Filter out any rows where the partners or reference have a NoCall as these cannot be used in the analysis
     filtered_df = filter_out_nocalls(

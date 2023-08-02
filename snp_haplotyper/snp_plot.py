@@ -48,7 +48,6 @@ def plot_results(
 
     # preprocess dataframe for input to plotting function
     for embryo in embryo_ids:
-
         fig = px.scatter(
             df,
             x="Position",
@@ -166,8 +165,14 @@ def plot_results(
         # Set reasonable axis size
         fig.update_xaxes(
             range=[
-                gene_start - (flanking_region_size + 100000),
-                gene_end + (flanking_region_size + 100000),
+                gene_start
+                - (
+                    flanking_region_size + 100000
+                ),  # nicely place the annotation text within the plot
+                gene_end
+                + (
+                    flanking_region_size + 100000
+                ),  # nicely place the annotation text within the plot
             ],
             exponentformat="none",
         )
@@ -190,9 +195,15 @@ def plot_results(
                 go.Scatter(
                     name=annotation_name_high_risk,
                     x=[
-                        gene_start - (flanking_region_size - 100000),
+                        gene_start
+                        - (
+                            flanking_region_size - 100000
+                        ),  # nicely place the annotation text within the plot
                         (gene_start + gene_end) / 2,
-                        gene_end + (flanking_region_size - 100000),
+                        gene_end
+                        + (
+                            flanking_region_size - 100000
+                        ),  # nicely place the annotation text within the plot
                     ],
                     y=[
                         3,
@@ -216,9 +227,15 @@ def plot_results(
                 go.Scatter(
                     name=annotation_name_low_risk,
                     x=[
-                        gene_start - (flanking_region_size - 100000),
+                        gene_start
+                        - (
+                            flanking_region_size - 100000
+                        ),  # nicely place the annotation text within the plot
                         (gene_start + gene_end) / 2,
-                        gene_end + (flanking_region_size - 100000),
+                        gene_end
+                        + (
+                            flanking_region_size - 100000
+                        ),  # nicely place the annotation text within the plot
                     ],
                     y=[-3, -3, -3],
                     mode="text",
