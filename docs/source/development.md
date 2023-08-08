@@ -134,3 +134,25 @@ To view the output open index.html in the build folder.
 ## Release Process
 
 TODO
+
+### Update crontab
+
+The shell script `restart_server.sh` can be added as an automated cron job to periodically check that the service is running and, if not, restart it.  This ensures the maximum uptime for BASHer with minimal manual input.
+
+Make sure to grant execute permissions to the script:
+
+```bash
+chmod +x /path/to/restart_server.sh
+```
+
+Then, you can schedule it with a cron job by editing your crontab:
+
+```bash
+crontab -e
+```
+
+Add a line like this to run the script every 15 minutes (adjust the timing as needed):
+
+```
+*/15 * * * * /path/to/restart_server.sh
+```
