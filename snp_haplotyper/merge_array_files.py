@@ -1,11 +1,10 @@
 import argparse
 import collections
-import numpy as np
-import pandas as pd
-
-
 import logging
 from typing import List
+
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 

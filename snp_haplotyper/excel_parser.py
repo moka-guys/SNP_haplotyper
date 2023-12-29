@@ -1,16 +1,25 @@
 import argparse
-from check_inputs import check_input
-from openpyxl import load_workbook
-from openpyxl.utils import get_column_interval
-import pandas as pd
-from pathlib import Path
-import re
 import logging
 import os
+import re
 import subprocess
 import sys
+from pathlib import Path
+
 import config as config
+import pandas as pd
 import snp_haplotype
+from check_inputs import check_input
+from EnumDataClasses import (
+    Chromosome,
+    FlankingRegions,
+    InheritanceMode,
+    Relationship,
+    Sex,
+    Status,
+)
+from openpyxl import load_workbook
+from openpyxl.utils import get_column_interval
 
 
 # Custom error handler which saves errors to a dictionary for feedback to user
@@ -190,7 +199,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
             argument_dict[input_name] = cell_value
 
     biopsy_number = argument_dict["biopsy_number"]
-    chr = argument_dict["chromosome"]
+    chr = Chromosome["CHR_" + str(argument_dict["chromosome"]).upper()]
     consanguineous = argument_dict["consanguineous"]
     de_novo = argument_dict["de_novo"]
     disease = argument_dict["disease"]
@@ -198,14 +207,14 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     exclusion = argument_dict["exclusion"]
     female_partner_hosp_num = argument_dict["female_partner_hosp_num"]
     # flanking_region_size = argument_dict["flanking_region_size"]
-    flanking_region_size = "2mb"
+    flanking_region_size = FlankingRegions.FLANK_2MB
     gene_symbol = argument_dict["gene"]
     gene_end = int(argument_dict["gene_end"])
     gene_omim = argument_dict["gene_omim"]
     gene_start = int(argument_dict["gene_start"])
     input_file = argument_dict["input_file"]
     maternal_mutation = argument_dict["maternal_mutation"]
-    mode_of_inheritance = argument_dict["mode_of_inheritance"].lower()
+    mode_of_inheritance = InheritanceMode(argument_dict["mode_of_inheritance"].lower())
     multi_analysis = argument_dict["multi_analysis"]
     paste_gene = argument_dict[
         "paste_gene"
@@ -222,10 +231,19 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         else argument_dict["ref_relationship_to_couple"].lower()
     )
     ref_seq = argument_dict["ref_seq"]
-    ref_status = argument_dict["ref_status"].lower()
+    ref_status_str = argument_dict["ref_status"].lower()
+
+    # Convert the status string to Status enum
+    try:
+        ref_status = Status(ref_status_str)
+    except ValueError:
+        print(f"Invalid status: {ref_status_str}")
+
     template_version = argument_dict["template_version"]
 
     embryo_data_df = argument_dict["embryo_data"]
+    # Ensure all values are strings
+    embryo_data_df = embryo_data_df.astype(str)
 
     column_names = ["biopsy_no", "embryo_id", "embryo_sex", "embryo_column_name"]
 
@@ -242,7 +260,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         # If data has been passed in for the embryo data sheet, check that the selected biopsy number is in the sheet
         if (
             not embryo_data_df.empty
-            and biopsy_number not in embryo_data_df["biopsy_no"]
+            and biopsy_number not in embryo_data_df["biopsy_no"].to_list()
         ):
             logger.error(
                 f"Error: Biopsy number {biopsy_number} is not in the embryo data sheet."
@@ -265,7 +283,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
 
     (
         partner1_type,
-        partner1_sex,
+        partner1_sex_str,
         partner1_forename,
         partner1_surname,
         partner1_dob,
@@ -273,9 +291,15 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         partner1_column_name,
     ) = argument_dict["partner1_details"].values.tolist()[0]
 
+    # Convert the sex string to Sex enum
+    try:
+        partner1_sex = Sex(partner1_sex_str.lower())
+    except ValueError:
+        print(f"Invalid sex: {partner1_sex_str}")
+
     (
         partner2_type,
-        partner2_sex,
+        partner2_sex_str,
         partner2_forename,
         partner2_surname,
         partner2_dob,
@@ -283,8 +307,14 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         partner2_column_name,
     ) = argument_dict["partner2_details"].values.tolist()[0]
 
+    # Convert the sex string to Sex enum
+    try:
+        partner2_sex = Sex(partner2_sex_str.lower())
+    except ValueError:
+        print(f"Invalid sex: {partner2_sex_str}")
+
     (
-        reference_sex,
+        reference_sex_str,
         reference_forename,
         reference_surname,
         reference_dob,
@@ -292,19 +322,24 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         reference_column_name,
     ) = argument_dict["reference"].values.tolist()[0]
 
-    # Clean imported data
-    partner1_sex = partner1_sex.lower()
-    partner2_sex = partner2_sex.lower()
+    # Check if reference_sex_str is not None
+    if reference_sex_str is None:
+        reference_sex = Sex("unknown")
+    else:
+        try:
+            reference_sex = Sex(reference_sex_str.lower())
+        except ValueError:
+            print(f"Invalid sex: {reference_sex_str}")
 
-    if partner1_sex == "male" and partner2_sex == "female":
-        male_partner_status = partner1_type.lower()
+    if partner1_sex == Sex.MALE and partner2_sex == Sex.FEMALE:
+        male_partner_status = Status(partner1_type.split("_")[0])
         male_partner_col = partner1_column_name
-        female_partner_status = partner2_type.lower()
+        female_partner_status = Status(partner2_type.split("_")[0])
         female_partner_col = partner2_column_name
-    elif partner1_sex == "female" and partner2_sex == "male":
-        male_partner_status = partner2_type.lower()
+    elif partner1_sex == Sex.FEMALE and partner2_sex == Sex.MALE:
+        male_partner_status = Status(partner2_type.split("_")[0])
         male_partner_col = partner2_column_name
-        female_partner_status = partner1_type.lower()
+        female_partner_status = Status(partner1_type.split("_")[0])
         female_partner_col = partner1_column_name
 
     # TODO rationalise output prefix - input_file or input_spreadsheet - move cleanup of names into test function?
@@ -315,31 +350,31 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         .replace("excel_test_X_linked_", "")
     )
 
-    if mode_of_inheritance == "autosomal_dominant":
-        female_partner_status = female_partner_status.split("_")[0]
-        male_partner_status = male_partner_status.split("_")[0]
-    elif mode_of_inheritance == "autosomal_recessive":
-        female_partner_status = (
-            "carrier"
-            if female_partner_status == "carrier_partner"
-            else female_partner_status
-        )
-        male_partner_status = (
-            "carrier"
-            if male_partner_status == "carrier_partner"
-            else male_partner_status
-        )
-    elif mode_of_inheritance == "x_linked":
-        female_partner_status = (
-            "carrier"
-            if female_partner_status == "carrier_female_partner"
-            else female_partner_status
-        )
-        male_partner_status = (
-            "unaffected"
-            if male_partner_status == "unaffected_male_partner"
-            else male_partner_status
-        )
+    # if mode_of_inheritance == InheritanceMode.AUTOSOMAL_DOMINANT:
+    #     female_partner_status = female_partner_status
+    #     male_partner_status = convert_to_status_enum(male_partner_status.split("_")[0])
+    # elif mode_of_inheritance == InheritanceMode.AUTOSOMAL_RECESSIVE:
+    #     female_partner_status = (
+    #         convert_to_status_enum("carrier")
+    #         if female_partner_status == "carrier_partner"
+    #         else female_partner_status
+    #     )
+    #     male_partner_status = (
+    #         convert_to_status_enum("carrier")
+    #         if male_partner_status == "carrier_partner"
+    #         else male_partner_status
+    #     )
+    # elif mode_of_inheritance == InheritanceMode.X_LINKED:
+    #     female_partner_status = (
+    #         convert_to_status_enum("carrier")
+    #         if female_partner_status == "carrier_female_partner"
+    #         else female_partner_status
+    #     )
+    #     male_partner_status = (
+    #         convert_to_status_enum("unaffected")
+    #         if male_partner_status == "unaffected_male_partner"
+    #         else male_partner_status
+    #     )
 
     lookup_dict = {
         "son": "child",
@@ -348,6 +383,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         "embryo": "child",
         "mother": "grandparent",
         "father": "grandparent",
+        "child": "child",
     }
     if ref_relationship.lower() in [
         "son",
@@ -356,8 +392,9 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         "embryo",
         "mother",
         "father",
+        "child",
     ]:
-        ref_relationship = lookup_dict[ref_relationship.lower()]
+        ref_relationship = Relationship(lookup_dict[ref_relationship.lower()])
 
     # Export data as dictionary to be used in other functions & testing
     excel_import = {}
@@ -372,7 +409,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     excel_import["exclusion"] = exclusion
     excel_import["female_partner_hosp_num"] = female_partner_hosp_num
     # excel_import["flanking_region_size"] = flanking_region_size
-    excel_import["flanking_region_size"] = "2mb"
+    excel_import["flanking_region_size"] = FlankingRegions.FLANK_2MB
     excel_import["gene"] = gene_symbol
     excel_import["gene_end"] = gene_end
     excel_import["gene_omim"] = gene_omim
@@ -404,6 +441,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     excel_import["pgd_worksheet"] = pgd_worksheet
     excel_import["pgd_worksheet_denovo"] = pgd_worksheet_denovo
     excel_import["pru"] = pru
+    excel_import["reference"] = reference
     excel_import["reference_sex"] = reference_sex
     excel_import["reference_forename"] = reference_forename
     excel_import["reference_surname"] = reference_surname
@@ -479,6 +517,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     args.female_partner_status = female_partner_status
     args.reference = reference_column_name
     args.reference_status = ref_status
+    args.reference_sex = reference_sex
     args.reference_relationship = ref_relationship
     args.gene_symbol = gene_symbol
     args.gene_start = gene_start

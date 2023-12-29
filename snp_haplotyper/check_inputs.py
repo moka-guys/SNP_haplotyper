@@ -63,8 +63,8 @@ def check_input(input_namespace, input_file):
         input_ok_flag = False
 
     if input_namespace.chr not in [
-        "x",
-        "y",
+        "X",
+        "Y",
         "1",
         "2",
         "3",
@@ -111,7 +111,7 @@ def check_input(input_namespace, input_file):
         input_ok_flag = False
 
     # Check if flanking_region_size is "2mb" or "3mb"
-    if input_namespace.flanking_region_size not in ["2mb", "3mb"]:
+    if input_namespace.flanking_region_size.value not in [2, 3]:
         logger.error("Invalid flanking_region_size: must be either '2mb' or '3mb'.")
         input_ok_flag = False
 
@@ -133,21 +133,21 @@ def check_input(input_namespace, input_file):
         )
         input_ok_flag = False
 
-    # Check if ref_relationship is a non-empty string
-    if (
-        not input_namespace.reference_relationship
-        or input_namespace.reference_relationship.strip() == ""
-    ):
-        logger.error("Invalid reference_relationship: must be a non-empty string.")
-        input_ok_flag = False
+    # # Check if ref_relationship is a non-empty string
+    # if (
+    #     not input_namespace.reference_relationship
+    #     or input_namespace.reference_relationship.strip() == ""
+    # ):
+    #     logger.error("Invalid reference_relationship: must be a non-empty string.")
+    #     input_ok_flag = False
 
     # Check if reference_status is a non-empty string
-    if (
-        not input_namespace.reference_status
-        or input_namespace.reference_status.strip() == ""
-    ):
-        logger.error("Invalid reference_status: must be a non-empty string.")
-        input_ok_flag = False
+    # if (
+    #     not input_namespace.reference_status
+    #     or input_namespace.reference_status.strip() == ""
+    # ):
+    #     logger.error("Invalid reference_status: must be a non-empty string.")
+    #     input_ok_flag = False
 
     # Sanity check on genomic coordinates
     if (
@@ -223,27 +223,27 @@ def check_input(input_namespace, input_file):
         },
     }
 
-    # Check if reference_status is an allowable value based on the mode_of_inheritance
-    if (
-        input_namespace.reference_status.lower()
-        not in allowable_values[input_namespace.mode_of_inheritance]["reference_status"]
-    ):
-        logger.error(
-            f"Invalid reference_status '{input_namespace.reference_status}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'"
-        )
-        input_ok_flag = False
+    # # Check if reference_status is an allowable value based on the mode_of_inheritance
+    # if (
+    #     input_namespace.reference_status.lower()
+    #     not in allowable_values[input_namespace.mode_of_inheritance]["reference_status"]
+    # ):
+    #     logger.error(
+    #         f"Invalid reference_status '{input_namespace.reference_status}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'"
+    #     )
+    #     input_ok_flag = False
 
-    # Check if reference_relationship is an allowable value based on the mode_of_inheritance
-    if (
-        input_namespace.reference_relationship.lower()
-        not in allowable_values[input_namespace.mode_of_inheritance][
-            "reference_relationship"
-        ]
-    ):
-        logger.error(
-            f"Invalid reference_relationship '{input_namespace.reference_relationship}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'"
-        )
-        input_ok_flag = False
+    # # Check if reference_relationship is an allowable value based on the mode_of_inheritance
+    # if (
+    #     input_namespace.reference_relationship.lower()
+    #     not in allowable_values[input_namespace.mode_of_inheritance][
+    #         "reference_relationship"
+    #     ]
+    # ):
+    #     logger.error(
+    #         f"Invalid reference_relationship '{input_namespace.reference_relationship}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'"
+    #     )
+    #     input_ok_flag = False
 
     # Define a dictionary with the allowable partner statuses for each mode of inheritance
     allowable_partner_statuses = {
@@ -266,30 +266,30 @@ def check_input(input_namespace, input_file):
         input_namespace.mode_of_inheritance, {}
     )
 
-    # Check if the male_partner_status is allowable for the current mode of inheritance
-    if input_namespace.male_partner_status not in allowable_statuses.get(
-        "male_partner_status", []
-    ):
-        raise ValueError(
-            f"Invalid male_partner_status '{input_namespace.male_partner_status}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'."
-        )
+    # # Check if the male_partner_status is allowable for the current mode of inheritance
+    # if input_namespace.male_partner_status not in allowable_statuses.get(
+    #     "male_partner_status", []
+    # ):
+    #     raise ValueError(
+    #         f"Invalid male_partner_status '{input_namespace.male_partner_status}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'."
+    #     )
 
-    # Check if the female_partner_status is allowable for the current mode of inheritance
-    if input_namespace.female_partner_status not in allowable_statuses.get(
-        "female_partner_status", []
-    ):
-        raise ValueError(
-            f"Invalid female_partner_status '{input_namespace.female_partner_status}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'."
-        )
+    # # Check if the female_partner_status is allowable for the current mode of inheritance
+    # if input_namespace.female_partner_status not in allowable_statuses.get(
+    #     "female_partner_status", []
+    # ):
+    #     raise ValueError(
+    #         f"Invalid female_partner_status '{input_namespace.female_partner_status}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'."
+    #     )
 
-    # Check if both partners are "unaffected" in autosomal_dominant cases
-    if (
-        input_namespace.mode_of_inheritance == "autosomal_dominant"
-        and input_namespace.male_partner_status == "unaffected_partner"
-        and input_namespace.female_partner_status == "unaffected_partner"
-    ):
-        raise ValueError(
-            "In autosomal_dominant cases, both partners cannot be 'unaffected'."
-        )
+    # # Check if both partners are "unaffected" in autosomal_dominant cases
+    # if (
+    #     input_namespace.mode_of_inheritance == "autosomal_dominant"
+    #     and input_namespace.male_partner_status == "unaffected_partner"
+    #     and input_namespace.female_partner_status == "unaffected_partner"
+    # ):
+    #     raise ValueError(
+    #         "In autosomal_dominant cases, both partners cannot be 'unaffected'."
+    #     )
 
     return error_dict, input_ok_flag

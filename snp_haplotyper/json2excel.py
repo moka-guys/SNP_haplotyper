@@ -1,8 +1,9 @@
 import argparse
+import json
+
+import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_interval
-import pandas as pd
-import json
 
 # Import command line arguments
 parser = argparse.ArgumentParser(
@@ -49,7 +50,6 @@ def defined_name_to_cell_location(workbook):
 
 
 def read_launch_json(json_file_path):
-
     with open(json_file_path, "r") as j:
         launch_contents = json.loads(j.read())
 

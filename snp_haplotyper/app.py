@@ -70,6 +70,10 @@ app.config["WTF_CSRF_ENABLED"] = True
 
 app.config.from_object(__name__)
 
+IMG_VERSIONED = os.getenv(
+    "IMG_VERSIONED", "N/A"
+)  # Get the version of the application for display in
+
 # Create a Blueprint object named "basher" that represents the "basher" component of the application. The URL prefix "/basher" is added to all routes defined in this blueprint.
 basher_bp = Blueprint("basher", __name__, url_prefix="/basher")
 Session(app)
@@ -100,7 +104,6 @@ def call_basher(basher_input_namespace):
         number_snps_imported,
         summary_snps_by_region,
         informative_snps_by_region,
-        embryo_count_data_df,
         html_string,
         pdf_string,
     ) = snp_haplotype.main(basher_input_namespace)
@@ -302,7 +305,7 @@ def form(basher_state="initial"):
             input_file = input_files[0]
 
         chgDetail["snp_array_files"] = input_file
-        basher_state = "started" # This doesn't refer to the backend starting, rather that the data has been submit and controls the flow in the html
+        basher_state = "started"  # This doesn't refer to the backend starting, rather that the data has been submit and controls the flow in the html
 
         # Get the file names of the uploaded files
         input_sheet_basename = os.path.basename(input_sheet)
