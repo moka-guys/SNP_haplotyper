@@ -1,16 +1,20 @@
+import json
+import os
+import re
 from argparse import Namespace
 from xml.dom import ValidationErr
-from snp_haplotype import main as snp_haplotype_main
-import os
+
 import pandas as pd
 import pytest
-import json
-from validate_output import validate_snp_results, validate_embryo_results
-
 from excel_parser import main as excel_parser_main
 from snp_haplotype import main as snp_haplotype_main
-from test_snp_filtering import setup_test_data
-import re
+from validate_output import validate_embryo_results, validate_snp_results
+
+from tests.functional.test_snp_filtering import (
+    embryo_validation_data,
+    setup_test_data,
+    snp_validation_data,
+)
 
 
 def setup_test_data_from_excel(split_by_embryo=False, version=1):
@@ -41,10 +45,16 @@ def setup_test_data_from_excel(split_by_embryo=False, version=1):
         excel_folder_path = "test_data/template_test_data_v1"
     elif version == 2:
         excel_folder_path = "test_data/template_test_data_v2"
+    elif version == 3:
+        excel_folder_path = "test_data/template_test_data_v3"
     else:
         raise ValueError(f"Unsupported version: {version}")
 
     excel_files = [f for f in os.listdir(excel_folder_path) if f.endswith(".xlsx")]
+
+    if version < 3:
+        # remove the excel files that have XL in the name as they do not contain the data we need (reference_sex)
+        excel_files = [f for f in excel_files if "XL" not in f]
 
     # iterate through excel files creating a dictionary with run names as keys and the values are
     # file paths for each run
@@ -78,7 +88,7 @@ def setup_test_data_from_excel(split_by_embryo=False, version=1):
 
 
 @pytest.mark.parametrize("name", setup_test_data_from_excel(False, version=1))
-def test_informative_snps_excel_v1(name):
+def test_informative_snps_excel_v1(name, snp_validation_data):
     """
     Tests whether the Single Nucleotide Polymorphisms (SNPs) extracted from the provided excel files
     (version 1) are as expected by comparing them with the validation data.
@@ -102,9 +112,8 @@ def test_informative_snps_excel_v1(name):
         mode_of_inheritance,
         sample_id,
         number_snps_imported,
-        summary_snps_by_region,
         informative_snps_by_region,
-        embryo_count_data_df,
+        embryo_snps_by_region,
         html_string,
         pdf_string,
     ) = snp_haplotype_main(basher_input_namespace)
@@ -117,18 +126,28 @@ def test_informative_snps_excel_v1(name):
         for dict in snp_validation:
             all_validation[dict["sample_id"]] = dict
 
+    # validate_snp_results(
+    #     mode_of_inheritance,
+    #     sample_id,
+    #     number_snps_imported,
+    #     embryo_snps_by_region,
+    #     informative_snps_by_region,
+    #     all_validation,
+    # )
+
     validate_snp_results(
         mode_of_inheritance,
         sample_id,
         number_snps_imported,
-        summary_snps_by_region,
         informative_snps_by_region,
-        all_validation,
+        embryo_snps_by_region,
+        snp_validation_data,
+        consanguineous=basher_input_namespace.consanguineous,
     )
 
 
 @pytest.mark.parametrize("name", setup_test_data_from_excel(False, version=2))
-def test_informative_snps_excel_v2(name):
+def test_informative_snps_excel_v2(name, snp_validation_data):
     """
     Tests whether the Single Nucleotide Polymorphisms (SNPs) extracted from the provided excel files
     (version 2) are as expected by comparing them with the validation data.
@@ -152,9 +171,8 @@ def test_informative_snps_excel_v2(name):
         mode_of_inheritance,
         sample_id,
         number_snps_imported,
-        summary_snps_by_region,
         informative_snps_by_region,
-        embryo_count_data_df,
+        embryo_snps_by_region,
         html_string,
         pdf_string,
     ) = snp_haplotype_main(basher_input_namespace)
@@ -171,14 +189,65 @@ def test_informative_snps_excel_v2(name):
         mode_of_inheritance,
         sample_id,
         number_snps_imported,
-        summary_snps_by_region,
         informative_snps_by_region,
-        all_validation,
+        embryo_snps_by_region,
+        snp_validation_data,
+        consanguineous=basher_input_namespace.consanguineous,
+    )
+
+
+@pytest.mark.parametrize("name", setup_test_data_from_excel(False, version=3))
+def test_informative_snps_excel_v3(name, snp_validation_data):
+    """
+    Tests whether the Single Nucleotide Polymorphisms (SNPs) extracted from the provided excel files
+    (version 2) are as expected by comparing them with the validation data.
+
+    The function parameters are parametrized using pytest's mark.parametrize decorator. For each test case,
+    the function parses the excel file, processes the SNPs, and compares them with the expected output stored in a JSON file.
+    If the SNPs extracted do not match the expected SNPs, the test will fail.
+
+    Parameters:
+    name (str): The name of the test case. This name is used to fetch the corresponding excel file for testing.
+
+    Raises:
+    AssertionError: If the actual output does not match the expected output.
+    """
+    test_args = setup_test_data_from_excel()
+    basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(
+        test_args[name]
+    )
+
+    (
+        mode_of_inheritance,
+        sample_id,
+        number_snps_imported,
+        informative_snps_by_region,
+        embryo_snps_by_region,
+        html_string,
+        pdf_string,
+    ) = snp_haplotype_main(basher_input_namespace)
+
+    json_file_path = "test_data/informative_snp_validation.json"
+
+    all_validation = {}
+    with open(json_file_path, "r") as j:
+        snp_validation = json.loads(j.read())
+        for dict in snp_validation:
+            all_validation[dict["sample_id"]] = dict
+
+    validate_snp_results(
+        mode_of_inheritance,
+        sample_id,
+        number_snps_imported,
+        informative_snps_by_region,
+        embryo_snps_by_region,
+        snp_validation_data,
+        consanguineous=basher_input_namespace.consanguineous,
     )
 
 
 @pytest.mark.parametrize("name", setup_test_data_from_excel(True, version=1))
-def test_embryo_categorization_excel_v1(name):
+def test_embryo_categorization_excel_v1(name, embryo_validation_data):
     """
     Tests the categorization of embryos based on the Single Nucleotide Polymorphisms (SNPs)
     data provided in the excel files (version 1).
@@ -204,9 +273,8 @@ def test_embryo_categorization_excel_v1(name):
         mode_of_inheritance,
         sample_id,
         number_snps_imported,
-        summary_snps_by_region,
         informative_snps_by_region,
-        embryo_count_data_df,
+        embryo_snps_by_region,
         html_string,
         pdf_string,
     ) = snp_haplotype_main(basher_input_namespace)
@@ -222,14 +290,16 @@ def test_embryo_categorization_excel_v1(name):
     validate_embryo_results(
         mode_of_inheritance,
         sample_id,
+        number_snps_imported,
         embryo_id,
-        embryo_count_data_df,
-        all_validation,
+        embryo_snps_by_region,
+        embryo_validation_data,
+        consanguineous=basher_input_namespace.consanguineous,
     )
 
 
 @pytest.mark.parametrize("name", setup_test_data_from_excel(True, version=2))
-def test_embryo_categorization_excel_v2(name):
+def test_embryo_categorization_excel_v2(name, embryo_validation_data):
     """
     Tests the categorization of embryos based on the Single Nucleotide Polymorphisms (SNPs)
     data provided in the excel files (version 2).
@@ -255,9 +325,8 @@ def test_embryo_categorization_excel_v2(name):
         mode_of_inheritance,
         sample_id,
         number_snps_imported,
-        summary_snps_by_region,
         informative_snps_by_region,
-        embryo_count_data_df,
+        embryo_snps_by_region,
         html_string,
         pdf_string,
     ) = snp_haplotype_main(basher_input_namespace)
@@ -273,7 +342,61 @@ def test_embryo_categorization_excel_v2(name):
     validate_embryo_results(
         mode_of_inheritance,
         sample_id,
+        number_snps_imported,
         embryo_id,
-        embryo_count_data_df,
-        all_validation,
+        embryo_snps_by_region,
+        embryo_validation_data,
+        consanguineous=basher_input_namespace.consanguineous,
+    )
+
+
+@pytest.mark.parametrize("name", setup_test_data_from_excel(True, version=3))
+def test_embryo_categorization_excel_v3(name, embryo_validation_data):
+    """
+    Tests the categorization of embryos based on the Single Nucleotide Polymorphisms (SNPs)
+    data provided in the excel files (version 2).
+
+    The function parameters are parametrized using pytest's mark.parametrize decorator. For each
+    test case, the function parses the excel file, processes the SNPs, and then compares the
+    embryo categorization results with the expected results stored in a JSON file.
+
+    Parameters:
+    name (str): The name of the test case. The name is used to fetch the corresponding excel file for testing
+    and includes the sample_id and embryo_id.
+
+    Raises:
+    AssertionError: If the actual output does not match the expected output.
+    """
+    test_args = setup_test_data_from_excel()
+    sample_id, embryo_id = name.rsplit("_", 1)
+    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(
+        test_args[sample_id]
+    )
+
+    (
+        mode_of_inheritance,
+        sample_id,
+        number_snps_imported,
+        informative_snps_by_region,
+        embryo_snps_by_region,
+        html_string,
+        pdf_string,
+    ) = snp_haplotype_main(basher_input_namespace)
+
+    json_file_path = "test_data/embryo_validation_data.json"
+
+    all_validation = {}
+    with open(json_file_path, "r") as j:
+        embryo_validation = json.loads(j.read())
+        for dict in embryo_validation:
+            all_validation[dict["sample_id"] + "_" + dict["embryo_id"]] = dict
+
+    validate_embryo_results(
+        mode_of_inheritance,
+        sample_id,
+        number_snps_imported,
+        embryo_id,
+        embryo_snps_by_region,
+        embryo_validation_data,
+        consanguineous=basher_input_namespace.consanguineous,
     )

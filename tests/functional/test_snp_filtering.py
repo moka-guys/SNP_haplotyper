@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 import json
 from validate_output import validate_snp_results, validate_embryo_results
+from EnumDataClasses import InheritanceMode, Relationship, Status, FlankingRegions
 
 
 def setup_test_data(split_by_embryo=False):
@@ -58,23 +59,33 @@ def setup_test_data(split_by_embryo=False):
             args = Namespace(
                 input_file=arg_dictionary["input_file"],
                 output_prefix=arg_dictionary["output_prefix"],
-                mode_of_inheritance=arg_dictionary["mode_of_inheritance"],
+                output_folder="output",
+                mode_of_inheritance=InheritanceMode(
+                    arg_dictionary["mode_of_inheritance"]
+                ),
                 male_partner=arg_dictionary["male_partner"],
-                male_partner_status=arg_dictionary["male_partner_status"],
+                male_partner_status=Status(arg_dictionary["male_partner_status"]),
                 female_partner=arg_dictionary["female_partner"],
-                female_partner_status=arg_dictionary["female_partner_status"],
+                female_partner_status=Status(arg_dictionary["female_partner_status"]),
                 reference=arg_dictionary["reference"],
-                reference_status=arg_dictionary["reference_status"],
-                reference_relationship=arg_dictionary["reference_relationship"],
+                reference_status=Status(arg_dictionary["reference_status"]),
+                reference_relationship=Relationship(
+                    arg_dictionary["reference_relationship"]
+                ),
+                reference_sex=arg_dictionary["reference_sex"],
+                embryo_ids=[],
+                embryo_sex=[],
                 gene_symbol=arg_dictionary["gene_symbol"],
                 gene_start=int(arg_dictionary["gene_start"]),
                 gene_end=int(arg_dictionary["gene_end"]),
                 chr=arg_dictionary["chr"],
-                flanking_region_size=arg_dictionary["flanking_region_size"],
+                flanking_region_size=FlankingRegions(
+                    int(arg_dictionary["flanking_region_size"])
+                ),
                 consanguineous=True if "consanguineous" in arg_dictionary else False,
                 testing=True,
                 trio_only=True,
-                header_info=header_to_dict(arg_dictionary["header_info"]),
+                header_info=arg_dictionary["header_info"],
             )
         else:
             # Ensure that embryo_ids are a list even if only a single embryo is present
@@ -91,25 +102,33 @@ def setup_test_data(split_by_embryo=False):
             args = Namespace(
                 input_file=arg_dictionary["input_file"],
                 output_prefix=arg_dictionary["output_prefix"],
-                mode_of_inheritance=arg_dictionary["mode_of_inheritance"],
+                output_folder="output",
+                mode_of_inheritance=InheritanceMode(
+                    arg_dictionary["mode_of_inheritance"]
+                ),
                 male_partner=arg_dictionary["male_partner"],
-                male_partner_status=arg_dictionary["male_partner_status"],
+                male_partner_status=Status(arg_dictionary["male_partner_status"]),
                 female_partner=arg_dictionary["female_partner"],
-                female_partner_status=arg_dictionary["female_partner_status"],
+                female_partner_status=Status(arg_dictionary["female_partner_status"]),
                 reference=arg_dictionary["reference"],
-                reference_status=arg_dictionary["reference_status"],
-                reference_relationship=arg_dictionary["reference_relationship"],
+                reference_status=Status(arg_dictionary["reference_status"]),
+                reference_relationship=Relationship(
+                    arg_dictionary["reference_relationship"]
+                ),
+                reference_sex=arg_dictionary["reference_sex"],
                 embryo_ids=embryo_ids_list,
                 embryo_sex=embryo_sex_list,
                 gene_symbol=arg_dictionary["gene_symbol"],
                 gene_start=int(arg_dictionary["gene_start"]),
                 gene_end=int(arg_dictionary["gene_end"]),
                 chr=arg_dictionary["chr"],
-                flanking_region_size=arg_dictionary["flanking_region_size"],
+                flanking_region_size=FlankingRegions(
+                    int(arg_dictionary["flanking_region_size"])
+                ),
                 consanguineous=True if "consanguineous" in arg_dictionary else False,
                 testing=True,
                 trio_only=False,
-                header_info=header_to_dict(arg_dictionary["header_info"]),
+                header_info=arg_dictionary["header_info"],
             )
 
         run_data_dictionary[run_name] = args
@@ -127,26 +146,57 @@ def setup_test_data(split_by_embryo=False):
         return run_data_dictionary
 
 
+@pytest.fixture
+def snp_validation_data():
+    json_file_path = "test_data/informative_snp_validation.json"
+    all_per_sample_validation = {}
+
+    with open(json_file_path, "r") as j:
+        snp_validation = json.loads(j.read())
+        for entry in snp_validation:
+            all_per_sample_validation[entry["sample_id"]] = entry
+
+    return all_per_sample_validation
+
+
+@pytest.fixture
+def embryo_validation_data():
+    json_file_path = "test_data/embryo_validation_data.json"
+    all_per_embryo_validation = {}
+
+    with open(json_file_path, "r") as j:
+        snp_validation = json.loads(j.read())
+        for dict in snp_validation:
+            combined_key = f"{dict['sample_id']}_{dict['embryo_id']}"
+            all_per_embryo_validation[combined_key] = dict
+
+    return all_per_embryo_validation
+
+
+# Cache the results for each sample on the first test for that sample so that subsequent test runs do not need to re-run the entire pipeline
+cached_results = {}
+
+
 @pytest.mark.parametrize("name", setup_test_data(False))
-def test_informative_snps(name):
+def test_informative_snps(name, snp_validation_data):
     args = setup_test_data()
     (
         mode_of_inheritance,
         sample_id,
         number_snps_imported,
-        summary_snps_by_region,
         informative_snps_by_region,
-        embryo_count_data_df,
+        embryo_snps_by_region,
         html_string,
         pdf_string,
     ) = main(args[name])
-    json_file_path = "test_data/informative_snp_validation.json"
 
-    all_validation = {}
-    with open(json_file_path, "r") as j:
-        snp_validation = json.loads(j.read())
-        for dict in snp_validation:
-            all_validation[dict["sample_id"]] = dict
+    # Store results in a dictionary so that they can be accessed by the embryo categorization test
+    cached_results[sample_id] = {
+        "informative_snps_by_region": informative_snps_by_region,
+        "embryo_snps_by_region": embryo_snps_by_region,
+        "mode_of_inheritance": mode_of_inheritance,
+        "number_snps_imported": number_snps_imported,
+    }
 
     validate_snp_results(
         mode_of_inheritance,
@@ -154,40 +204,47 @@ def test_informative_snps(name):
             "_with_embryo", ""
         ),  # Remove any suffixes from the sample_id which will not be present in the validation data
         number_snps_imported,
-        summary_snps_by_region,
         informative_snps_by_region,
-        all_validation,
+        embryo_snps_by_region,
+        snp_validation_data,
+        consanguineous=args[name].consanguineous,
     )
 
 
 @pytest.mark.parametrize("name", setup_test_data(True))
-def test_embryo_categorization(name):
+def test_embryo_categorization(name, embryo_validation_data):
     args = setup_test_data()
     embryo_id = name.rsplit("_", 1)[1]
     name = name.rsplit("_", 1)[0]
-    (
-        mode_of_inheritance,
-        sample_id,
-        number_snps_imported,
-        summary_snps_by_region,
-        informative_snps_by_region,
-        embryo_count_data_df,
-        html_string,
-        pdf_string,
-    ) = main(args[name])
-    # Need to select "informative_snp_data" or "embryo_cat_json" as appropriate TODO move into func args
-    json_file_path = "test_data/embryo_validation_data.json"
+    sample_id = "_".join(name.split("_")[2:])
 
-    all_validation = {}
-    with open(json_file_path, "r") as j:
-        embryo_validation = json.loads(j.read())
-        for dict in embryo_validation:
-            all_validation[dict["sample_id"] + "_" + dict["embryo_id"]] = dict
+    # Retrieve the cached results from the informative snp test if they exist, else
+    # run BASHer to generate the results
+    if sample_id in cached_results.keys():
+        print("Using cached results")
+        embryo_snps_by_region = cached_results[sample_id]["embryo_snps_by_region"]
+        mode_of_inheritance = cached_results[sample_id]["mode_of_inheritance"]
+        number_snps_imported = cached_results[sample_id]["number_snps_imported"]
+    else:
+        print("Using calculated result")
+        (
+            mode_of_inheritance,
+            sample_id,
+            number_snps_imported,
+            informative_snps_by_region,
+            embryo_snps_by_region,
+            html_string,
+            pdf_string,
+        ) = main(args[name])
 
     validate_embryo_results(
         mode_of_inheritance,
-        name.split("_", 2)[2],
+        sample_id.replace("_precase", "").replace(
+            "_with_embryo", ""
+        ),  # Remove any suffixes from the sample_id which will not be present in the validation data
+        number_snps_imported,
         embryo_id,
-        embryo_count_data_df,
-        all_validation,
+        embryo_snps_by_region,
+        embryo_validation_data,
+        consanguineous=args[name].consanguineous,
     )
