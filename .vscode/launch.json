@@ -2449,7 +2449,7 @@
             "program": "snp_haplotyper/snp_haplotype.py",
             "console": "integratedTerminal",
             "purpose": [
-                "debug-test"
+                "debug-in-terminal"
             ],
             "args": [
                 "--input_file",

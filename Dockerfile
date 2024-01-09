@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y wkhtmltopdf
 
 # add app
 COPY ["snp_haplotyper", "requirements.txt", "tests", "wsgi.py", \
-    "pytest.ini", ".coverage", "docs", "gunicorn.conf.py", "./"]
+    "pytest.ini", "docs", "gunicorn.conf.py", "./"]
 
 COPY ["test_data/AffyID2rsid.txt", "../test_data/AffyID2rsid.txt"]
 
