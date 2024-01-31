@@ -23,7 +23,7 @@ ENV SESSION_FILE_DIR /var/local/basher/flask_sessions
 # add and install requirements
 COPY ./requirements.txt .
 RUN pip3 install -r requirements.txt
-USER 0 
+USER 0
 RUN mkdir -p /var/local/basher/logs/
 RUN mkdir -p /var/local/basher/uploads/
 RUN mkdir -p /var/local/basher/flask_sessions/

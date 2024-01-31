@@ -29,8 +29,6 @@ class Sex(Enum):
     MALE = "male"
     FEMALE = "female"
     UNKNOWN = "unknown"
-
-
 class Chromosome(str, Enum):
     CHR_1 = "1"
     CHR_2 = "2"

@@ -1,4 +1,5 @@
 import math
+import re
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -359,3 +360,10 @@ def set_inherited_from_category_dtype(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     return df
+
+
+def get_clean_filename(path):
+    # Split the path on either \ or /
+    parts = re.split(r"[\\/]", path)
+    # Return the last element
+    return parts[-1]

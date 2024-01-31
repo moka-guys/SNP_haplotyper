@@ -1,6 +1,8 @@
 import logging
 import re
 
+from EnumDataClasses import InheritanceMode
+
 
 # Custom error handler which saves errors to a dictionary for feedback to user
 class DictErrorHandler(logging.Handler):
@@ -53,9 +55,9 @@ def check_input(input_namespace, input_file):
     #    column_names = f.readline().strip().split("\t")
 
     if input_namespace.mode_of_inheritance not in [
-        "autosomal_dominant",
-        "autosomal_recessive",
-        "x_linked",
+        InheritanceMode.AUTOSOMAL_DOMINANT,
+        InheritanceMode.AUTOSOMAL_RECESSIVE,
+        InheritanceMode.X_LINKED,
     ]:
         logger.error(
             f"Invalid Mode of Inheritance {input_namespace.mode_of_inheritance} entered as argument, should be 'Autosomal Dominant', 'Autosomal Recessive', or 'X_Linked'"

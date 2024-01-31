@@ -1,40 +1,34 @@
+import logging
+import os
+import random
+import tempfile
+import time
+import zipfile
 from argparse import Namespace
 from datetime import datetime
+from io import BytesIO
+
+import merge_array_files
+import pdfkit
+import snp_haplotype
 from excel_parser import parse_excel_input
 from flask import (
-    Flask,
-    render_template,
-    Response,
-    send_file,
-    jsonify,
-    request,
-    session,
     Blueprint,
+    Flask,
+    Response,
+    jsonify,
+    render_template,
+    request,
+    send_file,
+    session,
 )
-from flask_wtf import FlaskForm
-from flask_session import Session
 from flask_cors import CORS, cross_origin
-from io import BytesIO
-import merge_array_files
-import os
+from flask_session import Session
+from flask_wtf import FlaskForm
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
-import pdfkit
-import time
-import random
-import snp_haplotype
-import tempfile
-from wtforms import (
-    FileField,
-    SubmitField,
-    MultipleFileField,
-    ValidationError,
-)
 from werkzeug.utils import secure_filename
-import zipfile
-
-
-import logging
+from wtforms import FileField, MultipleFileField, SubmitField, ValidationError
 
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logger = logging.getLogger("BASHer_logger")

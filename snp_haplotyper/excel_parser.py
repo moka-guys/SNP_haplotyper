@@ -1,5 +1,6 @@
 import argparse
 import logging
+import math
 import os
 import re
 import subprocess
@@ -18,6 +19,7 @@ from EnumDataClasses import (
     Sex,
     Status,
 )
+from helper_functions import get_clean_filename
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_interval
 
@@ -98,7 +100,23 @@ def load_workbook_range(range_string, worksheet):
     for row in worksheet[range_string]:
         data_rows.append([cell.value for cell in row])
 
-    return pd.DataFrame(data_rows, columns=get_column_interval(col_start, col_end))
+    df = pd.DataFrame(data_rows, columns=get_column_interval(col_start, col_end))
+
+    # Convert float values to text as specified
+    def convert_float_to_text(value):
+        if isinstance(value, float):
+            # Check for NaN
+            if math.isnan(value):
+                return (
+                    None  # or return '' if you want to replace NaN with an empty string
+                )
+            # Remove the decimal point and append a zero
+            return str(int(value))
+        return value
+
+    df = df.applymap(convert_float_to_text)
+
+    return df
 
 
 def parse_excel_input(input_spreadsheet, snp_array_file=None):
@@ -195,7 +213,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         else:
             # Process cell locations in the format data_entry!$B$31 or data_entry!$F$22:$L$22 (merged cells)
             cell_location = dn.attr_text.split(":")[0].split("!")[1].replace("$", "")
-            cell_value = data_entry_sheet[cell_location].value
+            cell_value = str(data_entry_sheet[cell_location].value).strip()
             argument_dict[input_name] = cell_value
 
     biopsy_number = argument_dict["biopsy_number"]
@@ -242,10 +260,10 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     template_version = argument_dict["template_version"]
 
     embryo_data_df = argument_dict["embryo_data"]
+    column_names = ["biopsy_no", "embryo_id", "embryo_sex", "embryo_column_name"]
+
     # Ensure all values are strings
     embryo_data_df = embryo_data_df.astype(str)
-
-    column_names = ["biopsy_no", "embryo_id", "embryo_sex", "embryo_column_name"]
 
     # Check that the embryo data sheet has the correct columns
     if len(embryo_data_df.columns) == len(column_names):
@@ -485,7 +503,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
 
         # Check if the snp_array_file is not one of the input files and it's not a merged file
         if not is_merged_file and snp_array_file_basename not in [
-            os.path.basename(file_name) for file_name in input_files
+            get_clean_filename(file_name) for file_name in input_files
         ]:
             logger.error(
                 f"The SNP array text file specified on the command line, {snp_array_file_basename} is different to that specified in the template, {input_files} which is converted to {merged_name}."
@@ -506,6 +524,8 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
 
     # Create an argparse and populate it with the required arguments for passing to snp_haplotyper
     args = argparse.Namespace()
+    args.embryo_ids = embryo_data_df.embryo_id.to_list()
+    args.embryo_sex = embryo_data_df.embryo_sex.to_list()
     args.mode_of_inheritance = mode_of_inheritance
     args.input_file = input_filepath
     args.output_folder = config.output_folder
