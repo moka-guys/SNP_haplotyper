@@ -362,7 +362,11 @@ class SNPData:
         )
 
         # Convert snp_position to Categorical type with predefined order
-        categories_list = ["upstream", "within_gene", "downstream"]
+        categories_list = [
+            "upstream",
+            "within_gene",
+            "downstream",
+        ]
         self.snp_df["snp_position"] = pd.Categorical(
             self.snp_df["snp_position"], categories=categories_list, ordered=True
         )
@@ -375,6 +379,17 @@ class SNPData:
         if hasattr(self, "snp_df") and isinstance(self.snp_df, pd.DataFrame):
             # Check if 'snp_position' column exists in snp_df
             if "snp_position" in self.snp_df.columns:
+                categories_list = [
+                    "upstream",
+                    "within_gene",
+                    "downstream",
+                    "outside_ROI",
+                ]
+                self.snp_df["snp_position"] = pd.Categorical(
+                    self.snp_df["snp_position"],
+                    categories=categories_list,
+                    ordered=True,
+                )
                 # Filter out SNPs outside ROI and reset index
                 self.outside_roi = self.snp_df[
                     self.snp_df["snp_position"] == "outside_ROI"
@@ -405,6 +420,14 @@ class SNPData:
             raise ValueError(
                 "Invalid inheritance logic or mode of inheritance not set!"
             )
+        categories_list = [
+            "upstream",
+            "within_gene",
+            "downstream",
+        ]
+        self.snp_df["snp_position"] = pd.Categorical(
+            self.snp_df["snp_position"], categories=categories_list, ordered=True
+        )
 
     def add_risk_summary_column(self):
         def categorize(row):

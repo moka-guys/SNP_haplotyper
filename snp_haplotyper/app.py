@@ -69,7 +69,7 @@ IMG_VERSIONED = os.getenv(
 )  # Get the version of the application for display in
 
 # Create a Blueprint object named "basher" that represents the "basher" component of the application. The URL prefix "/basher" is added to all routes defined in this blueprint.
-basher_bp = Blueprint("basher", __name__, url_prefix="/basher")
+basher_bp = Blueprint("basher", __name__, url_prefix="0")
 Session(app)
 CORS(
     app, supports_credentials=True
@@ -257,7 +257,7 @@ def form(basher_state="initial"):
 
         session["timestr"] = datetime.now().strftime("%Y%m%d-%H%M%S")
         os.mkdir(os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"]))
-        file_handler = logging.FileHandler(f"/var/local/basher/logs/basher_error.log")
+        file_handler = logging.FileHandler(f"/var/local/basher/logs_error.log")
         formatter = logging.Formatter(log_format)
         file_handler.setFormatter(formatter)
 
