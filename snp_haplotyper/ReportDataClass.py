@@ -55,9 +55,11 @@ class ReportData:
     report_date: str = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
 
     def __post_init__(self):
-        # Format gene_start and gene_end with 1000s comma separator
-        # self.gene_start = f"{int(self.gene_start):,}" # TODO check if already comma separated
-        # self.gene_end = f"{int(self.gene_end):,}" # TODO check if already comma separated
+        #
+        # Format gene_start and gene_end into int with 1000s comma separator
+        self.gene_start = f"{int(self.gene_start.replace(',', '')):,}"
+        self.gene_end = f"{int(self.gene_end.replace(',', '')):,}"
+
         # Check if input_file is a file object or a string
         if isinstance(self.input_file, IO):
             self.input_file = self.input_file.name
