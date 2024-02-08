@@ -24,3 +24,6 @@ released_to_production = False
 output_folder = "/home/graeme/Desktop/SNP_haplotyper/output"
 
 input_folder = "/home/graeme/Desktop/SNP_haplotyper/"
+
+# File containing details of the probesets on the array (currently Thermo Fisher Scientific HT-CMA_96.r3 SNP array)
+probesets_mapping_file = "../test_data/AffyID2rsid.txt"
