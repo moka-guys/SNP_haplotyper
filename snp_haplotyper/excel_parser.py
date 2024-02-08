@@ -360,39 +360,12 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         female_partner_status = Status(partner1_type.split("_")[0])
         female_partner_col = partner1_column_name
 
-    # TODO rationalise output prefix - input_file or input_spreadsheet - move cleanup of names into test function?
     output_prefix = (
         os.path.splitext(os.path.basename(input_spreadsheet))[0]
         .replace("excel_test_Autosomal_Dominant_", "")
         .replace("excel_test_Autosomal_Recessive_", "")
         .replace("excel_test_X_linked_", "")
     )
-
-    # if mode_of_inheritance == InheritanceMode.AUTOSOMAL_DOMINANT:
-    #     female_partner_status = female_partner_status
-    #     male_partner_status = convert_to_status_enum(male_partner_status.split("_")[0])
-    # elif mode_of_inheritance == InheritanceMode.AUTOSOMAL_RECESSIVE:
-    #     female_partner_status = (
-    #         convert_to_status_enum("carrier")
-    #         if female_partner_status == "carrier_partner"
-    #         else female_partner_status
-    #     )
-    #     male_partner_status = (
-    #         convert_to_status_enum("carrier")
-    #         if male_partner_status == "carrier_partner"
-    #         else male_partner_status
-    #     )
-    # elif mode_of_inheritance == InheritanceMode.X_LINKED:
-    #     female_partner_status = (
-    #         convert_to_status_enum("carrier")
-    #         if female_partner_status == "carrier_female_partner"
-    #         else female_partner_status
-    #     )
-    #     male_partner_status = (
-    #         convert_to_status_enum("unaffected")
-    #         if male_partner_status == "unaffected_male_partner"
-    #         else male_partner_status
-    #     )
 
     lookup_dict = {
         "son": "child",
