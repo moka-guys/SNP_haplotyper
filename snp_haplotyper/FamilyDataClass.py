@@ -1,9 +1,8 @@
 import logging
-import pandas as pd
-from pydantic import BaseModel, root_validator
-from typing import Dict, List, Optional
 from pathlib import Path
+from typing import Dict, List, Optional
 
+import pandas as pd
 from EnumDataClasses import (
     Chromosome,
     FlankingRegions,
@@ -12,6 +11,7 @@ from EnumDataClasses import (
     Sex,
     Status,
 )
+from pydantic import BaseModel, root_validator
 
 logger = logging.getLogger("BASHer_logger")
 
@@ -115,6 +115,7 @@ class FamilyData(BaseModel):
         mode_of_inheritance = values.get("mode_of_inheritance").value
         # reference_sex = values.get("reference_sex").value
         reference_status = values.get("reference_status").value
+        reference_sex = values.get("reference_sex").value
 
         # Define allowable values based on mode_of_inheritance
         allowable_values = {
@@ -131,12 +132,12 @@ class FamilyData(BaseModel):
                 "reference_status": {"affected", "unaffected"},
             },
         }
-        # TODO
+
         # Validate reference_sex for mode of inheritance
-        # if reference_sex not in allowable_values[mode_of_inheritance]["reference_sex"]:
-        # raise ValueError(
-        #     f"Invalid reference_sex '{reference_sex}' for mode_of_inheritance '{mode_of_inheritance}'"
-        # )
+        if reference_sex not in allowable_values[mode_of_inheritance]["reference_sex"]:
+            raise ValueError(
+                f"Invalid reference_sex '{reference_sex}' for mode_of_inheritance '{mode_of_inheritance}'"
+            )
 
         # Validate reference_status for mode of inheritance
         if (
