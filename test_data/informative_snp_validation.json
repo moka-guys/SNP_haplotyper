@@ -3,175 +3,414 @@
         "mode": "autosomal_dominant",
         "sample_id": "F4_BRCA2_AD",
         "num_snps": 1508,
-        "info_snps_upstream_2mb": 69,
+        "info_snps_upstream": 69,
         "info_snps_in_gene": 2,
-        "info_snps_downstream_2mb": 21,
+        "info_snps_downstream": 21,
         "total_info_snps": 92,
-        "high_risk_snps_upstream_2mb": 15,
-        "high_risk_within_gene": 0,
-        "high_risk_snps_downstream_2mb": 9,
-        "low_risk_snps_upstream_2mb": 54,
-        "low_risk_within_gene": 2,
-        "low_risk_snps_downstream_2mb": 12
+        "high_risk_snps_upstream": 15,
+        "high_risk_snps_within_gene": 0,
+        "high_risk_snps_downstream": 9,
+        "low_risk_snps_upstream": 54,
+        "low_risk_snps_within_gene": 2,
+        "low_risk_snps_downstream": 12
     },
     {
         "mode": "autosomal_dominant",
         "sample_id": "F5_COL1A1_AD",
         "num_snps": 1406,
-        "info_snps_upstream_2mb": 51,
+        "info_snps_upstream": 51,
         "info_snps_in_gene": 0,
-        "info_snps_downstream_2mb": 31,
+        "info_snps_downstream": 31,
         "total_info_snps": 82,
-        "high_risk_snps_upstream_2mb": 17,
-        "high_risk_within_gene": 0,
-        "high_risk_snps_downstream_2mb": 12,
-        "low_risk_snps_upstream_2mb": 34,
-        "low_risk_within_gene": 0,
-        "low_risk_snps_downstream_2mb": 19
+        "high_risk_snps_upstream": 17,
+        "high_risk_snps_within_gene": 0,
+        "high_risk_snps_downstream": 12,
+        "low_risk_snps_upstream": 34,
+        "low_risk_snps_within_gene": 0,
+        "low_risk_snps_downstream": 19
     },
     {
         "mode": "autosomal_dominant",
         "sample_id": "F6_BRCA2_AD",
         "num_snps": 1508,
-        "info_snps_upstream_2mb": 51,
+        "info_snps_upstream": 51,
         "info_snps_in_gene": 2,
-        "info_snps_downstream_2mb": 34,
+        "info_snps_downstream": 34,
         "total_info_snps": 87,
-        "high_risk_snps_upstream_2mb": 10,
-        "high_risk_within_gene": 0,
-        "high_risk_snps_downstream_2mb": 24,
-        "low_risk_snps_upstream_2mb": 41,
-        "low_risk_within_gene": 2,
-        "low_risk_snps_downstream_2mb": 10
+        "high_risk_snps_upstream": 10,
+        "high_risk_snps_within_gene": 0,
+        "high_risk_snps_downstream": 24,
+        "low_risk_snps_upstream": 41,
+        "low_risk_snps_within_gene": 2,
+        "low_risk_snps_downstream": 10
     },
     {
         "mode": "autosomal_dominant",
         "sample_id": "F8_PKD2_AD",
         "num_snps": 1809,
-        "info_snps_upstream_2mb": 110,
+        "info_snps_upstream": 110,
         "info_snps_in_gene": 1,
-        "info_snps_downstream_2mb": 66,
+        "info_snps_downstream": 66,
         "total_info_snps": 177,
-        "high_risk_snps_upstream_2mb": 22,
-        "high_risk_within_gene": 0,
-        "high_risk_snps_downstream_2mb": 6,
-        "low_risk_snps_upstream_2mb": 88,
-        "low_risk_within_gene": 1,
-        "low_risk_snps_downstream_2mb": 60
+        "high_risk_snps_upstream": 22,
+        "high_risk_snps_within_gene": 0,
+        "high_risk_snps_downstream": 6,
+        "low_risk_snps_upstream": 88,
+        "low_risk_snps_within_gene": 1,
+        "low_risk_snps_downstream": 60
     },
     {
         "mode": "autosomal_dominant",
         "sample_id": "F12_PMP22_AD",
         "num_snps": 1433,
-        "info_snps_upstream_2mb": 44,
+        "info_snps_upstream": 44,
         "info_snps_in_gene": 0,
-        "info_snps_downstream_2mb": 30,
+        "info_snps_downstream": 30,
         "total_info_snps": 74,
-        "high_risk_snps_upstream_2mb": 41,
-        "high_risk_within_gene": 0,
-        "high_risk_snps_downstream_2mb": 20,
-        "low_risk_snps_upstream_2mb": 3,
-        "low_risk_within_gene": 0,
-        "low_risk_snps_downstream_2mb": 10
+        "high_risk_snps_upstream": 41,
+        "high_risk_snps_within_gene": 0,
+        "high_risk_snps_downstream": 20,
+        "low_risk_snps_upstream": 3,
+        "low_risk_snps_within_gene": 0,
+        "low_risk_snps_downstream": 10
     },
     {
         "mode": "autosomal_dominant",
         "sample_id": "F12_DMPK_AD",
         "num_snps": 1661,
-        "info_snps_upstream_2mb": 48,
+        "info_snps_upstream": 48,
         "info_snps_in_gene": 0,
-        "info_snps_downstream_2mb": 51,
+        "info_snps_downstream": 51,
         "total_info_snps": 99,
-        "high_risk_snps_upstream_2mb": 36,
-        "high_risk_within_gene": 0,
-        "high_risk_snps_downstream_2mb": 29,
-        "low_risk_snps_upstream_2mb": 12,
-        "low_risk_within_gene": 0,
-        "low_risk_snps_downstream_2mb": 22
+        "high_risk_snps_upstream": 36,
+        "high_risk_snps_within_gene": 0,
+        "high_risk_snps_downstream": 29,
+        "low_risk_snps_upstream": 12,
+        "low_risk_snps_within_gene": 0,
+        "low_risk_snps_downstream": 22
     },
     {
         "mode": "autosomal_dominant",
         "sample_id": "F15_PKP2_AD",
         "num_snps": 1208,
-        "info_snps_upstream_2mb": 78,
+        "info_snps_upstream": 78,
         "info_snps_in_gene": 1,
-        "info_snps_downstream_2mb": 64,
+        "info_snps_downstream": 64,
         "total_info_snps": 143,
-        "high_risk_snps_upstream_2mb": 28,
-        "high_risk_within_gene": 0,
-        "high_risk_snps_downstream_2mb": 5,
-        "low_risk_snps_upstream_2mb": 50,
-        "low_risk_within_gene": 1,
-        "low_risk_snps_downstream_2mb": 59
+        "high_risk_snps_upstream": 28,
+        "high_risk_snps_within_gene": 0,
+        "high_risk_snps_downstream": 5,
+        "low_risk_snps_upstream": 50,
+        "low_risk_snps_within_gene": 1,
+        "low_risk_snps_downstream": 59
     },
     {
         "mode": "autosomal_dominant",
         "sample_id": "F16_FUS_AD",
         "num_snps": 1100,
-        "info_snps_upstream_2mb": 22,
+        "info_snps_upstream": 22,
         "info_snps_in_gene": 0,
-        "info_snps_downstream_2mb": 17,
+        "info_snps_downstream": 17,
         "total_info_snps": 39,
-        "high_risk_snps_upstream_2mb": 4,
-        "high_risk_within_gene": 0,
-        "high_risk_snps_downstream_2mb": 1,
-        "low_risk_snps_upstream_2mb": 18,
-        "low_risk_within_gene": 0,
-        "low_risk_snps_downstream_2mb": 16
+        "high_risk_snps_upstream": 4,
+        "high_risk_snps_within_gene": 0,
+        "high_risk_snps_downstream": 1,
+        "low_risk_snps_upstream": 18,
+        "low_risk_snps_within_gene": 0,
+        "low_risk_snps_downstream": 16
     },
     {
         "mode": "x_linked",
         "sample_id": "F10_FMR1_XL",
         "num_snps": 1704,
-        "info_snps_upstream_2mb": 108,
-        "info_snps_in_gene": 8,
-        "info_snps_downstream_2mb": 154,
-        "total_info_snps": 270,
-        "high_risk_snps_upstream_2mb": 45,
-        "high_risk_within_gene": 0,
-        "high_risk_snps_downstream_2mb": 68,
-        "low_risk_snps_upstream_2mb": 63,
-        "low_risk_within_gene": 8,
-        "low_risk_snps_downstream_2mb": 86
+        "info_snps_upstream": [
+            108,
+            108,
+            108
+        ],
+        "info_snps_in_gene": [
+            8,
+            8,
+            8
+        ],
+        "info_snps_downstream": [
+            154,
+            154,
+            154
+        ],
+        "total_info_snps": [
+            270,
+            0,
+            0
+        ],
+        "high_risk_snps_upstream": [
+            45,
+            54,
+            54
+        ],
+        "high_risk_snps_within_gene": [
+            0,
+            3,
+            5
+        ],
+        "high_risk_snps_downstream": [
+            68,
+            74,
+            80
+        ],
+        "low_risk_snps_upstream": [
+            63,
+            54,
+            54
+        ],
+        "low_risk_snps_within_gene": [
+            8,
+            5,
+            3
+        ],
+        "low_risk_snps_downstream": [
+            86,
+            80,
+            74
+        ]
     },
-        {
-            "mode": "x_linked",
-            "sample_id": "F11_DMD_XL",
-            "num_snps": 17639,
-            "info_snps_upstream_2mb": 115,
-            "info_snps_in_gene": 391,
-            "info_snps_downstream_2mb": 20,
-            "total_info_snps": 526,
-            "high_risk_snps_upstream_2mb": 56,
-            "high_risk_within_gene": 131,
-            "high_risk_snps_downstream_2mb": 4,
-            "low_risk_snps_upstream_2mb": 59,
-            "low_risk_within_gene": 260,
-            "low_risk_snps_downstream_2mb": 16
-        },
-        {
-            "mode": "autosomal_recessive",
-            "sample_id": "F3_HBB_AR",
-            "num_snps": 1718,
-            "info_snps_upstream_2mb_from_female": 51,
-            "info_snps_in_gene_from_female": 0,
-            "info_snps_downstream_2mb_from_female": 40,
-            "total_info_snps_from_female": 153,
-            "high_risk_snps_upstream_2mb_from_female": 56,
-            "high_risk_within_gene_from_female": 131,
-            "high_risk_snps_downstream_2mb_from_female": 4,
-            "low_risk_snps_upstream_2mb_from_female": 59,
-            "low_risk_within_gene_from_female": 260,
-            "low_risk_snps_downstream_2mb_from_female": 16,
-            "info_snps_upstream_2mb_from_male": 115,
-            "info_snps_in_gene_from_male": 391,
-            "info_snps_downstream_2mb_from_male": 20,
-            "total_info_snps_from_male": 526,
-            "high_risk_snps_upstream_2mb_from_male": 56,
-            "high_risk_within_gene_from_male": 131,
-            "high_risk_snps_downstream_2mb_from_male": 4,
-            "low_risk_snps_upstream_2mb_from_male": 59,
-            "low_risk_within_gene_from_male": 260,
-            "low_risk_snps_downstream_2mb_from_male": 16
-        }
+    {
+        "mode": "x_linked",
+        "sample_id": "F11_DMD_XL",
+        "num_snps": 17639,
+        "info_snps_upstream": [
+            115,
+            115,
+            115
+        ],
+        "info_snps_in_gene": [
+            391,
+            391,
+            391
+        ],
+        "info_snps_downstream": [
+            20,
+            20,
+            20
+        ],
+        "total_info_snps": [
+            526,
+            526,
+            526
+        ],
+        "high_risk_snps_upstream": [
+            56,
+            54,
+            61
+        ],
+        "high_risk_snps_within_gene": [
+            131,
+            193,
+            198
+        ],
+        "high_risk_snps_downstream": [
+            4,
+            8,
+            12
+        ],
+        "low_risk_snps_upstream": [
+            59,
+            61,
+            54
+        ],
+        "low_risk_snps_within_gene": [
+            260,
+            198,
+            193
+        ],
+        "low_risk_snps_downstream": [
+            16,
+            12,
+            8
+        ]
+    },
+    {
+        "mode": "x_linked",
+        "sample_id": "F0_EFNB1_XL",
+        "num_snps": 1839,
+        "info_snps_upstream": [
+            169,
+            169,
+            169
+        ],
+        "info_snps_in_gene": [
+            0,
+            0,
+            0
+        ],
+        "info_snps_downstream": [
+            179,
+            179,
+            179
+        ],
+        "total_info_snps": [
+            188,
+            188,
+            188
+        ],
+        "high_risk_snps_upstream": [
+            130,
+            79,
+            90
+        ],
+        "high_risk_snps_within_gene": [
+            0,
+            0,
+            0
+        ],
+        "high_risk_snps_downstream": [
+            104,
+            96,
+            83
+        ],
+        "low_risk_snps_upstream": [
+            39,
+            90,
+            79
+        ],
+        "low_risk_snps_within_gene": [
+            0,
+            0,
+            0
+        ],
+        "low_risk_snps_downstream": [
+            75,
+            83,
+            96
+        ]
+    },
+    {
+        "mode": "autosomal_recessive",
+        "sample_id": "F3_HBB_AR",
+        "num_snps": 1718,
+        "info_snps_upstream": 216,
+        "info_snps_in_gene": 1,
+        "info_snps_downstream": 230,
+        "total_info_snps": 447,
+        "high_risk_snps_upstream_from_female_partner": 5,
+        "high_risk_snps_within_gene_from_female_partner": 0,
+        "high_risk_snps_downstream_from_female_partner": 35,
+        "low_risk_snps_upstream_from_female_partner": 46,
+        "low_risk_snps_within_gene_from_female_partner": 0,
+        "low_risk_snps_downstream_from_female_partner": 67,
+        "high_risk_snps_upstream_from_male_partner": 11,
+        "high_risk_snps_within_gene_from_male_partner": 0,
+        "high_risk_snps_downstream_from_male_partner": 30,
+        "low_risk_snps_upstream_from_male_partner": 154,
+        "low_risk_snps_within_gene_from_male_partner": 1,
+        "low_risk_snps_downstream_from_male_partner": 98
+    },
+    {
+        "mode": "autosomal_recessive",
+        "sample_id": "F7_FRAS1_AR",
+        "num_snps": 2558,
+        "info_snps_upstream": 304,
+        "info_snps_in_gene": 65,
+        "info_snps_downstream": 164,
+        "total_info_snps": 533,
+        "high_risk_snps_upstream_from_female_partner": 46,
+        "high_risk_snps_within_gene_from_female_partner": 9,
+        "high_risk_snps_downstream_from_female_partner": 34,
+        "low_risk_snps_upstream_from_female_partner": 94,
+        "low_risk_snps_within_gene_from_female_partner": 33,
+        "low_risk_snps_downstream_from_female_partner": 82,
+        "high_risk_snps_upstream_from_male_partner": 72,
+        "high_risk_snps_within_gene_from_male_partner": 4,
+        "high_risk_snps_downstream_from_male_partner": 12,
+        "low_risk_snps_upstream_from_male_partner": 92,
+        "low_risk_snps_within_gene_from_male_partner": 19,
+        "low_risk_snps_downstream_from_male_partner": 36
+    },
+    {
+        "mode": "autosomal_recessive",
+        "sample_id": "F9_PGAP3_AR",
+        "num_snps": 1713,
+        "info_snps_upstream": 108,
+        "info_snps_in_gene": 0,
+        "info_snps_downstream": 218,
+        "total_info_snps": 326,
+        "high_risk_snps_upstream_from_female_partner": 36,
+        "high_risk_snps_within_gene_from_female_partner": 0,
+        "high_risk_snps_downstream_from_female_partner": 41,
+        "low_risk_snps_upstream_from_female_partner": 24,
+        "low_risk_snps_within_gene_from_female_partner": 0,
+        "low_risk_snps_downstream_from_female_partner": 79,
+        "high_risk_snps_upstream_from_male_partner": 13,
+        "high_risk_snps_within_gene_from_male_partner": 0,
+        "high_risk_snps_downstream_from_male_partner": 39,
+        "low_risk_snps_upstream_from_male_partner": 35,
+        "low_risk_snps_within_gene_from_male_partner": 0,
+        "low_risk_snps_downstream_from_male_partner": 59
+    },
+    {
+        "mode": "autosomal_recessive",
+        "sample_id": "F14_RTTN_AR_affected",
+        "num_snps": 1152,
+        "info_snps_upstream": 165,
+        "info_snps_in_gene": 21,
+        "info_snps_downstream": 164,
+        "total_info_snps": 350,
+        "high_risk_snps_upstream_from_female_partner": 46,
+        "high_risk_snps_within_gene_from_female_partner": 1,
+        "high_risk_snps_downstream_from_female_partner": 17,
+        "low_risk_snps_upstream_from_female_partner": 11,
+        "low_risk_snps_within_gene_from_female_partner": 2,
+        "low_risk_snps_downstream_from_female_partner": 34,
+        "high_risk_snps_upstream_from_male_partner": 35,
+        "high_risk_snps_within_gene_from_male_partner": 4,
+        "high_risk_snps_downstream_from_male_partner": 32,
+        "low_risk_snps_upstream_from_male_partner": 73,
+        "low_risk_snps_within_gene_from_male_partner": 14,
+        "low_risk_snps_downstream_from_male_partner": 81
+    },
+    {
+        "mode": "autosomal_recessive",
+        "sample_id": "F14_RTTN_AR_unaffected",
+        "num_snps": 1152,
+        "info_snps_upstream": 166,
+        "info_snps_in_gene": 22,
+        "info_snps_downstream": 164,
+        "total_info_snps": 352,
+        "high_risk_snps_upstream_from_female_partner": 46,
+        "high_risk_snps_within_gene_from_female_partner": 2,
+        "high_risk_snps_downstream_from_female_partner": 16,
+        "low_risk_snps_upstream_from_female_partner": 12,
+        "low_risk_snps_within_gene_from_female_partner": 1,
+        "low_risk_snps_downstream_from_female_partner": 35,
+        "high_risk_snps_upstream_from_male_partner": 33,
+        "high_risk_snps_within_gene_from_male_partner": 4,
+        "high_risk_snps_downstream_from_male_partner": 33,
+        "low_risk_snps_upstream_from_male_partner": 75,
+        "low_risk_snps_within_gene_from_male_partner": 15,
+        "low_risk_snps_downstream_from_male_partner": 80
+    },
+    {
+        "mode": "autosomal_recessive",
+        "sample_id": "F13_ARSB_AR_consang",
+        "num_snps": 1676,
+        "info_snps_upstream": 278,
+        "info_snps_in_gene": 35,
+        "info_snps_downstream": 235,
+        "total_info_snps": 548,
+        "high_risk_snps_upstream_from_female_partner": 1,
+        "high_risk_snps_within_gene_from_female_partner": 0,
+        "high_risk_snps_downstream_from_female_partner": 6,
+        "low_risk_snps_upstream_from_female_partner": 62,
+        "low_risk_snps_within_gene_from_female_partner": 5,
+        "low_risk_snps_downstream_from_female_partner": 74,
+        "high_risk_snps_upstream_from_male_partner": 1,
+        "high_risk_snps_within_gene_from_male_partner": 0,
+        "high_risk_snps_downstream_from_male_partner": 62,
+        "low_risk_snps_upstream_from_male_partner": 124,
+        "low_risk_snps_within_gene_from_male_partner": 11,
+        "low_risk_snps_downstream_from_male_partner": 68,
+        "high_or_low_risk_snps_upstream_from_both_partners": 90,
+        "high_or_low_risk_snps_within_gene_from_both_partners": 19,
+        "high_or_low_risk_snps_downstream_from_both_partners": 25
+    }
 ]

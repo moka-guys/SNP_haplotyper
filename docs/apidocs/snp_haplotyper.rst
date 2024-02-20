@@ -4,6 +4,14 @@ snp\_haplotyper package
 Submodules
 ----------
 
+snp\_haplotyper.app module
+--------------------------
+
+.. automodule:: snp_haplotyper.app
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 snp\_haplotyper.autosomal\_dominant\_logic module
 -------------------------------------------------
 
@@ -16,6 +24,14 @@ snp\_haplotyper.autosomal\_recessive\_logic module
 --------------------------------------------------
 
 .. automodule:: snp_haplotyper.autosomal_recessive_logic
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+snp\_haplotyper.check\_inputs module
+------------------------------------
+
+.. automodule:: snp_haplotyper.check_inputs
    :members:
    :undoc-members:
    :show-inheritance:
@@ -52,18 +68,10 @@ snp\_haplotyper.json2excel module
    :undoc-members:
    :show-inheritance:
 
-snp\_haplotyper.sample\_sheet\_reader module
---------------------------------------------
-
-.. automodule:: snp_haplotyper.sample_sheet_reader
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-snp\_haplotyper.select\_input\_file module
+snp\_haplotyper.merge\_array\_files module
 ------------------------------------------
 
-.. automodule:: snp_haplotyper.select_input_file
+.. automodule:: snp_haplotyper.merge_array_files
    :members:
    :undoc-members:
    :show-inheritance:
@@ -84,10 +92,10 @@ snp\_haplotyper.snp\_plot module
    :undoc-members:
    :show-inheritance:
 
-snp\_haplotyper.stream\_output module
--------------------------------------
+snp\_haplotyper.validate\_output module
+---------------------------------------
 
-.. automodule:: snp_haplotyper.stream_output
+.. automodule:: snp_haplotyper.validate_output
    :members:
    :undoc-members:
    :show-inheritance:

@@ -50,7 +50,7 @@ Several flags can be set to prevent features which have not been properly valida
 allow_autosomal_dominant_cases = True
 allow_autosomal_recessive_cases = True
 allow_x_linked_cases = True
-allow_cosanguineous_cases = True
+allow_consanguineous_cases = True
 ```
 
 ## Configure helper scripts, if used
