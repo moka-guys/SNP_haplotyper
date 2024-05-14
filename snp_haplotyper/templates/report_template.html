@@ -1,13 +1,27 @@
+<!DOCTYPE html>
 <html>
 
 <head>
     <meta charset="utf-8" />
     <title></title>
-    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+
+
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- DataTables JS and DataTables Bootstrap integration JS -->
+    <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.21/js/dataTables.bootstrap4.min.js"></script>
+
+    <!-- Plotly library -->
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js" charset="utf-8"></script>
+
 </head>
 
 <body>
@@ -16,7 +30,7 @@
     {{ header_html }}
     <table>
         <tr>
-            <td><b>Mode of Inheritance:</b> {{mode_of_inheritance}} </td>
+            <td><b>Mode of Inheritance:</b> {{mode_of_inheritance}} : {{consanguinity_flag}}</td>
         </tr>
         <tr>
             <td><b>SNP Data File:</b> {{input_file}} </td>
@@ -49,40 +63,40 @@
     <!-- *** Section 1 *** --->
     <h2>Probe Classification Table</h2>
     {{ warning }}
-    <tbody>
-        <tr>
-            <td>Minimum Genomic Coordinate:</td>
-            <td><input type="text" id="min" name="min"></td>
-        </tr>
-        <tr>
-            <td>Maximum Genomic Coordinate:</td>
-            <td><input type="text" id="max" name="max"></td>
-        </tr>
-        {{ results_table_1 }}
+    <table>
+        <tbody>
+            <tr>
+                <td>Minimum Genomic Coordinate:</td>
+                <td><input type="text" id="min" name="min"></td>
+            </tr>
+            <tr>
+                <td>Maximum Genomic Coordinate:</td>
+                <td><input type="text" id="max" name="max"></td>
+            </tr>
+        </tbody>
+    </table>
+    {{ results_table_1 }}
 
-        <h2>NoCalls per Sample</h2>
-        {{ warning }}
-        {{ nocall_table }}
+    <h2>NoCalls per Sample</h2>
+    {{ warning }}
+    {{ qc_table }}
 
-        <h2>NoCalls Proportion per Sample</h2>
-        {{ warning }}
-        {{ nocall_percentages_table }}
 
-        <h2>Informative SNPs by region</h2>
-        {{ warning }}
-        {{ summary_snps_table }}
+    <h2>Informative SNPs by region</h2>
+    {{ warning }}
+    {{ summary_snps_table }}
 
-        <h2>Embryo Alleles by Risk Category</h2>
-        {{ warning }}
-        {{ summary_embryo_table }}
+    <h2>Embryo Alleles by Risk Category</h2>
+    {{ warning }}
+    {{ summary_embryo_table }}
 
-        <h2>Embryo Summary by Risk Category and SNP Position</h2>
-        {{ warning }}
-        {{ summary_embryo_by_region_table }}
+    <h2>Embryo Summary by Risk Category and SNP Position</h2>
+    {{ warning }}
+    {{ summary_embryo_by_region_table }}
 
-        <h2>Plot Embryo Results</h2>
-        {{ warning }}
-        {{ html_text_for_plots }}
+    <h2>Plot Embryo Results</h2>
+    {{ warning }}
+    {{ text_for_plots }}
 </body>
 
 <script>
@@ -91,56 +105,80 @@
             .clone(true)
             .addClass('filters')
             .appendTo('#results_table_1 thead');
+
         var table = $('#results_table_1').DataTable({
             orderCellsTop: true,
             fixedHeader: true,
             initComplete: function () {
                 var api = this.api();
-
                 // For each column
-                api
-                    .columns()
-                    .eq(0)
-                    .each(function (colIdx) {
-                        // Set the header cell to contain the input element
-                        var cell = $('.filters th').eq(
-                            $(api.column(colIdx).header()).index()
-                        );
-                        var title = $(cell).text();
-                        $(cell).html('<input type="text" placeholder="' + title + '" />');
+                api.columns().eq(0).each(function (colIdx) {
+                    // Set the header cell to contain the input element
+                    var cell = $('.filters th').eq(
+                        $(api.column(colIdx).header()).index()
+                    );
+                    var title = $(cell).text();
+                    $(cell).html('<input type="text" placeholder="' + title + '" />');
 
-                        // On every keypress in this input
-                        $(
-                            'input',
-                            $('.filters th').eq($(api.column(colIdx).header()).index())
-                        )
-                            .off('keyup change')
-                            .on('keyup change', function (e) {
-                                e.stopPropagation();
+                    // On every keypress in this input
+                    $('input', $('.filters th').eq($(api.column(colIdx).header()).index()))
+                        .off('keyup change')
+                        .on('keyup change', function (e) {
+                            e.stopPropagation();
+                            // Get the search value
+                            $(this).attr('title', $(this).val());
+                            var regexr = '({search})';
+                            var cursorPosition = this.selectionStart;
+                            // Search the column for that value
+                            api.column(colIdx).search(
+                                this.value != '' ? regexr.replace('{search}', '(((' + this.value + ')))') : '',
+                                this.value != '',
+                                this.value == ''
+                            ).draw();
 
-                                // Get the search value
-                                $(this).attr('title', $(this).val());
-                                var regexr = '({search})'; //$(this).parents('th').find('select').val();
+                            $(this).focus()[0].setSelectionRange(cursorPosition, cursorPosition);
+                        });
+                });
+            }
+        });
 
-                                var cursorPosition = this.selectionStart;
-                                // Search the column for that value
-                                api
-                                    .column(colIdx)
-                                    .search(
-                                        this.value != ''
-                                            ? regexr.replace('{search}', '(((' + this.value + ')))')
-                                            : '',
-                                        this.value != '',
-                                        this.value == ''
-                                    )
-                                    .draw();
+        // Custom filtering for min and max values
+        $.fn.dataTable.ext.search.push(
+            function (settings, data, dataIndex) {
+                var min = parseInt($('#min').val(), 10);
+                var max = parseInt($('#max').val(), 10);
+                var Position = parseFloat(data[3]) || 0; // use data for the Position column
 
-                                $(this)
-                                    .focus()[0]
-                                    .setSelectionRange(cursorPosition, cursorPosition);
-                            });
-                    });
-            },
+                if ((isNaN(min) && isNaN(max)) ||
+                    (isNaN(min) && Position <= max) ||
+                    (min <= Position && isNaN(max)) ||
+                    (min <= Position && Position <= max)) {
+                    return true;
+                }
+                return false;
+            }
+        );
+
+        // Event listener to the two range filtering inputs to redraw on input
+        $('#min, #max').keyup(function () {
+            table.draw();
+        });
+    });
+
+</script>
+
+
+<script>
+    $(document).ready(function () {
+        $('#T_qc_table').DataTable({
+            paging: false,
+            ordering: false,
+            info: false,
+            searching: false,
+            initComplete: function () {
+                // Add Bootstrap border class to the table after DataTables has been initialized
+                $('#T_qc_table').addClass('table table-striped table-bordered border-dark');
+            }
         });
     });
 </script>
@@ -148,32 +186,14 @@
 <script>
     $(document).ready(function () {
         $('#summary_snps_table').DataTable({
-            "paging": false,
-            "ordering": false,
-            "info": false,
-            "searching": false,
-        });
-    });
-</script>
-
-<script>
-    $(document).ready(function () {
-        $('#nocall_table').DataTable({
-            "paging": false,
-            "ordering": false,
-            "info": false,
-            "searching": false,
-        });
-    });
-</script>
-
-<script>
-    $(document).ready(function () {
-        $('#nocall_percentages_table').DataTable({
-            "paging": false,
-            "ordering": false,
-            "info": false,
-            "searching": false,
+            paging: false,
+            ordering: false,
+            info: false,
+            searching: false,
+            initComplete: function () {
+                // Add Bootstrap border class to the table after DataTables has been initialized
+                $('#summary_snps_table').addClass('table center');
+            }
         });
     });
 </script>
@@ -181,50 +201,14 @@
 <script>
     $(document).ready(function () {
         $('#summary_embryo_table').DataTable({
-            "paging": false,
-            "ordering": false,
-            "info": false,
-            "searching": false,
-        });
-    });
-</script>
-
-<script>
-    $(document).ready(function () {
-        $('#summary_embryo_by_region_table').DataTable({
-            "paging": false,
-            "ordering": false,
-            "info": false,
-            "searching": false,
-        });
-    });
-</script>
-
-
-<script>
-    /* Custom filtering function which will search data in column four between two values */
-    $.fn.dataTable.ext.search.push(
-        function (settings, data, dataIndex) {
-            var min = parseInt($('#min').val(), 10);
-            var max = parseInt($('#max').val(), 10);
-            var Position = parseFloat(data[3]) || 0; // use data for the Position column
-
-            if ((isNaN(min) && isNaN(max)) ||
-                (isNaN(min) && Position <= max) ||
-                (min <= Position && isNaN(max)) ||
-                (min <= Position && Position <= max)) {
-                return true;
+            paging: false,
+            ordering: false,
+            info: false,
+            searching: false,
+            initComplete: function () {
+                // Add Bootstrap border class to the table after DataTables has been initialized
+                $('#summary_embryo_table').addClass('table table-striped table-bordered');
             }
-            return false;
-        }
-    );
-
-    $(document).ready(function () {
-        var table = $('#results_table_1').DataTable();
-
-        // Event listener to the two range filtering inputs to redraw on input
-        $('#min, #max').keyup(function () {
-            table.draw();
         });
     });
 </script>

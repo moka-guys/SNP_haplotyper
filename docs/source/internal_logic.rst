@@ -3,8 +3,6 @@ Internal BASHer Logic
 
 Below is outlined the internal processing logic used by BASHer to identify & classify SNPs for each mode of inheritance.
 
-TODO: Add draw.io diagram
-
 .. toctree::
    :maxdepth: 4
    :caption: Logic by inheritance mode:

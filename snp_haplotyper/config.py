@@ -1,38 +1,33 @@
+"""
+Module contains configuration settings for the SNP haplotyper program.
+"""
+
 # NOTE: CHECK DEPLOYMENT DOCS FOR MORE INFO ON CONFIGURATION ON TRUST
 
 # The genome build used by the SNP array
-genome_build = "GRCh38"
+GENOME_BUILD = "GRCh38"
 
 # Current version of BASHer used to generate the report
-basher_version = "1.0.0"
-
-# If this flag is set to True, the program will stream the results of the analysis in JSON
-# format to the standard output intead of creating a HTML report. This is useful for
-# debugging issues with the test suite as pytest captures this output during testing and
-# compares it to the expected output
-
-stream_results = False
+BASHER_VERSION = "1.0.0"
 
 # These flags can be used to prevent the program from running certain parts of the analysis
 # for example, if you have validated specific modes of inheritance, you can set the flags
 # to skip the analysis of other modes of inheritance
-allow_autosomal_dominant_cases = True
-allow_autosomal_recessive_cases = True
-allow_x_linked_cases = False
-allow_consanguineous_cases = False
-allow_trio_only_analysis = False
+ALLOW_AUTOSOMAL_DOMINANT_CASES = True
+ALLOW_AUTOSOMAL_RECESSIVE_CASES = True
+ALLOW_AUTOSOMAL_X_LINKED_CASES = True
+ALLOW_CONSANGUINEOUS_CASES = True
+ALLOW_TRIO_ONLY_ANALYSIS = True
 
 # The following flag adds a warning to the report if the version of BASHer used to generate it
 # is still in development
-released_to_production = False
+RELEASED_TO_PRODUCTION = False
 
 
 # Filepaths used by the excel_parser.py script
-python_location = "/home/graeme/miniconda3/envs/python3.10env/bin/python"
+OUTPUT_FOLDER = "/home/graeme/Desktop/SNP_haplotyper/output"
 
-snp_haplotype_script = (
-    "/home/graeme/Desktop/SNP_haplotyper/snp_haplotyper/snp_haplotype.py"
-)
-output_folder = "/home/graeme/Desktop/SNP_haplotyper/output"
+INPUT_FOLDER = "/home/graeme/Desktop/SNP_haplotyper/"
 
-input_folder = ""
+# File containing details of the probesets on the array (currently Thermo Fisher Scientific HT-CMA_96.r3 SNP array)
+PROBESETS_MAPPING_FILE = "../test_data/AffyID2rsid.txt"
