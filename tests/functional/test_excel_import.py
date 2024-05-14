@@ -349,7 +349,7 @@ def test_embryo_categorization_excel_v3(name, embryo_validation_data):
     """
     test_args = setup_test_data_from_excel(True, version=3)
     sample_id, embryo_id = name.rsplit("_", 1)
-    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[name])
+    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[sample_id])
 
     (
         mode_of_inheritance,

@@ -58,7 +58,7 @@ IMG_VERSIONED = os.getenv("IMG_VERSIONED", "N/A")  # Get the version of the appl
 
 # Create a Blueprint object named "basher" that represents the "basher" component of the application.
 # The URL prefix "/basher" is added to all routes defined in this blueprint.
-basher_bp = Blueprint("basher", __name__, url_prefix="0")
+basher_bp = Blueprint("basher", __name__, url_prefix="/basher")
 Session(app)
 CORS(app, supports_credentials=True)  # Enable handling of cross-origin requests - required to run react components
 
