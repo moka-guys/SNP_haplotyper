@@ -131,9 +131,6 @@ sphinx-build -b html docs/source docs/build
 
 To view the output open index.html in the build folder.
 
-## Release Process
-
-TODO
 
 ### Update crontab
 

@@ -1,26 +1,42 @@
-import logging
+"""
+This module contains classes and functions for processing genetic data of an embryo, including categorization and
+summarization of genetic risk based on the mode of inheritance. It encapsulates all relevant data for an embryo.
+"""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from EnumDataClasses import (
-    Chromosome,
-    FlankingRegions,
-    InheritanceMode,
-    Relationship,
-    Sex,
-    Status,
-)
+from EnumDataClasses import InheritanceMode, Sex
 from exceptions import ArgumentInputError, InvalidParameterSelectedError
 from FamilyDataClass import FamilyData
-from pydantic import BaseModel, root_validator
 from snp_plot import plot_results
-from SNPDataClass import SNPData
 
 
 class EmbryoAlleleCategorizer(ABC):
+    """
+    An abstract base class designed to categorize alleles in embryos based on Single Nucleotide Polymorphisms (SNPs)
+    and family genetic data. It prepares data for allele categorization by extracting relevant information from SNP
+    data and family genetic history, aimed at facilitating the determination of inherited risk categories for specific
+    alleles.
+
+    Attributes:
+        embryo_id (str): Unique identifier for the embryo being analyzed.
+        embryo_sex (str): Sex of the embryo.
+        family_genetic_data (object): An object containing genetic data of the family, must have attributes
+                                       'male_partner', 'female_partner', and 'reference' accessible.
+        embryo_category_df (DataFrame): A pandas DataFrame containing filtered and relevant SNP data for allele
+                                        categorization, including information on risk categories and inheritance.
+
+    Parameters:
+        embryo_id (str): Unique identifier for the embryo.
+        embryo_sex (str): Sex of the embryo.
+        family_genetic_data (object): Object containing genetic data of the family, including data of the male partner,
+                                      female partner, and a reference.
+        snp_data_df (DataFrame): A pandas DataFrame containing SNP data to be filtered for the categorization process.
+    """
+
     def __init__(self, embryo_id, embryo_sex, family_genetic_data, snp_data_df):
         self.embryo_id = embryo_id
         self.embryo_sex = embryo_sex
@@ -45,15 +61,28 @@ class EmbryoAlleleCategorizer(ABC):
 
     @abstractmethod
     def categorize(self, *args, **kwargs):
-        pass
+        """
+        Abstract method to calculate the embryo risk category for each SNP, different concrete methods for each
+        mode of inheritance.
+        """
 
 
 class AutosomalDominantCategorizer(EmbryoAlleleCategorizer):
+    """
+    A specialized categorizer for assessing genetic risk in embryos based on the autosomal dominant mode of inheritance.
+    This class extends the EmbryoAlleleCategorizer to specifically handle the complexities associated with autosomal
+    dominant genetic conditions, using Single Nucleotide Polymorphisms (SNPs) data.
+
+    Returns:
+        pd.DataFrame: An updated DataFrame with the 'embryo_risk_category' column added, containing risk assessments
+        for each SNP based on autosomal dominant inheritance patterns.
+    """
+
     def categorize(self) -> pd.DataFrame:
         """
         For Autosomal Dominant mode of inheritance, calculate the embryo risk category for each SNP.
         """
-        embryo_risk_col = f"embryo_risk_category"
+        embryo_risk_col = "embryo_risk_category"
 
         conditions = [
             (self.embryo_category_df["snp_risk_category_AB"] == "high_risk")
@@ -65,9 +94,7 @@ class AutosomalDominantCategorizer(EmbryoAlleleCategorizer):
         ]
         values = ["high_risk", "low_risk", "NoCall"]
 
-        self.embryo_category_df[embryo_risk_col] = np.select(
-            conditions, values, default="uninformative"
-        )
+        self.embryo_category_df[embryo_risk_col] = np.select(conditions, values, default="uninformative")
         self.embryo_category_df[embryo_risk_col] = pd.Categorical(
             self.embryo_category_df[embryo_risk_col],
             categories=[
@@ -86,11 +113,22 @@ class AutosomalDominantCategorizer(EmbryoAlleleCategorizer):
 
 
 class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
+    """
+    Specializes in categorizing alleles for embryos based on the autosomal recessive mode of inheritance.
+    This class extends the EmbryoAlleleCategorizer to specifically handle the complexities associated with autosomal
+    autosomal recessive genetic conditions (including consideration on the impact of consanguinity), using Single
+    Nucleotide Polymorphisms (SNPs) data.
+
+    Returns:
+        pd.DataFrame: An updated DataFrame with the 'embryo_risk_category' column added, reflecting the autosomal
+        recessive risk assessment for each SNP.
+    """
+
     def categorize(self):
         """
         For Autosomal Recessive mode of inheritance, calculate the embryo risk category for each SNP.
         """
-        embryo_risk_col = f"embryo_risk_category"
+        embryo_risk_col = "embryo_risk_category"
         consanguineous = self.family_genetic_data.consanguineous
 
         conditions = [
@@ -125,22 +163,6 @@ class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
             & (self.embryo_category_df["snp_inherited_from"] == "both_partners")
             & ((self.embryo_category_df[self.embryo_id] == "BB"))
             & consanguineous,
-            (self.embryo_category_df["snp_risk_category_AA"] == "high_risk")
-            & (self.embryo_category_df["snp_inherited_from"] == "both_partners")
-            & ((self.embryo_category_df[self.embryo_id] == "AA"))
-            & consanguineous,
-            (self.embryo_category_df["snp_risk_category_BB"] == "high_risk")
-            & (self.embryo_category_df["snp_inherited_from"] == "both_partners")
-            & ((self.embryo_category_df[self.embryo_id] == "BB"))
-            & consanguineous,
-            (self.embryo_category_df["snp_risk_category_AA"] == "low_risk")
-            & (self.embryo_category_df["snp_inherited_from"] == "both_partners")
-            & ((self.embryo_category_df[self.embryo_id] == "AA"))
-            & consanguineous,
-            (self.embryo_category_df["snp_risk_category_BB"] == "low_risk")
-            & (self.embryo_category_df["snp_inherited_from"] == "both_partners")
-            & ((self.embryo_category_df[self.embryo_id] == "BB"))
-            & consanguineous,
             # NoCall
             (self.embryo_category_df["snp_risk_category_AB"] != "uninformative")
             & (self.embryo_category_df["snp_risk_category_AB"] == "NoCall"),
@@ -154,15 +176,9 @@ class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
             "high_risk",
             "low_risk",
             "low_risk",
-            "high_risk",
-            "high_risk",
-            "low_risk",
-            "low_risk",
             "NoCall",
         ]
-        self.embryo_category_df[embryo_risk_col] = np.select(
-            conditions, values, default="uninformative"
-        )
+        self.embryo_category_df[embryo_risk_col] = np.select(conditions, values, default="uninformative")
         self.embryo_category_df[embryo_risk_col] = pd.Categorical(
             self.embryo_category_df[embryo_risk_col],
             categories=[
@@ -180,15 +196,27 @@ class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
 
 
 class XLinkedCategorizer(EmbryoAlleleCategorizer):
+    """
+    A specialized categorizer for assessing genetic risk in embryos based on the X-linked mode of inheritance.
+    This class extends the EmbryoAlleleCategorizer to specifically handle the complexities associated with X-linked
+    genetic conditions, using Single Nucleotide Polymorphisms (SNPs) data.
+
+    Returns:
+        pd.DataFrame: An updated DataFrame with the 'embryo_risk_category' column added, containing risk assessments
+        for each SNP based on X-linked inheritance patterns.
+    """
+
     def categorize(self) -> pd.DataFrame:
         """
         For X-linked mode of inheritance, calculate the embryo risk category for each SNP.
         """
-        embryo_risk_col = f"embryo_risk_category"
+        embryo_risk_col = "embryo_risk_category"
 
         if self.embryo_sex == Sex.UNKNOWN:
             raise ArgumentInputError(
-                f"'unknown' embryo sex not allowed for x-linked mode of inheritance. Check that correct mode of inheritance has been entered for {self.embryo_id}, or enter correct sex for {self.embryo_id}"
+                f"'unknown' embryo sex not allowed for x-linked mode of inheritance. "
+                f"Check that correct mode of inheritance has been entered for {self.embryo_id}, "
+                f"or enter correct sex for {self.embryo_id}"
             )
 
         if self.embryo_sex == Sex.FEMALE:
@@ -208,9 +236,7 @@ class XLinkedCategorizer(EmbryoAlleleCategorizer):
                 "NoCall_in_trio",
             ]
 
-            self.embryo_category_df[embryo_risk_col] = np.select(
-                conditions, values, default="uninformative"
-            )
+            self.embryo_category_df[embryo_risk_col] = np.select(conditions, values, default="uninformative")
 
         elif self.embryo_sex == Sex.MALE:
             conditions = [
@@ -238,9 +264,7 @@ class XLinkedCategorizer(EmbryoAlleleCategorizer):
                 "NoCall_in_trio",
             ]
 
-            self.embryo_category_df[embryo_risk_col] = np.select(
-                conditions, values, default="uninformative"
-            )
+            self.embryo_category_df[embryo_risk_col] = np.select(conditions, values, default="uninformative")
 
         else:
             raise ArgumentInputError(
@@ -286,36 +310,27 @@ class EmbryoRiskSummariser(ABC):
 
 class AutosomalDominantRiskSummariser(EmbryoRiskSummariser):
     """
-    Class for Autosomal Dominant cases, summarising embryo risk data into summary tables grouping the number of SNPs in each category.
+    Class for Autosomal Dominant cases, summarising embryo risk data into summary tables grouping the number of SNPs in
+    each category.
     """
 
     def risk_summary(self, embryo_id, embryo_category_df: pd.DataFrame) -> pd.DataFrame:
         """
         Summarises embryo risk data by SNP risk category.
         """
-        risk_summary_df = (
-            embryo_category_df.groupby("embryo_risk_category")
-            .size()
-            .reset_index(name=embryo_id)
-        )
+        risk_summary_df = embryo_category_df.groupby("embryo_risk_category").size().reset_index(name=embryo_id)
         return risk_summary_df
 
-    def risk_summary_per_region(
-        self, embryo_id, embryo_category_df: pd.DataFrame
-    ) -> pd.DataFrame:
+    def risk_summary_per_region(self, embryo_id, embryo_category_df: pd.DataFrame) -> pd.DataFrame:
         """
         Summarises embryo risk data by SNP risk category and region.
         """
         risk_summary_per_region = (
-            embryo_category_df.groupby(["embryo_risk_category", "gene_distance"])
-            .size()
-            .reset_index(name=embryo_id)
+            embryo_category_df.groupby(["embryo_risk_category", "gene_distance"]).size().reset_index(name=embryo_id)
         )
         return risk_summary_per_region
 
-    def risk_summary_for_testing(
-        self, embryo_id: str, embryo_category_df: pd.DataFrame
-    ) -> pd.DataFrame:
+    def risk_summary_for_testing(self, embryo_id: str, embryo_category_df: pd.DataFrame) -> pd.DataFrame:
         """
         Summarises embryo risk data in format expected by pytests.
 
@@ -329,22 +344,19 @@ class AutosomalDominantRiskSummariser(EmbryoRiskSummariser):
 
         # Group by embryo_risk_category and snp_position and count occurrences
         grouped_df = (
-            embryo_category_df.groupby(["embryo_risk_category", "snp_position"])
-            .size()
-            .reset_index(name=embryo_id)
+            embryo_category_df.groupby(["embryo_risk_category", "snp_position"]).size().reset_index(name=embryo_id)
         )
 
         # Filter rows where embryo_risk_category is either 'high_risk' or 'low_risk'
-        filtered_df = grouped_df[
-            grouped_df["embryo_risk_category"].isin(["high_risk", "low_risk"])
-        ]
+        filtered_df = grouped_df[grouped_df["embryo_risk_category"].isin(["high_risk", "low_risk"])]
 
         return filtered_df
 
 
 class AutosomalRecessiveRiskSummariser(EmbryoRiskSummariser):
     """
-    Class for Autosomal Recessive cases, summarising embryo risk data into summary tables grouping the number of SNPs in each category.
+    Class for Autosomal Recessive cases, summarising embryo risk data into summary tables grouping the number of SNPs
+    in each category.
     """
 
     def risk_summary(self, embryo_id, embryo_category_df: pd.DataFrame) -> pd.DataFrame:
@@ -363,9 +375,7 @@ class AutosomalRecessiveRiskSummariser(EmbryoRiskSummariser):
         )
         return risk_summary_df
 
-    def risk_summary_per_region(
-        self, embryo_id, embryo_category_df: pd.DataFrame
-    ) -> pd.DataFrame:
+    def risk_summary_per_region(self, embryo_id, embryo_category_df: pd.DataFrame) -> pd.DataFrame:
         """
         Summarises embryo risk data by SNP risk category and region.
         """
@@ -382,9 +392,7 @@ class AutosomalRecessiveRiskSummariser(EmbryoRiskSummariser):
         )
         return risk_summary_per_region
 
-    def risk_summary_for_testing(
-        self, embryo_id: str, embryo_category_df: pd.DataFrame
-    ) -> pd.DataFrame:
+    def risk_summary_for_testing(self, embryo_id: str, embryo_category_df: pd.DataFrame) -> pd.DataFrame:
         """
         Summarises embryo risk data in format expected by pytests.
 
@@ -410,14 +418,10 @@ class AutosomalRecessiveRiskSummariser(EmbryoRiskSummariser):
         )
 
         # Filter rows where embryo_risk_category is either 'high_risk' or 'low_risk'
-        filtered_df = grouped_df[
-            grouped_df["embryo_risk_category"].isin(["high_risk", "low_risk"])
-        ]
+        filtered_df = grouped_df[grouped_df["embryo_risk_category"].isin(["high_risk", "low_risk"])]
 
         filtered_df = filtered_df[
-            grouped_df["snp_inherited_from"].isin(
-                ["male_partner", "female_partner", "both_partners"]
-            )
+            grouped_df["snp_inherited_from"].isin(["male_partner", "female_partner", "both_partners"])
         ]
 
         return filtered_df
@@ -425,36 +429,27 @@ class AutosomalRecessiveRiskSummariser(EmbryoRiskSummariser):
 
 class XLinkedRiskSummariser(EmbryoRiskSummariser):
     """
-    Class for X-linked cases, summarising embryo risk data into summary tables grouping the number of SNPs in each category.
+    Class for X-linked cases, summarising embryo risk data into summary tables grouping the number of SNPs in
+    each category.
     """
 
     def risk_summary(self, embryo_id, embryo_category_df: pd.DataFrame) -> pd.DataFrame:
         """
         Summarises embryo risk data by SNP risk category.
         """
-        risk_summary_df = (
-            embryo_category_df.groupby("embryo_risk_category")
-            .size()
-            .reset_index(name=embryo_id)
-        )
+        risk_summary_df = embryo_category_df.groupby("embryo_risk_category").size().reset_index(name=embryo_id)
         return risk_summary_df
 
-    def risk_summary_per_region(
-        self, embryo_id, embryo_category_df: pd.DataFrame
-    ) -> pd.DataFrame:
+    def risk_summary_per_region(self, embryo_id, embryo_category_df: pd.DataFrame) -> pd.DataFrame:
         """
         Summarises embryo risk data by SNP risk category and region.
         """
         risk_summary_per_region = (
-            embryo_category_df.groupby(["embryo_risk_category", "gene_distance"])
-            .size()
-            .reset_index(name=embryo_id)
+            embryo_category_df.groupby(["embryo_risk_category", "gene_distance"]).size().reset_index(name=embryo_id)
         )
         return risk_summary_per_region
 
-    def risk_summary_for_testing(
-        self, embryo_id: str, embryo_category_df: pd.DataFrame
-    ) -> pd.DataFrame:
+    def risk_summary_for_testing(self, embryo_id: str, embryo_category_df: pd.DataFrame) -> pd.DataFrame:
         """
         Summarises embryo risk data in format expected by pytests.
 
@@ -468,15 +463,11 @@ class XLinkedRiskSummariser(EmbryoRiskSummariser):
 
         # Group by embryo_risk_category and snp_position and count occurrences
         grouped_df = (
-            embryo_category_df.groupby(["embryo_risk_category", "snp_position"])
-            .size()
-            .reset_index(name=embryo_id)
+            embryo_category_df.groupby(["embryo_risk_category", "snp_position"]).size().reset_index(name=embryo_id)
         )
 
         # Filter rows where embryo_risk_category is either 'high_risk' or 'low_risk'
-        filtered_df = grouped_df[
-            grouped_df["embryo_risk_category"].isin(["high_risk", "low_risk"])
-        ]
+        filtered_df = grouped_df[grouped_df["embryo_risk_category"].isin(["high_risk", "low_risk"])]
 
         return filtered_df
 
@@ -497,7 +488,7 @@ def detect_miscall_or_ado(
     male_partner_haplotype: str,
     female_partner_haplotype: str,
     reference_haplotype: str,
-    embryo_haplotype: str,
+    embryo_haplotype: str,  # TODO  add embryo sex - MALE, FEMALE, OR UNKNOWN
     mode_of_inheritance: InheritanceMode,
 ):
     """QC identify miscalls or ADOs (Allele Drop Outs)
@@ -531,7 +522,8 @@ def detect_miscall_or_ado(
     ) - set(["AA", "BB", "AB", "NoCall"])
     if len(illegal_args) != 0:
         raise ArgumentInputError(
-            f"Function detect_miscall_or_ado() only excepts 'AA','BB', 'AB', NoCall' as arguments, recieved {str(illegal_args)}"
+            "Function detect_miscall_or_ado() only excepts 'AA','BB', 'AB', NoCall' as arguments, "
+            "received " + str(illegal_args)
         )
 
     alleles = [
@@ -543,47 +535,54 @@ def detect_miscall_or_ado(
     ]
 
     # Check if mode of inheritance is null
-    if mode_of_inheritance == None:
-        raise InvalidParameterSelectedError(
-            f"Invalid mode of inheritance: {mode_of_inheritance}"
-        )
+    if mode_of_inheritance is None:
+        raise InvalidParameterSelectedError(f"Invalid mode of inheritance: {mode_of_inheritance}")
 
     match alleles:
         # For autosomal dominant and autosomal recessive mark as NoCall if any column NoCall
-        case [
-            "NoCall",
-            _,
-            _,
-            _,
-            InheritanceMode.AUTOSOMAL_DOMINANT | InheritanceMode.AUTOSOMAL_RECESSIVE,
-        ] | [
-            _,
-            "NoCall",
-            _,
-            _,
-            InheritanceMode.AUTOSOMAL_DOMINANT | InheritanceMode.AUTOSOMAL_RECESSIVE,
-        ] | [
-            _,
-            _,
-            "NoCall",
-            _,
-            InheritanceMode.AUTOSOMAL_DOMINANT | InheritanceMode.AUTOSOMAL_RECESSIVE,
-        ] | [
-            _,
-            _,
-            _,
-            "NoCall",
-            InheritanceMode.AUTOSOMAL_DOMINANT | InheritanceMode.AUTOSOMAL_RECESSIVE,
-        ]:
+        case (
+            [
+                "NoCall",
+                _,
+                _,
+                _,
+                InheritanceMode.AUTOSOMAL_DOMINANT | InheritanceMode.AUTOSOMAL_RECESSIVE,
+            ]
+            | [
+                _,
+                "NoCall",
+                _,
+                _,
+                InheritanceMode.AUTOSOMAL_DOMINANT | InheritanceMode.AUTOSOMAL_RECESSIVE,
+            ]
+            | [
+                _,
+                _,
+                "NoCall",
+                _,
+                InheritanceMode.AUTOSOMAL_DOMINANT | InheritanceMode.AUTOSOMAL_RECESSIVE,
+            ]
+            | [
+                _,
+                _,
+                _,
+                "NoCall",
+                InheritanceMode.AUTOSOMAL_DOMINANT | InheritanceMode.AUTOSOMAL_RECESSIVE,
+            ]
+        ):
             result = "NoCall"
         # For x-linked mark as NoCall if any column other than male_partner is NoCall
-        case [_, "NoCall", _, _, InheritanceMode.X_LINKED] | [
-            _,
-            _,
-            "NoCall",
-            _,
-            InheritanceMode.X_LINKED,
-        ] | [_, _, _, "NoCall", InheritanceMode.X_LINKED]:
+        case (
+            [_, "NoCall", _, _, InheritanceMode.X_LINKED]
+            | [
+                _,
+                _,
+                "NoCall",
+                _,
+                InheritanceMode.X_LINKED,
+            ]
+            | [_, _, _, "NoCall", InheritanceMode.X_LINKED]
+        ):
             result = "NoCall"
         # Compare embryo haplotype to parent haplotypes
         case ["AA", "AA", _, _, _]:
@@ -675,14 +674,16 @@ def update_embryo_risk_column(
     - pd.DataFrame: Updated DataFrame with modified risk column
     """
     df[risk_col_name] = df.apply(
-        lambda row: row[risk_col_name]
-        if row[risk_col_name] != "uninformative"
-        else detect_miscall_or_ado(
-            row[male_partner_col],
-            row[female_partner_col],
-            row[reference_col],
-            row[embryo_col],
-            mode_of_inheritance,
+        lambda row: (
+            row[risk_col_name]
+            if row[risk_col_name] != "uninformative"
+            else detect_miscall_or_ado(
+                row[male_partner_col],
+                row[female_partner_col],
+                row[reference_col],
+                row[embryo_col],
+                mode_of_inheritance,
+            )
         ),
         axis=1,
     )
@@ -691,15 +692,48 @@ def update_embryo_risk_column(
 
 @dataclass
 class EmbryoData:
+    """
+    A data class for storing and processing genetic data of an embryo, including categorization and summarization
+    of genetic risk based on the mode of inheritance. It encapsulates all relevant data for an embryo, including
+    its ID, sex, family genetic data, and a DataFrame containing SNP data for allele categorization.
+
+    Upon initialization, it automatically performs allele categorization based on the specified mode of inheritance
+    (Autosomal Dominant, Autosomal Recessive, X-Linked, etc.) using the family's genetic data and updates the SNP
+    data DataFrame with risk categories. It also generates a summary of genetic risks, including per-region risk
+    summaries and a summary for testing purposes, and plots the results.
+
+    Attributes:
+        embryo_id (str): Unique identifier for the embryo.
+        embryo_sex (Sex): Sex of the embryo, defined by an Enum (e.g., Male, Female, Unknown).
+        family_genetic_data (FamilyData): An instance containing detailed family genetic data, including mode of
+                                          inheritance and consanguinity status.
+        embryo_category_df (pd.DataFrame): A DataFrame containing SNP data for the embryo, which will be updated with
+                                           risk categories based on allele categorization.
+
+    Post-initialization attributes:
+        mode_of_inheritance (InheritanceMode): The mode of inheritance determined from the family genetic data.
+        male_partner (str): Identifier for the male partner in the genetic data.
+        female_partner (str): Identifier for the female partner in the genetic data.
+        consanguineous (bool): Boolean indicating if there is consanguinity in the family.
+        reference (str): Reference identifier used in the genetic data.
+        rsid (pd.Series): Series containing rsIDs from the SNP data.
+        risk_summary_df (pd.DataFrame): A summary DataFrame of genetic risks.
+        risk_summary_per_region_df (pd.DataFrame): A summary DataFrame of genetic risks per region.
+        risk_summary_for_testing_df (pd.DataFrame): A summary DataFrame of genetic risks for testing purposes.
+        results_plot: A plot visualizing the results of the risk categorization and summarization.
+
+    Methods:
+        get_embryo_results: Returns the updated DataFrame with SNP risk categorizations.
+        get_pytest_benchmark: Returns the DataFrame used for testing benchmarks.
+    """
+
     embryo_id: str
     embryo_sex: Sex
     family_genetic_data: FamilyData
     embryo_category_df: pd.DataFrame
 
     def __post_init__(self):
-        self.mode_of_inheritance: InheritanceMode = (
-            self.family_genetic_data.mode_of_inheritance
-        )
+        self.mode_of_inheritance: InheritanceMode = self.family_genetic_data.mode_of_inheritance
         self.male_partner: str = self.family_genetic_data.male_partner
         self.female_partner: str = self.family_genetic_data.female_partner
         self.consanguineous: bool = self.family_genetic_data.consanguineous
@@ -707,10 +741,10 @@ class EmbryoData:
 
         self.rsid: "pd.Series" = self.embryo_category_df["rsID"]
 
-        CategorizerClass = get_allele_categorizer(self.mode_of_inheritance)
+        categorizer_class = get_allele_categorizer(self.mode_of_inheritance)
 
-        if CategorizerClass:
-            categorizer_instance = CategorizerClass(
+        if categorizer_class:
+            categorizer_instance = categorizer_class(
                 self.embryo_id,
                 self.embryo_sex,
                 self.family_genetic_data,
@@ -744,20 +778,18 @@ class EmbryoData:
             ordered=True,
         )
 
-        self.embryo_category_df["embryo_risk_category"] = self.embryo_category_df[
-            "embryo_risk_category"
-        ].astype(cat_type)
+        self.embryo_category_df["embryo_risk_category"] = self.embryo_category_df["embryo_risk_category"].astype(
+            cat_type
+        )
 
-        SummarizerClass = get_embryo_risk_summariser(self.mode_of_inheritance)
+        summarizer_class = get_embryo_risk_summariser(self.mode_of_inheritance)
 
-        summariser_instance = SummarizerClass(
+        summariser_instance = summarizer_class(
             self.embryo_id,
             self.embryo_category_df,
         )
 
-        self.risk_summary_df = summariser_instance.risk_summary(
-            self.embryo_id, self.embryo_category_df
-        )
+        self.risk_summary_df = summariser_instance.risk_summary(self.embryo_id, self.embryo_category_df)
         self.risk_summary_per_region_df = summariser_instance.risk_summary_per_region(
             self.embryo_id, self.embryo_category_df
         )
@@ -777,7 +809,13 @@ class EmbryoData:
         )
 
     def get_embryo_results(self):
+        """
+        Returns the updated DataFrame with SNP risk categorizations.
+        """
         return self.embryo_category_df
 
     def get_pytest_benchmark(self):
+        """
+        Returns the DataFrame used for testing benchmarks.
+        """
         return self.risk_summary_for_testing_df

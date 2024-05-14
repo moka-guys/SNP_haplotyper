@@ -4,7 +4,6 @@
 URL="http://10.189.213.201/basher/"
 
 # Command to restart the server (replace this with the actual command)
-# TODO check the file path for this command on the server
 RESTART_COMMAND="ansible-playbook -i graeme/deployment/inventories/production graeme/deployment/playbooks/basher.yml"
 
 # Perform the HTTP request using curl & check for successful exit code

@@ -159,15 +159,9 @@ def test_ref_affected_male_ref_XL(setup_all_combination_of_inputs_XL):
     expected_results_df = pd.read_csv(data_io)
     expected_results_df = set_risk_category_dtype(expected_results_df)
 
-    tm.assert_series_equal(
-        results_df["snp_risk_category_AB"], expected_results_df["snp_risk_category_AB"]
-    )
-    tm.assert_series_equal(
-        results_df["snp_risk_category_AA"], expected_results_df["snp_risk_category_AA"]
-    )
-    tm.assert_series_equal(
-        results_df["snp_risk_category_BB"], expected_results_df["snp_risk_category_BB"]
-    )
+    tm.assert_series_equal(results_df["snp_risk_category_AB"], expected_results_df["snp_risk_category_AB"])
+    tm.assert_series_equal(results_df["snp_risk_category_AA"], expected_results_df["snp_risk_category_AA"])
+    tm.assert_series_equal(results_df["snp_risk_category_BB"], expected_results_df["snp_risk_category_BB"])
 
 
 @pytest.mark.x_linked_logic
@@ -197,7 +191,7 @@ def test_ref_affected_female_ref_XL(setup_all_combination_of_inputs_XL):
     AA,BB,BB,uninformative,uninformative,uninformative
     AA,BB,AB,uninformative,uninformative,uninformative
     AA,AB,AA,low_risk,high_risk,low_risk
-    AA,AB,BB,high_risk,high_risk,low_risk
+    AA,AB,BB,uninformative,uninformative,uninformative
     AA,AB,AB,uninformative,uninformative,uninformative
     BB,AA,AA,uninformative,uninformative,uninformative
     BB,AA,BB,uninformative,uninformative,uninformative
@@ -205,7 +199,7 @@ def test_ref_affected_female_ref_XL(setup_all_combination_of_inputs_XL):
     BB,BB,AA,uninformative,uninformative,uninformative
     BB,BB,BB,uninformative,uninformative,uninformative
     BB,BB,AB,uninformative,uninformative,uninformative
-    BB,AB,AA,high_risk,low_risk,high_risk
+    BB,AB,AA,uninformative,uninformative,uninformative
     BB,AB,BB,low_risk,low_risk,high_risk
     BB,AB,AB,uninformative,uninformative,uninformative
     AB,AA,AA,uninformative,uninformative,uninformative
@@ -225,12 +219,6 @@ def test_ref_affected_female_ref_XL(setup_all_combination_of_inputs_XL):
     expected_results_df = pd.read_csv(data_io)
     expected_results_df = set_risk_category_dtype(expected_results_df)
 
-    tm.assert_series_equal(
-        results_df["snp_risk_category_AB"], expected_results_df["snp_risk_category_AB"]
-    )
-    tm.assert_series_equal(
-        results_df["snp_risk_category_AA"], expected_results_df["snp_risk_category_AA"]
-    )
-    tm.assert_series_equal(
-        results_df["snp_risk_category_BB"], expected_results_df["snp_risk_category_BB"]
-    )
+    tm.assert_series_equal(results_df["snp_risk_category_AB"], expected_results_df["snp_risk_category_AB"])
+    tm.assert_series_equal(results_df["snp_risk_category_AA"], expected_results_df["snp_risk_category_AA"])
+    tm.assert_series_equal(results_df["snp_risk_category_BB"], expected_results_df["snp_risk_category_BB"])

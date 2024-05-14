@@ -1,13 +1,16 @@
+"""
+This module contains the excel_parser function which reads the input data from an excel file and runs the
+snp_haplotyper function.
+"""
+
 import argparse
 import logging
 import math
 import os
 import re
-import subprocess
 import sys
-from pathlib import Path
 
-import config as config
+import config
 import pandas as pd
 import snp_haplotype
 from check_inputs import check_input
@@ -24,13 +27,16 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_interval
 
 
-# Custom error handler which saves errors to a dictionary for feedback to user
 class DictErrorHandler(logging.Handler):
+    """Custom error handler which saves errors to a dictionary for feedback to user"""
+
     def __init__(self, error_dict):
         super().__init__()
         self.error_dict = error_dict
 
     def emit(self, record):
+        """
+        Emit a log record."""
         if record.levelno == logging.ERROR:
             error_msg = self.format(record)
             if error_msg not in self.error_dict:
@@ -53,10 +59,9 @@ logger.addHandler(dict_error_handler)
 # Add the directory containing this script to the PYTHOPATH
 sys.path.append(os.path.dirname(__file__))
 
-# Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
-parser = argparse.ArgumentParser(
-    description="Parses meta data from provided excel file and runs SNP haplotyper"
-)
+# Import command line arguments (these can be automatically generated from the sample sheet using
+# sample_sheet_reader.py)
+parser = argparse.ArgumentParser(description="Parses meta data from provided excel file and runs SNP haplotyper")
 
 # File input/output data
 parser.add_argument(
@@ -107,9 +112,7 @@ def load_workbook_range(range_string, worksheet):
         if isinstance(value, float):
             # Check for NaN
             if math.isnan(value):
-                return (
-                    None  # or return '' if you want to replace NaN with an empty string
-                )
+                return None  # or return '' if you want to replace NaN with an empty string
             # Remove the decimal point and append a zero
             return str(int(value))
         return value
@@ -190,12 +193,10 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
 
     # Get list of defined ranges from provided excel sheet
     defined_ranges = wb.defined_names
-    # TODO Add to logger when implemented
     #  print(defined_ranges)
     data_entry_sheet = wb["data_entry"]
 
     for dn in wb.defined_names.definedName:
-        # TODO Add to logger when implemented
         # print(dn.name)
         # print(dn.attr_text)
         input_name = dn.name
@@ -206,9 +207,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
             "reference",
         ]:
             # Import excel ranges
-            df = load_workbook_range(
-                dn.attr_text.split("!")[1].replace("$", ""), data_entry_sheet
-            )
+            df = load_workbook_range(dn.attr_text.split("!")[1].replace("$", ""), data_entry_sheet)
             argument_dict[input_name] = df.dropna(how="all")  # Remove empty rows
         else:
             # Process cell locations in the format data_entry!$B$31 or data_entry!$F$22:$L$22 (merged cells)
@@ -234,9 +233,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     maternal_mutation = argument_dict["maternal_mutation"]
     mode_of_inheritance = InheritanceMode(argument_dict["mode_of_inheritance"].lower())
     multi_analysis = argument_dict["multi_analysis"]
-    paste_gene = argument_dict[
-        "paste_gene"
-    ]  # genomic range in format chr3:100000-200000 used to populate other fields
+    paste_gene = argument_dict["paste_gene"]  # genomic range in format chr3:100000-200000 used to populate other fields
     paternal_mutation = argument_dict["paternal_mutation"]
     pgd_worksheet = argument_dict["pgd_worksheet"]
     pgd_worksheet_denovo = argument_dict["pgd_worksheet_denovo"]
@@ -276,17 +273,10 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
             logging.error('Key "embryo_sex" is missing from the DataFrame')
 
         # If data has been passed in for the embryo data sheet, check that the selected biopsy number is in the sheet
-        if (
-            not embryo_data_df.empty
-            and biopsy_number not in embryo_data_df["biopsy_no"].to_list()
-        ):
-            logger.error(
-                f"Error: Biopsy number {biopsy_number} is not in the embryo data sheet."
-            )
+        if not embryo_data_df.empty and biopsy_number not in embryo_data_df["biopsy_no"].to_list():
+            logger.error(f"Error: Biopsy number {biopsy_number} is not in the embryo data sheet.")
         # Filter embryo data to only include embryos from the current biopsy
-        filtered_embryo_data_df = embryo_data_df[
-            embryo_data_df["biopsy_no"] == biopsy_number
-        ]
+        filtered_embryo_data_df = embryo_data_df[embryo_data_df["biopsy_no"] == biopsy_number]
 
         # Check if there are any embryos in the current biopsy
         if filtered_embryo_data_df.empty:
@@ -366,6 +356,57 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         .replace("excel_test_Autosomal_Recessive_", "")
         .replace("excel_test_X_linked_", "")
     )
+
+    allowable_values = {
+        InheritanceMode.X_LINKED: {
+            "reference_sex": {Sex.FEMALE, Sex.MALE},
+            "reference_status": {Status.CARRIER, Status.AFFECTED, Status.UNAFFECTED},
+            "reference_relationship": {
+                "father",
+                "mother",
+                "son",
+                "daughter",
+                "child",
+                "embryo",
+                "prenatal",
+            },
+        },
+        InheritanceMode.AUTOSOMAL_DOMINANT: {
+            "reference_sex": {Sex.FEMALE, Sex.MALE, Sex.UNKNOWN},
+            "reference_status": {Status.AFFECTED, Status.UNAFFECTED},
+            "reference_relationship": {
+                "grandparent",
+                "father",
+                "mother",
+                "son",
+                "daughter",
+                "child",
+                "embryo",
+                "prenatal",
+                "both",
+            },
+        },
+        InheritanceMode.AUTOSOMAL_RECESSIVE: {
+            "reference_sex": {Sex.FEMALE, Sex.MALE, Sex.UNKNOWN},
+            "reference_status": {Status.AFFECTED, Status.UNAFFECTED},
+            "reference_relationship": {
+                "son",
+                "daughter",
+                "child",
+                "embryo",
+                "prenatal",
+            },
+        },
+    }
+
+    # Check if reference_relationship is an allowable value based on the mode_of_inheritance
+    if ref_relationship.lower() not in allowable_values[mode_of_inheritance]["reference_relationship"]:
+        raise ValueError(
+            f"Invalid reference_relationship '{ref_relationship}' for mode_of_inheritance '{mode_of_inheritance}'"
+        )
+        input_ok_flag = False
+
+    # Map the reference relationship to grandparent or child, the only distinction in the logic.
 
     lookup_dict = {
         "son": "child",
@@ -447,7 +488,8 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
 
     # The user can specify the SNP array text files in both the provided template and the via the command line
     # If a SNP array text file is specified in both the template and the command line the two files must be the same
-    # If a SNP array text file is specified in the template but not the command line, the file specified in the template will be used
+    # If a SNP array text file is specified in the template but not the command line, the file specified in the
+    # template will be used
 
     # Check whether a SNP array text file has been specified on the commandline, if they have then check
     # it against that provided in the template. If they are different, raise an error
@@ -460,14 +502,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
 
         # Remove the file extensions, sort the filenames, and concatenate the file names
         merged_name = (
-            "_".join(
-                sorted(
-                    [
-                        os.path.splitext(os.path.basename(file_name))[0]
-                        for file_name in input_files
-                    ]
-                )
-            )
+            "_".join(sorted([os.path.splitext(os.path.basename(file_name))[0] for file_name in input_files]))
             + "_merged.txt"
         )
 
@@ -488,9 +523,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         # Check whether environment variable is set
         if "UPLOAD_FOLDER" in os.environ:
             # If docker-compose has set the environment variable, use the path specified in the environment variable
-            input_filepath = os.path.join(
-                os.environ["UPLOAD_FOLDER"], os.path.basename(input_file)
-            )
+            input_filepath = os.path.join(os.environ["UPLOAD_FOLDER"], os.path.basename(input_file))
         else:
             # If we are running outside of docker-compose, use the path specified in the config file
             input_filepath = input_file
@@ -501,7 +534,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     args.embryo_sex = embryo_data_df.embryo_sex.to_list()
     args.mode_of_inheritance = mode_of_inheritance
     args.input_file = input_filepath
-    args.output_folder = config.output_folder
+    args.output_folder = config.OUTPUT_FOLDER
     args.output_prefix = output_prefix
     args.mode_of_inheritance = mode_of_inheritance
     args.male_partner = male_partner_col
@@ -520,7 +553,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     args.consanguineous = True if consanguineous == "yes" else False
 
     # If analysis is being done for embryos add that data as well
-    if trio_only == False:
+    if trio_only is False:
         args.trio_only = False
         args.embryo_ids = filtered_embryo_data_df.embryo_column_name.to_list()
         args.embryo_sex = filtered_embryo_data_df.embryo_sex.to_list()
@@ -528,9 +561,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         args.trio_only = True
 
     # Add header info to cmd string
-    args.header_info = (
-        f"PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}"
-    )
+    args.header_info = f"PRU={pru};Hospital No={female_partner_hosp_num};Biopsy No={biopsy_number}"
 
     # Use check_inputs.py module to ensure the input data is valid
     error_dictionary, input_ok_flag = check_input(args, input_filepath)
@@ -539,7 +570,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         input_ok_flag = False
         error_dictionary.update(error_dict_parser)
 
-    if input_ok_flag == False:
+    if input_ok_flag is False:
         logger.error("Input data is not valid, exiting - check log file for details")
         # sys.exit(1)
     else:
@@ -548,14 +579,14 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
 
 
 def main(excel_parser_args):
+    """
+    Main function for the excel_parser module. Parses the excel input and runs the snp_haplotyper function."""
     # If the user has specified the run_basher flag, then parse the excel input and run snp_haplotyper
     if excel_parser_args.run_basher:
         if excel_parser_args.snp_array_file is None:
             excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
         else:
-            excel_import = parse_excel_input(
-                excel_parser_args.input_spreadsheet, excel_parser_args.snp_array_file
-            )
+            excel_import = parse_excel_input(excel_parser_args.input_spreadsheet, excel_parser_args.snp_array_file)
         snp_haplotype.main(excel_import)
     # If the user has not specified the run_basher flag, then just parse the excel input
     else:

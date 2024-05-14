@@ -1,19 +1,13 @@
-import math
-import re
-from typing import Any, Dict, List, Optional
+"""
+This module contains helper functions for the SNP haplotyper package.
+"""
 
-import numpy as np
+import re
+from typing import Dict, List
+
 import pandas as pd
 import plotly as plt
-from EnumDataClasses import (
-    Chromosome,
-    FlankingRegions,
-    InheritanceMode,
-    Relationship,
-    Sex,
-    Status,
-)
-from jinja2 import BaseLoader, DictLoader, Environment
+from jinja2 import DictLoader, Environment
 
 
 def custom_order_generator(max_range_mb: int) -> List[str]:
@@ -79,18 +73,18 @@ def create_human_readable_heading(
     female_partner: str,
     reference: str,
 ) -> dict:
+    """Produces a human readable heading for use in tables and plots by removing file suffixes if present and adding
+    additional annotation sucha as sample type MP - Male Partner, FP - Female partner, Ref - Reference, alongside
+    sample sex if known."""
+
     def process_id(input_id: str, suffix: str) -> str:
         # Strip the .rhchp suffix if present and add the corresponding suffix
-        return (
-            input_id[:-6] + suffix if input_id.endswith(".rhchp") else input_id + suffix
-        )
+        return input_id[:-6] + suffix if input_id.endswith(".rhchp") else input_id + suffix
 
     # Part 1: Process the embryo_sex_lookup dictionary
     human_readable_embryo_lookup = {}
     for embryo_id, sex in embryo_sex_lookup.items():
-        human_readable_id = process_id(
-            embryo_id, ""
-        )  # No additional suffix for embryo IDs
+        human_readable_id = process_id(embryo_id, "")  # No additional suffix for embryo IDs
         human_readable_embryo_lookup[embryo_id] = f"{human_readable_id} {sex}"
 
     # Part 2: Process individual IDs
@@ -106,10 +100,10 @@ def create_human_readable_heading(
     return combined_result
 
 
-def replace_column_names(
-    df: pd.DataFrame, human_readable_headings: dict
-) -> pd.DataFrame:
-    # Replace the column names
+def replace_column_names(df: pd.DataFrame, human_readable_headings: dict) -> pd.DataFrame:
+    """
+    Replace the column names
+    """
     df.rename(columns=human_readable_headings, inplace=True)
 
     return df
@@ -129,9 +123,7 @@ def produce_html_table(
     Returns:
         String: HTML formated table with the provide table_id used to set the HTML table id attribute.
     """
-    html_table = summary_df.to_html(
-        table_id=table_identifier, index=include_index, classes=classes
-    )
+    html_table = summary_df.to_html(table_id=table_identifier, index=include_index, classes=classes)
     return html_table
 
 
@@ -152,9 +144,7 @@ def check_affy_duplicates(rsid_data_path):
     df = pd.read_csv(rsid_data_path, delimiter="\t", low_memory=False)
 
     # Create a single column with the position data
-    df["position"] = (
-        df["Chr"].astype(str).str.strip() + "_" + df["Min"].astype(str).str.strip()
-    )
+    df["position"] = df["Chr"].astype(str).str.strip() + "_" + df["Min"].astype(str).str.strip()
 
     # Using keep=False to mark all duplicates
     duplicates_mask = df["position"].duplicated(keep=False)
@@ -165,9 +155,7 @@ def check_affy_duplicates(rsid_data_path):
     multiple_probeset_summary_df = multiple_probeset_summary.reset_index(name="count")
 
     # Optionally, sort the result by 'count' in descending order
-    sorted_result_df = multiple_probeset_summary_df.sort_values(
-        by="count", ascending=False
-    )
+    sorted_result_df = multiple_probeset_summary_df.sort_values(by="count", ascending=False)
 
     lookup_df = df[df["position"].isin(sorted_result_df["position"])]
     lookup_df = lookup_df[["position", "rsID"]]
@@ -218,13 +206,10 @@ def generate_plots(fig_dict: Dict[str, str], static_plots=False) -> Dict[str, st
     return plots_as_html
 
 
-def format_plot_html_str(
-    plots_as_html: Dict[str, str], add_dropdown_selection=False
-) -> str:
+def format_plot_html_str(plots_as_html: Dict[str, str], add_dropdown_selection=False) -> str:
     """
     Concatenate multiple dynamic plots into a single HTML string
     """
-    # TODO Add dropdown functionality and update this function and docstring
     # Initialize an empty list to hold divs
     div_list = []
 
@@ -239,9 +224,7 @@ def format_plot_html_str(
             div_list.append(div)
 
             # Create a dropdown option for the plot
-            dropdown_options.append(
-                f'<option value="plot-{plot_id}">Plot {plot_id}</option>'
-            )
+            dropdown_options.append(f'<option value="plot-{plot_id}">Plot {plot_id}</option>')
 
         # Combine all the divs into a single HTML string
         all_divs = "\n".join(div_list)
@@ -355,14 +338,13 @@ def set_inherited_from_category_dtype(df: pd.DataFrame) -> pd.DataFrame:
         "unassigned",
     ]
 
-    df["snp_inherited_from"] = pd.Categorical(
-        df["snp_inherited_from"], categories=categories, ordered=True
-    )
+    df["snp_inherited_from"] = pd.Categorical(df["snp_inherited_from"], categories=categories, ordered=True)
 
     return df
 
 
 def get_clean_filename(path):
+    """Returns a clean filename from file path in OS agnostic manner"""
     # Split the path on either \ or /
     parts = re.split(r"[\\/]", path)
     # Return the last element

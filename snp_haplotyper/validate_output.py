@@ -1,3 +1,20 @@
+"""
+This module provides functions to convert input dictionaries of benchmark data into DataFrames with multi-index which
+are used in the pytest suite.
+
+Functions:
+- dict_to_dataframe_AD(data, consanguineous=False): Converts an input dictionary of autosomal dominant benchmark data
+into a DataFrame.
+- dict_to_dataframe_AR(data, consanguineous=False): Converts an input dictionary of autosomal recessive benchmark data
+into a DataFrame.
+- dict_to_dataframe_XL(data, consanguineous=False): Converts an input dictionary of X-linked benchmark data into a
+DataFrame.
+- dict_to_dataframe_AD_embryo(data, consanguineous=False): Converts an input dictionary of autosomal dominant benchmark
+data for embryos into a DataFrame.
+- dict_to_dataframe_AR_embryo(data, consanguineous=False): Converts an input dictionary of autosomal recessive
+benchmark data for embryos into a DataFrame.
+"""
+
 import pandas as pd
 from EnumDataClasses import InheritanceMode
 from pandas.testing import assert_frame_equal
@@ -31,24 +48,18 @@ def dict_to_dataframe_AD(data, consanguineous=False):
         {
             "snp_position": pos,
             "snp_risk_category_summary": risk,
-            "snp_count": data.get(
-                f"{risk}_snps_{pos}", 0
-            ),  # Using get method to handle missing keys
+            "snp_count": data.get(f"{risk}_snps_{pos}", 0),  # Using get method to handle missing keys
         }
         for pos in positions
         for risk in risk_categories
     ]
 
-    df = pd.DataFrame(organized_data).set_index(
-        ["snp_position", "snp_risk_category_summary"]
-    )
+    df = pd.DataFrame(organized_data).set_index(["snp_position", "snp_risk_category_summary"])
 
     # Convert index levels to CategoricalIndex with specified categories and order
     df.index = pd.MultiIndex.from_arrays(
         [
-            pd.CategoricalIndex(
-                df.index.get_level_values(level), categories=categories, ordered=True
-            )
+            pd.CategoricalIndex(df.index.get_level_values(level), categories=categories, ordered=True)
             for level, categories in zip(df.index.names, [positions, all_categories])
         ]
     )
@@ -94,19 +105,13 @@ def dict_to_dataframe_AR(data, consanguineous=False):
         entry["snp_count"] = data.get(key, entry["snp_count"])
 
     # Create DataFrame and set multi-index
-    df = pd.DataFrame(organized_data).set_index(
-        ["snp_inherited_from", "snp_risk_category_summary", "snp_position"]
-    )
+    df = pd.DataFrame(organized_data).set_index(["snp_inherited_from", "snp_risk_category_summary", "snp_position"])
 
     # Convert index levels to CategoricalIndex with specified categories and order
     df.index = pd.MultiIndex.from_arrays(
         [
-            pd.CategoricalIndex(
-                df.index.get_level_values(level), categories=categories, ordered=True
-            )
-            for level, categories in zip(
-                df.index.names, [inherited_from_categories, risk_categories, positions]
-            )
+            pd.CategoricalIndex(df.index.get_level_values(level), categories=categories, ordered=True)
+            for level, categories in zip(df.index.names, [inherited_from_categories, risk_categories, positions])
         ]
     )
     df = df.sort_index()
@@ -152,24 +157,18 @@ def dict_to_dataframe_XL(data, consanguineous=False):
         {
             "snp_position": pos,
             "snp_risk_category_summary": risk,
-            "snp_count": data.get(
-                f"{risk}_snps_{pos}", 0
-            ),  # Using get method to handle missing keys
+            "snp_count": data.get(f"{risk}_snps_{pos}", 0),  # Using get method to handle missing keys
         }
         for pos in positions
         for risk in risk_categories
     ]
 
-    df = pd.DataFrame(organized_data).set_index(
-        ["snp_position", "snp_risk_category_summary"]
-    )
+    df = pd.DataFrame(organized_data).set_index(["snp_position", "snp_risk_category_summary"])
 
     # Convert index levels to CategoricalIndex with specified categories and order
     df.index = pd.MultiIndex.from_arrays(
         [
-            pd.CategoricalIndex(
-                df.index.get_level_values(level), categories=categories, ordered=True
-            )
+            pd.CategoricalIndex(df.index.get_level_values(level), categories=categories, ordered=True)
             for level, categories in zip(df.index.names, [positions, all_categories])
         ]
     )
@@ -204,24 +203,18 @@ def dict_to_dataframe_AD_embryo(data, consanguineous=False):
         {
             "embryo_risk_category": risk,
             "snp_position": pos,
-            "snp_count": data.get(
-                f"{risk}_snps_{pos}", 0
-            ),  # Using get method to handle missing keys
+            "snp_count": data.get(f"{risk}_snps_{pos}", 0),  # Using get method to handle missing keys
         }
         for risk in risk_categories
         for pos in positions
     ]
 
-    df = pd.DataFrame(organized_data).set_index(
-        ["embryo_risk_category", "snp_position"]
-    )
+    df = pd.DataFrame(organized_data).set_index(["embryo_risk_category", "snp_position"])
 
     # Convert index levels to CategoricalIndex with specified categories and order
     df.index = pd.MultiIndex.from_arrays(
         [
-            pd.CategoricalIndex(
-                df.index.get_level_values(level), categories=categories, ordered=True
-            )
+            pd.CategoricalIndex(df.index.get_level_values(level), categories=categories, ordered=True)
             for level, categories in zip(df.index.names, [all_categories, positions])
         ]
     )
@@ -268,9 +261,7 @@ def dict_to_dataframe_AR_embryo(data, consanguineous=False):
         entry["snp_count"] = data.get(key, entry["snp_count"])
 
     # Create DataFrame and set multi-index
-    df = pd.DataFrame(organized_data).set_index(
-        ["snp_inherited_from", "snp_risk_category_summary", "snp_position"]
-    )
+    df = pd.DataFrame(organized_data).set_index(["snp_inherited_from", "snp_risk_category_summary", "snp_position"])
 
     full_risk_categories = [
         "high_risk",
@@ -285,9 +276,7 @@ def dict_to_dataframe_AR_embryo(data, consanguineous=False):
     # Convert index levels to CategoricalIndex with specified categories and order
     df.index = pd.MultiIndex.from_arrays(
         [
-            pd.CategoricalIndex(
-                df.index.get_level_values(level), categories=categories, ordered=True
-            )
+            pd.CategoricalIndex(df.index.get_level_values(level), categories=categories, ordered=True)
             for level, categories in zip(
                 df.index.names,
                 [inherited_from_categories, full_risk_categories, positions],
@@ -343,24 +332,18 @@ def dict_to_dataframe_XL_embryo(data, consanguineous=False):
         {
             "embryo_risk_category": risk,
             "snp_position": pos,
-            "snp_count": data.get(
-                f"{risk}_snps_{pos}", 0
-            ),  # Using get method to handle missing keys
+            "snp_count": data.get(f"{risk}_snps_{pos}", 0),  # Using get method to handle missing keys
         }
         for risk in risk_categories
         for pos in positions
     ]
 
-    df = pd.DataFrame(organized_data).set_index(
-        ["embryo_risk_category", "snp_position"]
-    )
+    df = pd.DataFrame(organized_data).set_index(["embryo_risk_category", "snp_position"])
 
     # Convert index levels to CategoricalIndex with specified categories and order
     df.index = pd.MultiIndex.from_arrays(
         [
-            pd.CategoricalIndex(
-                df.index.get_level_values(level), categories=categories, ordered=True
-            )
+            pd.CategoricalIndex(df.index.get_level_values(level), categories=categories, ordered=True)
             for level, categories in zip(df.index.names, [all_categories, positions])
         ]
     )
@@ -377,10 +360,12 @@ def validate_snp_results(
     consanguineous=False,
 ):
     """
-    Validates the summary and informative SNP (Single Nucleotide Polymorphisms) results.  Compares the produced results to the expected results as imported from the launch.json.
+    Validates the summary and informative SNP (Single Nucleotide Polymorphisms) results.  Compares the produced results
+    to the expected results as imported from the launch.json.
 
     Arguments:
-        mode (str): The mode of inheritance being tested. Currently supports "autosomal_dominant" and "autosomal_recessive".
+        mode (str): The mode of inheritance being tested. Currently supports "autosomal_dominant"
+        and "autosomal_recessive".
         sample_id (str): The unique identifier for the sample.
         number_snps_imported (int): The number of SNPs imported.
         summary_snps_by_region (DataFrame): DataFrame containing summary SNPs information by gene region.
@@ -415,9 +400,7 @@ def validate_snp_results(
         # Test contents of summary_snps_by_region dataframe which is used to make the summary_snps_table in the report
         # We import the benchmark data as a DataFrame and compare it to the produced DataFrame
         XL_benchmark_df = dict_to_dataframe_XL(validation)
-        XL_benchmark_df = pd.DataFrame(
-            XL_benchmark_df.snp_count.tolist(), index=XL_benchmark_df.index
-        )
+        XL_benchmark_df = pd.DataFrame(XL_benchmark_df.snp_count.tolist(), index=XL_benchmark_df.index)
         XL_benchmark_df.columns = [
             "snp_count_female_AB",
             "snp_count_male_AA",
@@ -437,6 +420,9 @@ def validate_embryo_results(
     all_validation: dict,
     consanguineous=False,
 ):
+    """
+    Validates the summary and informative SNP (Single Nucleotide Polymorphisms) results for embryos.
+    Compares the produced results to the expected results as imported from the launch.json."""
     validation = all_validation[sample_id + "_" + embryo_id]
     assert mode == InheritanceMode(validation["mode"])
     assert sample_id == validation["sample_id"]
@@ -486,9 +472,7 @@ def validate_embryo_results(
         ]
 
         AR_benchmark_df = AR_benchmark_df[
-            AR_benchmark_df.index.isin(
-                ["male_partner", "both_partners", "female_partner"], level=0
-            )
+            AR_benchmark_df.index.isin(["male_partner", "both_partners", "female_partner"], level=0)
         ]
 
         AR_benchmark_df = AR_benchmark_df.reset_index()

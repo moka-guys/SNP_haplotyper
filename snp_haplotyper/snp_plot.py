@@ -1,17 +1,10 @@
+
 import logging
 
 import pandas as pd
-import plotly as plt
 import plotly.express as px
 import plotly.graph_objects as go
-from EnumDataClasses import (
-    Chromosome,
-    FlankingRegions,
-    InheritanceMode,
-    Relationship,
-    Sex,
-    Status,
-)
+from EnumDataClasses import InheritanceMode
 
 logger = logging.getLogger("BASHer_logger")
 
@@ -47,13 +40,9 @@ def plot_results(
     gene_end = int(gene_end)
 
     # Replace "unassigned" in "snp_inherited_from" with "uninformative"
-    df["snp_inherited_from"] = df["snp_inherited_from"].replace(
-        {"unassigned": "uninformative"}
-    )
+    df["snp_inherited_from"] = df["snp_inherited_from"].replace({"unassigned": "uninformative"})
     if consanguineous:
-        df["snp_inherited_from"] = df["snp_inherited_from"].replace(
-            {"both_partners": "uninformative"}
-        )
+        df["snp_inherited_from"] = df["snp_inherited_from"].replace({"both_partners": "uninformative"})
     else:
         # Ignore both_partners category for non-consanguineous families
         df["snp_inherited_from"] = pd.Categorical(
@@ -75,14 +64,8 @@ def plot_results(
     )
 
     # Determine if faceting is needed based on the mode of inheritance
-    facet_col = (
-        "snp_inherited_from"
-        if mode_of_inheritance == InheritanceMode.AUTOSOMAL_RECESSIVE
-        else None
-    )
-    facet_col_wrap = (
-        1 if mode_of_inheritance == InheritanceMode.AUTOSOMAL_RECESSIVE else 0
-    )
+    facet_col = "snp_inherited_from" if mode_of_inheritance == InheritanceMode.AUTOSOMAL_RECESSIVE else None
+    facet_col_wrap = 1 if mode_of_inheritance == InheritanceMode.AUTOSOMAL_RECESSIVE else 0
 
     # Color mapping
     color_discrete_map = {
@@ -183,14 +166,8 @@ def plot_results(
     # Set reasonable axis size
     fig.update_xaxes(
         range=[
-            gene_start
-            - (
-                bp_flanking_region_size + 100000
-            ),  # nicely place the annotation text within the plot
-            gene_end
-            + (
-                bp_flanking_region_size + 100000
-            ),  # nicely place the annotation text within the plot
+            gene_start - (bp_flanking_region_size + 100000),  # nicely place the annotation text within the plot
+            gene_end + (bp_flanking_region_size + 100000),  # nicely place the annotation text within the plot
         ],
         exponentformat="none",
     )
@@ -213,15 +190,9 @@ def plot_results(
             go.Scatter(
                 name=annotation_name_high_risk,
                 x=[
-                    gene_start
-                    - (
-                        bp_flanking_region_size - 100000
-                    ),  # nicely place the annotation text within the plot
+                    gene_start - (bp_flanking_region_size - 100000),  # nicely place the annotation text within the plot
                     (gene_start + gene_end) / 2,
-                    gene_end
-                    + (
-                        bp_flanking_region_size - 100000
-                    ),  # nicely place the annotation text within the plot
+                    gene_end + (bp_flanking_region_size - 100000),  # nicely place the annotation text within the plot
                 ],
                 y=[
                     3,
@@ -245,15 +216,9 @@ def plot_results(
             go.Scatter(
                 name=annotation_name_low_risk,
                 x=[
-                    gene_start
-                    - (
-                        bp_flanking_region_size - 100000
-                    ),  # nicely place the annotation text within the plot
+                    gene_start - (bp_flanking_region_size - 100000),  # nicely place the annotation text within the plot
                     (gene_start + gene_end) / 2,
-                    gene_end
-                    + (
-                        bp_flanking_region_size - 100000
-                    ),  # nicely place the annotation text within the plot
+                    gene_end + (bp_flanking_region_size - 100000),  # nicely place the annotation text within the plot
                 ],
                 y=[-3, -3, -3],
                 mode="text",
@@ -269,13 +234,8 @@ def plot_results(
             col=1,
         )
 
-    if (
-        mode_of_inheritance == InheritanceMode.X_LINKED
-        or mode_of_inheritance == InheritanceMode.AUTOSOMAL_DOMINANT
-    ):
-        summary_df = embryo_count_data_df.groupby(
-            ["embryo_risk_category", "snp_position"]
-        ).sum()
+    if mode_of_inheritance == InheritanceMode.X_LINKED or mode_of_inheritance == InheritanceMode.AUTOSOMAL_DOMINANT:
+        summary_df = embryo_count_data_df.groupby(["embryo_risk_category", "snp_position"]).sum()
         add_snp_count_annotation(
             1,
             "High_risk count",
@@ -290,9 +250,7 @@ def plot_results(
         )
     # A faceted 3 plot figure is created for AR so that male and female SNPs can be separated out.
     elif mode_of_inheritance == InheritanceMode.AUTOSOMAL_RECESSIVE:
-        summary_df = embryo_count_data_df.groupby(
-            ["embryo_risk_category", "snp_position", "snp_inherited_from"]
-        ).sum()
+        summary_df = embryo_count_data_df.groupby(["embryo_risk_category", "snp_position", "snp_inherited_from"]).sum()
         add_snp_count_annotation(  # Male plot
             3,
             "High_risk count male",

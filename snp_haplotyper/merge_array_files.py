@@ -53,7 +53,7 @@ def check_input_dfs(dfs: list[pd.DataFrame]) -> None:
     for df in dfs:
         probeset_ids.append(df["Probeset ID"].values)
 
-    if all([np.array_equal(probeset_ids[0], x) for x in probeset_ids[1:]]) == False:
+    if all([np.array_equal(probeset_ids[0], x) for x in probeset_ids[1:]]) is False:
         raise ValueError(
             "Probeset IDs are not identical for all input files. Check you have not mixed SNP arrays data."
         )

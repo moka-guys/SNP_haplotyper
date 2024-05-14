@@ -34,7 +34,8 @@ def setup_test_data_from_excel(split_by_embryo=False, version=1):
     ValueError: If an unsupported version number is provided.
 
     Returns:
-    dict: A dictionary containing the setup test data. Keys are the run names and values are Namespace objects containing the input spreadsheet file path and optional snp_array_file and run_basher values.
+    dict: A dictionary containing the setup test data. Keys are the run names and values are Namespace objects
+    containing the input spreadsheet file path and optional snp_array_file and run_basher values.
     """
     # We need to get the embryo_ids for each sample from the launch JSON so we can auto generate
     # the test names for each embryo without prereading the excel files
@@ -60,9 +61,7 @@ def setup_test_data_from_excel(split_by_embryo=False, version=1):
     # file paths for each run
     run_data_dict = {}
     for excel_file in excel_files:
-        run_name = re.sub(
-            r"_v\d+\.xlsx$", "", excel_file.replace("excel_test_", "")
-        ).replace(".xlsx", "")
+        run_name = re.sub(r"_v\d+\.xlsx$", "", excel_file.replace("excel_test_", "")).replace(".xlsx", "")
         if split_by_embryo == False:
             run_data_dict[run_name] = Namespace(
                 input_spreadsheet=os.path.join(
@@ -104,9 +103,7 @@ def test_informative_snps_excel_v1(name, snp_validation_data):
     AssertionError: If the actual output does not match the expected output.
     """
     test_args = setup_test_data_from_excel()
-    basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(
-        test_args[name]
-    )
+    basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(test_args[name])
 
     (
         mode_of_inheritance,
@@ -125,15 +122,6 @@ def test_informative_snps_excel_v1(name, snp_validation_data):
         snp_validation = json.loads(j.read())
         for dict in snp_validation:
             all_validation[dict["sample_id"]] = dict
-
-    # validate_snp_results(
-    #     mode_of_inheritance,
-    #     sample_id,
-    #     number_snps_imported,
-    #     embryo_snps_by_region,
-    #     informative_snps_by_region,
-    #     all_validation,
-    # )
 
     validate_snp_results(
         mode_of_inheritance,
@@ -163,9 +151,7 @@ def test_informative_snps_excel_v2(name, snp_validation_data):
     AssertionError: If the actual output does not match the expected output.
     """
     test_args = setup_test_data_from_excel()
-    basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(
-        test_args[name]
-    )
+    basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(test_args[name])
 
     (
         mode_of_inheritance,
@@ -212,10 +198,8 @@ def test_informative_snps_excel_v3(name, snp_validation_data):
     Raises:
     AssertionError: If the actual output does not match the expected output.
     """
-    test_args = setup_test_data_from_excel()
-    basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(
-        test_args[name]
-    )
+    test_args = setup_test_data_from_excel(False, version=3)
+    basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(test_args[name])
 
     (
         mode_of_inheritance,
@@ -265,9 +249,7 @@ def test_embryo_categorization_excel_v1(name, embryo_validation_data):
     """
     test_args = setup_test_data_from_excel()
     sample_id, embryo_id = name.rsplit("_", 1)
-    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(
-        test_args[sample_id]
-    )
+    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[sample_id])
 
     (
         mode_of_inheritance,
@@ -317,9 +299,7 @@ def test_embryo_categorization_excel_v2(name, embryo_validation_data):
     """
     test_args = setup_test_data_from_excel()
     sample_id, embryo_id = name.rsplit("_", 1)
-    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(
-        test_args[sample_id]
-    )
+    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[sample_id])
 
     (
         mode_of_inheritance,
@@ -367,11 +347,9 @@ def test_embryo_categorization_excel_v3(name, embryo_validation_data):
     Raises:
     AssertionError: If the actual output does not match the expected output.
     """
-    test_args = setup_test_data_from_excel()
+    test_args = setup_test_data_from_excel(True, version=3)
     sample_id, embryo_id = name.rsplit("_", 1)
-    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(
-        test_args[sample_id]
-    )
+    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[name])
 
     (
         mode_of_inheritance,

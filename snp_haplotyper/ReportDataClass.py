@@ -1,31 +1,16 @@
-from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import IO, Any, Union
+from typing import IO, Any
 
-import pandas as pd
-from EnumDataClasses import (
-    Chromosome,
-    FlankingRegions,
-    InheritanceMode,
-    Relationship,
-    Sex,
-    Status,
-)
-from helper_functions import (
-    custom_order_generator,
-    dict2html,
-    format_plot_html_str,
-    generate_html_plot,
-    generate_pdf_plot,
-    generate_plots,
-    produce_html_table,
-)
 from jinja2 import Environment, PackageLoader
 
 
 @dataclass
 class ReportData:
+    """
+    Dataclass to hold all the data needed to generate a report
+    """
+
     html_text_for_plots: str
     pdf_text_for_plots: str
     text_for_plots: str
@@ -66,6 +51,11 @@ class ReportData:
 
 
 class ReportGenerator:
+    """
+    ReportGenerator class to generate
+    reports in HTML or PDF format
+    """
+
     def __init__(self, report_data: ReportData):
         # Initialize with the provided ReportData
         self.report_data = report_data
@@ -74,6 +64,9 @@ class ReportGenerator:
         self.template = env.get_template("report_template.html")
 
     def render(self, file_type: str) -> str:
+        """
+        Render the report in the desired format
+        """
         if file_type == "html":
             # HTML reports have dynamic plots
             self.report_data.text_for_plots = self.report_data.html_text_for_plots

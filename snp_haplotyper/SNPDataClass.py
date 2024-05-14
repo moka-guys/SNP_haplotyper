@@ -1,38 +1,31 @@
+"""
+This module provides the stuctures for storing SNP data
+"""
+
 import logging
 import os
 import sys
 from abc import ABC, abstractmethod
-from datetime import datetime
-from enum import Enum, auto
-from io import IOBase
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 
-import config as config  # TODO add code to use this dependency
+# from pydantic.dataclasses import dataclass
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+
+import config
 import numpy as np
 import pandas as pd
 import pandera as pa
-import pdfkit
-from exceptions import ArgumentInputError, InvalidParameterSelectedError
+from EnumDataClasses import InheritanceMode
+from FamilyDataClass import FamilyData
 from helper_functions import custom_order_generator
 from inheritance_logic import (
     AutosomalDominantLogic,
     AutosomalRecessiveLogic,
     XLinkedLogic,
 )
-from jinja2 import Environment, PackageLoader
 from pandas import DataFrame
 from pandas.api.types import CategoricalDtype
-from pydantic import (
-    BaseModel,
-    ValidationError,
-    conlist,
-    constr,
-    fields,
-    root_validator,
-    validator,
-)
-from pydantic.dataclasses import dataclass
 
 logger = logging.getLogger("BASHer_logger")
 
@@ -40,28 +33,14 @@ logger = logging.getLogger("BASHer_logger")
 sys.path.append(os.path.dirname(__file__))
 mod_path = Path(__file__).parent
 
-from dataclasses import dataclass
-
-import config as config
-from EnumDataClasses import (
-    Chromosome,
-    FlankingRegions,
-    InheritanceMode,
-    Relationship,
-    Sex,
-    Status,
-)
-from exceptions import ArgumentInputError, InvalidParameterSelectedError
-from FamilyDataClass import FamilyData
-
 
 def single_value(s: pd.Series) -> bool:
-    # checks if a series has a unique value
+    """checks if a series has a unique value"""
     return s.nunique() == 1
 
 
 def no_duplicates(s: pd.Series) -> bool:
-    # checks if a series has duplicate values
+    """checks if a series has duplicate values"""
     return not s.duplicated().any()
 
 
@@ -119,9 +98,7 @@ snp_df_schema = pa.DataFrameSchema(
         "Position": pa.Column(
             int,
             checks=[
-                pa.Check(
-                    lambda x: x >= 0, error="Negative values in 'Position' column"
-                ),
+                pa.Check(lambda x: x >= 0, error="Negative values in 'Position' column"),
             ],
             required=True,
         ),
@@ -138,32 +115,29 @@ snp_df_schema = pa.DataFrameSchema(
 
 @dataclass
 class SNPData:
-    family_data: FamilyData
-    snp_df: pd.DataFrame
-    affy_2_rs_ids_df: Optional[pd.DataFrame] = None
     """
     SNPData dataclass
     =================
 
-    This class represents and manipulates Single Nucleotide Polymorphism (SNP) data imported from an Affymetrix array. It further annotates this P data
-    based on genomic coordinates and other associated data.
+    This class represents and manipulates Single Nucleotide Polymorphism (SNP) data imported from an Affymetrix array.
+    It further annotates this SNP data based on genomic coordinates and other associated data.
 
     """
+
+    family_data: FamilyData
+    snp_df: pd.DataFrame
+    affy_2_rs_ids_df: Optional[pd.DataFrame] = None
 
     def __post_init__(self):
         self.number_snps_imported = self.snp_df.shape[0]
         self.validate_snp_df()
-        self.bp_flanking_region_size: int = (
-            self.family_data.flanking_region_size * 10**6
-        )
+        self.bp_flanking_region_size: int = self.family_data.flanking_region_size * 10**6
         if self.affy_2_rs_ids_df is None:
             self.affy_2_rs_ids_df = self._load_affy_2_rs_ids()
         self._add_rsid_column()
         self._add_duplicated_probeset_id_column()
         self._annotate_snp_data(self.family_data.flanking_region_size)
-        self.inheritance_logic = InheritanceLogicFactory.create_logic(
-            self.family_data.mode_of_inheritance
-        )
+        self.inheritance_logic = InheritanceLogicFactory.create_logic(self.family_data.mode_of_inheritance)
         self.remove_snps_outside_roi()
         self.categorise_snp_risk_category()
         self.add_risk_summary_column()
@@ -181,18 +155,13 @@ class SNPData:
         Returns:
             pd.DataFrame: A DataFrame containing the mapping for Affy probes_set IDs to dbSNP rsIDs.
         """
-        # TODO add this to config
         mod_path = Path(__file__).parent
-        rsid_data_path = (
-            mod_path / "../test_data/AffyID2rsid.txt"
-        ).resolve()  #  TODO add this to config
+        rsid_data_path = (mod_path / config.PROBESETS_MAPPING_FILE).resolve()
         if not rsid_data_path.exists():
             raise FileNotFoundError(f"File not found at {rsid_data_path}")
         df = pd.read_csv(rsid_data_path, delimiter=",", low_memory=False)
         if df is None or df.empty:
-            raise ValueError(
-                f"Failed to load the required DataFrame from the provided path."
-            )
+            raise ValueError("Failed to load the required DataFrame from the provided path.")
         return df
 
     def _add_rsid_column(self) -> None:
@@ -226,9 +195,7 @@ class SNPData:
             raise ValueError("Expected a DataFrame as input.")
 
         # Checking for duplicate 'probeset_id' and adding a new column
-        self.snp_df["probe_is_duplicated"] = self.snp_df.duplicated(
-            "probeset_id", keep=False
-        )
+        self.snp_df["probe_is_duplicated"] = self.snp_df.duplicated("probeset_id", keep=False)
 
     def validate_snp_df(self) -> None:
         """
@@ -280,9 +247,10 @@ class SNPData:
         return categorized_series
 
     @staticmethod
-    def calculate_mb_distance(
-        gene_positions: pd.Series, gene_start: int, gene_end: int
-    ) -> pd.Series:
+    def calculate_mb_distance(gene_positions: pd.Series, gene_start: int, gene_end: int) -> pd.Series:
+        """
+        Calculates the distance of SNPs from the gene in megabases.
+        """
         # Convert gene_positions to numpy array for vectorized operations
         positions = gene_positions.to_numpy()
 
@@ -299,14 +267,15 @@ class SNPData:
         )
 
         # Round away from zero using np.copysign and np.ceil
-        rounded_distances = np.copysign(np.ceil(np.abs(distances)), distances).astype(
-            int
-        )
+        rounded_distances = np.copysign(np.ceil(np.abs(distances)), distances).astype(int)
 
         return pd.Series(rounded_distances, index=gene_positions.index)
 
     @staticmethod
     def annotate_distances(distances: pd.Series) -> pd.Series:
+        """
+        Annotates distances in megabases to predefined categories.
+        """
         max_range_mb = max(abs(distances.max()), abs(distances.min()))
 
         def annotate(value):
@@ -318,11 +287,7 @@ class SNPData:
                 return f"{value-1}-{value}MB_from_end"
 
         category_order = custom_order_generator(max_range_mb)
-        return pd.Series(
-            pd.Categorical(
-                distances.apply(annotate), categories=category_order, ordered=True
-            )
-        )
+        return pd.Series(pd.Categorical(distances.apply(annotate), categories=category_order, ordered=True))
 
     def _annotate_snp_data(self, distance_mb: int):
         """
@@ -344,14 +309,10 @@ class SNPData:
         end = int(self.family_data.gene_end)
 
         # Use static method to categorize SNP by position
-        self.snp_df["snp_position"] = self.categorize_SNP_by_position(
-            self.snp_df["Position"], start, end, distance_mb
-        )
+        self.snp_df["snp_position"] = self.categorize_SNP_by_position(self.snp_df["Position"], start, end, distance_mb)
 
         # Use static method to calculate distances in MB
-        distances_in_mb = self.calculate_mb_distance(
-            self.snp_df["Position"], start, end
-        )
+        distances_in_mb = self.calculate_mb_distance(self.snp_df["Position"], start, end)
         self.snp_df["gene_distance"] = self.annotate_distances(distances_in_mb)
 
         # Convert gene_distance to Categorical type with custom order
@@ -391,19 +352,18 @@ class SNPData:
                     ordered=True,
                 )
                 # Filter out SNPs outside ROI and reset index
-                self.outside_roi = self.snp_df[
-                    self.snp_df["snp_position"] == "outside_ROI"
-                ].reset_index(drop=True)
+                self.outside_roi = self.snp_df[self.snp_df["snp_position"] == "outside_ROI"].reset_index(drop=True)
                 # Filter in SNPs inside ROI and reset index
-                self.snp_df = self.snp_df[
-                    self.snp_df["snp_position"] != "outside_ROI"
-                ].reset_index(drop=True)
+                self.snp_df = self.snp_df[self.snp_df["snp_position"] != "outside_ROI"].reset_index(drop=True)
             else:
                 print("Error: 'snp_position' column not found in snp_df.")
         else:
             print("Error: snp_df attribute is missing or not a DataFrame.")
 
     def categorise_snp_risk_category(self):
+        """
+        Categorizes SNPs based on their risk category.
+        """
         if self.inheritance_logic:
             InheritanceSpecificAnalysis = self.inheritance_logic(
                 self.snp_df,
@@ -417,9 +377,7 @@ class SNPData:
             )
             self.snp_df = InheritanceSpecificAnalysis.df
         else:
-            raise ValueError(
-                "Invalid inheritance logic or mode of inheritance not set!"
-            )
+            raise ValueError("Invalid inheritance logic or mode of inheritance not set!")
         categories_list = [
             "upstream",
             "within_gene",
@@ -430,6 +388,10 @@ class SNPData:
         )
 
     def add_risk_summary_column(self):
+        """
+        Adds a new column to the dataframe summarizing the risk categories.
+        """
+
         def categorize(row):
             values = [
                 row["snp_risk_category_AB"],
@@ -471,22 +433,19 @@ class SNPData:
         )
 
     def get_snp_df(self):
+        """
+        Returns the SNP dataframe.
+        """
         return self.snp_df
 
     def group_informative_snps_by_region(self) -> pd.DataFrame:
         """Calculates a summary of informative SNPs and sets the respective attribute."""
         if self.inheritance_logic:
-            informative_snps_summary = self.summary_logic.summarise(
-                self.snp_df, self.family_data.consanguineous
-            )
+            informative_snps_summary = self.summary_logic.summarise(self.snp_df, self.family_data.consanguineous)
         else:
-            raise ValueError(
-                "Invalid inheritance logic or mode of inheritance not set!"
-            )
+            raise ValueError("Invalid inheritance logic or mode of inheritance not set!")
         if informative_snps_summary is None:
-            raise ValueError(
-                "Failed to calculate informative SNPs summary. Expected a DataFrame."
-            )
+            raise ValueError("Failed to calculate informative SNPs summary. Expected a DataFrame.")
 
         if not isinstance(informative_snps_summary, pd.DataFrame):
             raise ValueError(
@@ -497,19 +456,22 @@ class SNPData:
     def summarise_test_data(self):
         """Calculates a summary of informative SNPs and sets the respective attribute."""
         if self.inheritance_logic:
-            self.pytest_format_snp_df = self.summary_logic.get_test_data(
-                self.snp_df, self.family_data.consanguineous
-            )
+            self.pytest_format_snp_df = self.summary_logic.get_test_data(self.snp_df, self.family_data.consanguineous)
         else:
-            raise ValueError(
-                "Invalid inheritance logic or mode of inheritance not set!"
-            )
+            raise ValueError("Invalid inheritance logic or mode of inheritance not set!")
 
     def get_test_df(self):
+        """
+        Returns the test data for the pytest.
+        """
         return self.pytest_format_snp_df
 
 
 class InheritanceLogicFactory:
+    """
+    Factory class to create the appropriate inheritance logic class based on the mode of inheritance.
+    """
+
     @staticmethod
     def create_logic(mode_of_inheritance):
         """
@@ -524,20 +486,30 @@ class InheritanceLogicFactory:
 
 
 class SummaryStrategy(ABC):
+    """
+    Abstract class for summarising SNP data."""
+
     def __init__(self, custom_order):
         self.custom_order = custom_order
 
     @abstractmethod
     def summarise(self, df, consanguineous):
+        """
+        Summarises the SNP data.
+        """
         pass
 
 
 class BaseSummary(SummaryStrategy):
+    """
+    Base class for summarising SNP data.
+    """
+
     def filter_snps(self, df, group_by_cols, snp_risk_categories):
+        """
+        Filters the SNPs based on the risk categories and groups them by the specified columns."""
         snps_by_region = df.value_counts(group_by_cols).reset_index(name="snp_count")
-        summarised_snps = (
-            snps_by_region.groupby(by=group_by_cols).sum(numeric_only=True).fillna(0)
-        )
+        summarised_snps = snps_by_region.groupby(by=group_by_cols).sum(numeric_only=True).fillna(0)
         return summarised_snps[
             np.in1d(
                 summarised_snps.index.get_level_values("snp_risk_category_summary"),
@@ -547,7 +519,13 @@ class BaseSummary(SummaryStrategy):
 
 
 class AutosomalDominantSummary(BaseSummary):
+    """
+    Class to summarise SNP data for autosomal dominant mode of inheritance."""
+
     def summarise(self, df: pd.DataFrame, consanguineous: bool):
+        """
+        Summarises the SNP data for autosomal dominant mode of inheritance.
+        """
         concise_df = self.filter_snps(
             df,
             ["snp_risk_category_summary", "gene_distance"],
@@ -564,6 +542,9 @@ class AutosomalDominantSummary(BaseSummary):
         return pd.concat([concise_df, totals])
 
     def get_test_data(self, df: pd.DataFrame, consanguineous: bool):
+        """
+        Returns the test data for the pytest.
+        """
         return self.filter_snps(
             df,
             ["snp_position", "snp_risk_category_summary"],
@@ -572,7 +553,14 @@ class AutosomalDominantSummary(BaseSummary):
 
 
 class AutosomalRecessiveSummary(BaseSummary):
+    """
+    Class to summarise SNP data for autosomal recessive mode of inheritance.
+    """
+
     def summarise(self, df: pd.DataFrame, consanguineous: bool):
+        """
+        Summarises the SNP data for autosomal recessive mode of inheritance.
+        """
         if consanguineous:
             valid_combinations = [
                 ("male_partner", "high_risk"),
@@ -591,8 +579,7 @@ class AutosomalRecessiveSummary(BaseSummary):
 
         # Remove 'uninformative' and 'unassigned' categories
         filtered_snps = df[
-            (df["snp_risk_category_summary"] != "uninformative")
-            & (df["snp_inherited_from"] != "unassigned")
+            (df["snp_risk_category_summary"] != "uninformative") & (df["snp_inherited_from"] != "unassigned")
         ]
 
         concise_df = (
@@ -635,6 +622,9 @@ class AutosomalRecessiveSummary(BaseSummary):
         return pd.concat([concise_df, totals])
 
     def get_test_data(self, df: pd.DataFrame, consanguineous: bool):
+        """
+        Returns the test data for the pytest.
+        """
         if consanguineous:
             valid_combinations = [
                 ("male_partner", "high_risk"),
@@ -653,8 +643,7 @@ class AutosomalRecessiveSummary(BaseSummary):
 
         # Remove 'uninformative' and 'unassigned' categories
         filtered_snps = df[
-            (df["snp_risk_category_summary"] != "uninformative")
-            & (df["snp_inherited_from"] != "unassigned")
+            (df["snp_risk_category_summary"] != "uninformative") & (df["snp_inherited_from"] != "unassigned")
         ]
 
         if consanguineous:
@@ -721,8 +710,14 @@ class AutosomalRecessiveSummary(BaseSummary):
 
 
 class XLinkedSummary(BaseSummary):
-    # TODO Filter out ADO and MisCalls if needed
+    """
+    Class to summarise SNP data for X-linked mode of inheritance.
+    """
+
     def summarise(self, df: DataFrame, consanguineous: bool):
+        """
+        Summarises the SNP data for X-linked mode of inheritance.
+        """
         filtered_snps = df[
             (df["snp_risk_category_AB"] != "uninformative")
             & (df["snp_risk_category_AA"] != "uninformative")
@@ -767,9 +762,7 @@ class XLinkedSummary(BaseSummary):
             summarised_snps_by_region.index.isin(["high_risk", "low_risk"], level=0)
         ]
 
-        snp_count_female_AB_total = summarised_snps_by_region[
-            "snp_count_female_AB"
-        ].sum()
+        snp_count_female_AB_total = summarised_snps_by_region["snp_count_female_AB"].sum()
         snp_count_male_AA_and_BB_total = (
             summarised_snps_by_region["snp_count_male_AA_and_BB"].sum() / 2
         )  # Each SNP will be counted twice as it is present in both AA and BB but can
@@ -791,6 +784,9 @@ class XLinkedSummary(BaseSummary):
         return pd.concat([summarised_snps_by_region, totals])
 
     def get_test_data(self, df: pd.DataFrame, consanguineous: bool):
+        """
+        Returns the test data for the pytest.
+        """
         filtered_snps = df[
             (df["snp_risk_category_AB"] != "uninformative")
             & (df["snp_risk_category_AA"] != "uninformative")
@@ -835,8 +831,15 @@ class XLinkedSummary(BaseSummary):
 
 
 class SummaryFactory:
+    """
+    Factory class to create the appropriate summary class based on the mode of inheritance.
+    """
+
     @staticmethod
     def create_summary(mode_of_inheritance: InheritanceMode, max_range_mb: int):
+        """
+        Select the appropriate summary class based on the mode of inheritance.
+        """
         custom_order = custom_order_generator(max_range_mb)
         if mode_of_inheritance == InheritanceMode.AUTOSOMAL_DOMINANT:
             return AutosomalDominantSummary(custom_order)

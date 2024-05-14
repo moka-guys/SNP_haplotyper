@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from io import StringIO
-from typing import Dict, List, Tuple, Union
 
 import pandas as pd
-from EnumDataClasses import InheritanceMode, Relationship, Sex, Status
+from EnumDataClasses import Relationship, Sex, Status
 from helper_functions import set_inherited_from_category_dtype, set_risk_category_dtype
 
 
@@ -78,9 +77,7 @@ class InheritanceLogic(ABC):
         data_io = StringIO(self.nocall_data)
         try:
             # Assuming the CSV data is well-formed and includes headers
-            nocall_lookup_df = pd.read_csv(
-                data_io, sep=",", comment="#", skipinitialspace=True
-            )
+            nocall_lookup_df = pd.read_csv(data_io, sep=",", comment="#", skipinitialspace=True)
             nocall_lookup_df["snp_inherited_from"] = nocall_lookup_df[
                 "snp_inherited_from"
             ].str.strip()  # Remove whitespace from snp_inherited_from column due to Comments
@@ -93,9 +90,7 @@ class InheritanceLogic(ABC):
     def merge_dataframes(self):
         # Merging self.df with self.lookup_df
         merge_cols = [self.reference, self.partner1, self.partner2]
-        self.df = pd.merge(
-            self.df, self.lookup_df, on=merge_cols, how="left", suffixes=("", "_lookup")
-        )
+        self.df = pd.merge(self.df, self.lookup_df, on=merge_cols, how="left", suffixes=("", "_lookup"))
 
         self.df = set_risk_category_dtype(self.df)
         self.df = set_inherited_from_category_dtype(self.df)
@@ -158,9 +153,7 @@ class AutosomalDominantLogic(InheritanceLogic):
                 lookup_df = AD_RefUnaffectedChildLookup().get_dataframe()
         # if lookup_df is not defined, raise an error
         if lookup_df.empty:
-            raise ValueError(
-                "lookup_df is empty, check reference_status and reference_relationship"
-            )
+            raise ValueError("lookup_df is empty, check reference_status and reference_relationship")
         # Rename the columns to match the input dataframe
         lookup_df.rename(
             columns={
@@ -259,8 +252,12 @@ class XLinkedLogic(InheritanceLogic):
         # Additional initialization for XLinkedLogic
 
         self.df = df
-        self.partner1 = carrier_female_partner  # AD = affected_partner, AR = female_partner, XL = carrier_female_partner
-        self.partner2 = unaffected_male_partner  # AD = unaffected_partner, AR = male_partner, XL = unaffected_male_partner
+        self.partner1 = (
+            carrier_female_partner  # AD = affected_partner, AR = female_partner, XL = carrier_female_partner
+        )
+        self.partner2 = (
+            unaffected_male_partner  # AD = unaffected_partner, AR = male_partner, XL = unaffected_male_partner
+        )
         self.reference = reference
         self.reference_status = reference_status
         self.reference_relationship = reference_relationship
@@ -640,7 +637,7 @@ class XL_RefFemaleLookup(BaseLookup):
         AA,               BB,                     BB,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 5
         AA,               BB,                     AB,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 6
         AA,               AB,                     AA,                   low_risk,             high_risk,            low_risk,             unassigned         # Comment for row 7
-        AA,               AB,                     BB,                   high_risk,            high_risk,            low_risk,             unassigned         # Comment for row 8
+        AA,               AB,                     BB,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 8
         AA,               AB,                     AB,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 9
         BB,               AA,                     AA,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 10
         BB,               AA,                     BB,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 11
@@ -648,7 +645,7 @@ class XL_RefFemaleLookup(BaseLookup):
         BB,               BB,                     AA,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 13
         BB,               BB,                     BB,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 14
         BB,               BB,                     AB,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 15
-        BB,               AB,                     AA,                   high_risk,            low_risk,             high_risk,            unassigned         # Comment for row 16
+        BB,               AB,                     AA,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 16
         BB,               AB,                     BB,                   low_risk,             low_risk,             high_risk,            unassigned         # Comment for row 17
         BB,               AB,                     AB,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 18
         AB,               AA,                     AA,                   uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 19

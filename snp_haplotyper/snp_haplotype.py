@@ -1,34 +1,23 @@
+"""
+This module is the main entry point for the SNP Haplotyper tool. It takes a SNP Array output file as input and
+"""
+
 import argparse
-import json
 import logging
 import os
 import sys
-from abc import ABC, abstractmethod
 from datetime import datetime
-from enum import Enum, auto
-from io import IOBase
+from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict
 
-import config as config  # TODO add code to use this dependency
-import numpy as np
 import pandas as pd
 import pdfkit
-from exceptions import ArgumentInputError, InvalidParameterSelectedError
-from helper_functions import custom_order_generator, import_haplotype_data
-from jinja2 import Environment, PackageLoader
-from pydantic import (
-    BaseModel,
-    ValidationError,
-    conlist,
-    constr,
-    fields,
-    root_validator,
-    validator,
-)
-from pydantic.dataclasses import dataclass
-
-# Import mode of inheritance specific code
+from EnumDataClasses import FlankingRegions, InheritanceMode, Relationship, Sex, Status
+from FamilyDataClass import FamilyData
+from helper_functions import import_haplotype_data
+from ReportDataClass import ReportGenerator
+from SNPAnalysisClass import SNPAnalysis
 
 logger = logging.getLogger("BASHer_logger")
 
@@ -36,31 +25,13 @@ logger = logging.getLogger("BASHer_logger")
 sys.path.append(os.path.dirname(__file__))
 mod_path = Path(__file__).parent
 
-import config as config
-from EnumDataClasses import (
-    Chromosome,
-    FlankingRegions,
-    InheritanceMode,
-    Relationship,
-    Sex,
-    Status,
-)
-from exceptions import ArgumentInputError, InvalidParameterSelectedError
-from FamilyDataClass import FamilyData
-from ReportDataClass import ReportData, ReportGenerator
-from SNPAnalysisClass import SNPAnalysis
-
-# TODO Copy rsID from hover tap
-# TODO Check telomeric/centromeric genes work with 2mb window (FHSD1 - D4Z4 repeat, PKD1)
-# TODO Add support for no embryos (just TRIOs being run to check if enough informative SNPs)
-# TODO Add ADO % to table
-
 
 def header_to_dict(header_str: str) -> Dict[str, str]:
     """
     Converts a string of header_info into a dictionary
     Args:
-        header_str (str): A string in the key=value pairs like "PRU=1234;Hospital No=1234;Biopsy No:111", where the keys will be the titles of the fields in the header
+        header_str (str): A string in the key=value pairs like "PRU=1234;Hospital No=1234;Biopsy No:111",
+        where the keys will be the titles of the fields in the header
     Returns:
         dict: A dictionary of the header info with field titles as keys and values as values
     """
@@ -102,11 +73,15 @@ class EnumAction(argparse.Action):
 # Import environment variables set by docker-compose
 UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER")
 
-# Import command line arguments (these can be automatically generated from the sample sheet using sample_sheet_reader.py)
+# Import command line arguments (these can be automatically generated from the sample
+# sheet using sample_sheet_reader.py)
 parser = argparse.ArgumentParser(description="SNP Haplotying from SNP Array data")
 
 
 def flanking_region_size_type(value):
+    """
+    Custom argparse type for flanking region size
+    """
     try:
         return FlankingRegions(int(value))
     except ValueError:
@@ -163,7 +138,7 @@ parser.add_argument(
     "-fp",
     "--female_partner",
     type=str,
-    help="ID in input table for male_partner",
+    help="ID in input table for female_partner",
 )
 
 parser.add_argument(
@@ -171,7 +146,7 @@ parser.add_argument(
     "--female_partner_status",
     type=Status,
     action=EnumAction,
-    help="ID in input table for female_partner",
+    help="Status of female_partner",
 )
 
 parser.add_argument(
@@ -272,23 +247,28 @@ parser.add_argument(
     "--trio_only",
     action=argparse.BooleanOptionalAction,
     default=False,
-    help="Flag to produce a preliminary report without looking at embryos, must be used if not embryo data is provided.",
+    help="Flag to produce a preliminary report without looking at embryos,"
+    " must be used if not embryo data is provided.",
 )
 
 parser.add_argument(
     "--header_info",
     type=str,
     required=True,
-    help="Pass a string to populate the report header. A field will be created for each entry field_title=field_value separated by ';', for example 'PRU=1234;Hospital No=1234;Biopsy No=111' will produce 3 fields in the header with the titles PRU, Hospital No, and Biopsy No.",
+    help="Pass a string to populate the report header. A field will be created for each entry field_title=field_value"
+    " separated by ';', "
+    "for example 'PRU=1234;Hospital No=1234;Biopsy No=111' will produce 3 fields in the header with the titles PRU,"
+    "Hospital No, and Biopsy No.",
 )
 
 
 def main(args):
+    """
+    Main function for SNP Haplotyper
+    """
     number_snps_to_import = import_haplotype_data(args.input_file).shape[0]
 
-    logger.info(
-        f"Number of SNPs to import from SNP Array File = {number_snps_to_import}."
-    )
+    logger.info(f"Number of SNPs to import from SNP Array File = {number_snps_to_import}.")
 
     def create_family_data_from_args(args):
         return FamilyData(
@@ -316,11 +296,9 @@ def main(args):
         )
 
     # Instantiate SNPAnalysis object
-    snp_pipeline = SNPAnalysis(
-        create_family_data_from_args(args), import_haplotype_data(args.input_file)
-    )
+    snp_pipeline = SNPAnalysis(create_family_data_from_args(args), import_haplotype_data(args.input_file))
 
-    logger.info(f"SNP Analysis complete - getting ready to prepare report.")
+    logger.info("SNP Analysis complete - getting ready to prepare report.")
 
     report_gen = ReportGenerator(snp_pipeline.report_data)
 
@@ -351,9 +329,7 @@ def main(args):
         args.output_prefix,
         snp_pipeline.snp_data.number_snps_imported,
         snp_pipeline.snp_data.pytest_format_snp_df,
-        pd.DataFrame()
-        if args.trio_only
-        else snp_pipeline.pytest_format_embryo_df,  # TODO Change to pytest specific df
+        pd.DataFrame() if args.trio_only else snp_pipeline.pytest_format_embryo_df,
         html_string,
         pdf_string,
     )
@@ -362,4 +338,3 @@ def main(args):
 if __name__ == "__main__":
     args = parser.parse_args()
     main(args)
-    # TODO move report saving code to here and capture output from main function

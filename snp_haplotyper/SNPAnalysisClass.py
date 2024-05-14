@@ -1,46 +1,32 @@
-import argparse
-import json
+"""
+This Module performs the SNP anaylsis and formatting of outputs
+"""
+
 import logging
 import os
 import sys
-from abc import ABC, abstractmethod
+from abc import ABC
 from datetime import datetime
-from enum import Enum, auto
-from io import IOBase
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
-import config as config  # TODO add code to use this dependency
-import numpy as np
+import config
 import pandas as pd
-import pdfkit
-from exceptions import ArgumentInputError, InvalidParameterSelectedError
+from EmbryoDataClass import EmbryoData
+from EnumDataClasses import InheritanceMode
+
+from FamilyDataClass import FamilyData
 from helper_functions import (
     create_human_readable_heading,
-    custom_order_generator,
     dict2html,
     format_plot_html_str,
-    generate_html_plot,
-    generate_pdf_plot,
     generate_plots,
     produce_html_table,
     replace_column_names,
 )
-from jinja2 import Environment, PackageLoader
 from pandas.io.formats.style import Styler
-from pydantic import (
-    BaseModel,
-    ValidationError,
-    conlist,
-    constr,
-    fields,
-    root_validator,
-    validator,
-)
-from pydantic.dataclasses import dataclass
-
-# Import mode of inheritance specific code
-
+from ReportDataClass import ReportData
+from SNPDataClass import SNPData
 
 logger = logging.getLogger("BASHer_logger")
 
@@ -48,22 +34,6 @@ logger = logging.getLogger("BASHer_logger")
 sys.path.append(os.path.dirname(__file__))
 mod_path = Path(__file__).parent
 
-import config as config
-from EmbryoDataClass import EmbryoData
-from EnumDataClasses import (
-    Chromosome,
-    FlankingRegions,
-    InheritanceMode,
-    Relationship,
-    Sex,
-    Status,
-)
-
-# Import mode of inheritance specific code
-from exceptions import ArgumentInputError, InvalidParameterSelectedError
-from FamilyDataClass import FamilyData
-from ReportDataClass import ReportData, ReportGenerator
-from SNPDataClass import SNPData
 
 # Imports variables for genome_build, allow_autosomal_dominant_cases, allow_autosomal_recessive_cases,
 # allow_x_linked_cases,allow_consanguineous_cases, basher_version, released_to_production
@@ -71,13 +41,17 @@ from SNPDataClass import SNPData
 
 class EmbryoTableFormatter(ABC):
     """
-    Abstract class for collating summary tables from multiple EmbryoData objects and formatting for display in the HTML report.
+    Abstract class for collating summary tables from multiple EmbryoData objects and formatting for display in the HTML
+    report.
     """
 
     def __init__(self):
         pass
 
     def set_consanguinity_flag(self, consanguinity_flag: bool) -> None:
+        """
+        Set the consanguinity flag for the formatter.
+        """
         self.consanguinity_flag = consanguinity_flag
 
     def add_total_row_to_df(
@@ -89,6 +63,9 @@ class EmbryoTableFormatter(ABC):
         filter_values_2: Optional[List[str]] = None,
         filter_column_2: Optional[str] = None,
     ) -> pd.DataFrame:
+        """
+        Add a total row to the DataFrame based on the specified columns and filter criteria.
+        """
         # Group by the specified columns and sum the data
         grouped_df = df.groupby(index_columns).sum()
 
@@ -97,13 +74,9 @@ class EmbryoTableFormatter(ABC):
 
         # Update the mask based on filter criteria, if provided
         if filter_values_1 and filter_column_1:
-            mask &= grouped_df.index.get_level_values(filter_column_1).isin(
-                filter_values_1
-            )
+            mask &= grouped_df.index.get_level_values(filter_column_1).isin(filter_values_1)
         if filter_values_2 and filter_column_2:
-            mask &= grouped_df.index.get_level_values(filter_column_2).isin(
-                filter_values_2
-            )
+            mask &= grouped_df.index.get_level_values(filter_column_2).isin(filter_values_2)
 
         # Apply the mask to the grouped DataFrame
         df = grouped_df[mask]
@@ -117,9 +90,7 @@ class EmbryoTableFormatter(ABC):
         # Create and set index for the total row
         if len(index_columns) > 1:
             index_values = [("Total_SNPs",) + ("",) * (len(index_columns) - 1)]
-            total_df.index = pd.MultiIndex.from_tuples(
-                index_values, names=index_columns
-            )
+            total_df.index = pd.MultiIndex.from_tuples(index_values, names=index_columns)
         else:
             total_df.index = pd.Index(["Total_SNPs"], name=index_columns[0])
 
@@ -135,8 +106,8 @@ class EmbryoTableFormatter(ABC):
         include_index: bool = False,
         classes: str = "table table-striped",
     ) -> str:
-        # This method currently just returns the table_name for demonstration purposes.
-        # Ideally, you would have the logic to produce the HTML table here.
+        """This method currently just returns the table_name for demonstration purposes.
+        Ideally, you would have the logic to produce the HTML table here."""
         summary_table_html = produce_html_table(
             summary_df,
             table_identifier,
@@ -147,18 +118,18 @@ class EmbryoTableFormatter(ABC):
 
 
 class AutosomalDominantFormatter(EmbryoTableFormatter):
+    """Formats summary tables for autosomal dominant mode of inheritance."""
+
     def embryo_snp_table(
         self,
         embryo_risk_summary_df: pd.DataFrame,
         human_readable_headings: Dict[str, str],
     ) -> str:
-        embryo_risk_summary_df = self.add_total_row_to_df(
-            embryo_risk_summary_df, ["embryo_risk_category"]
-        )
+        """
+        Formats the summary table for autosomal dominant mode of inheritance."""
+        embryo_risk_summary_df = self.add_total_row_to_df(embryo_risk_summary_df, ["embryo_risk_category"])
 
-        embryo_risk_summary_df = replace_column_names(
-            embryo_risk_summary_df, human_readable_headings
-        )
+        embryo_risk_summary_df = replace_column_names(embryo_risk_summary_df, human_readable_headings)
 
         summary_snps_table = self.create_table_html(
             summary_df=embryo_risk_summary_df,
@@ -174,6 +145,8 @@ class AutosomalDominantFormatter(EmbryoTableFormatter):
         summary_embryo_by_region_df: pd.DataFrame,
         human_readable_headings: Dict[str, str],
     ) -> str:
+        """
+        Formats the summary table for autosomal dominant mode of inheritance by region."""
         summary_embryo_by_region_df = self.add_total_row_to_df(
             summary_embryo_by_region_df,
             ["embryo_risk_category", "gene_distance"],
@@ -181,9 +154,7 @@ class AutosomalDominantFormatter(EmbryoTableFormatter):
             filter_column_1="embryo_risk_category",
         )
 
-        summary_embryo_by_region_df = replace_column_names(
-            summary_embryo_by_region_df, human_readable_headings
-        )
+        summary_embryo_by_region_df = replace_column_names(summary_embryo_by_region_df, human_readable_headings)
 
         summary_embryo_by_region_table = self.create_table_html(
             summary_df=summary_embryo_by_region_df,
@@ -197,11 +168,16 @@ class AutosomalDominantFormatter(EmbryoTableFormatter):
 
 class AutosomalRecessiveFormatter(EmbryoTableFormatter):
     # get consanguinity flag from family data
+    """
+    Formats summary tables for autosomal recessive mode of inheritance."""
+
     def embryo_snp_table(
         self,
         summary_snps_df: pd.DataFrame,
         human_readable_headings: Dict[str, str],
     ) -> str:
+        """
+        Formats the summary table for autosomal recessive mode of inheritance."""
         if self.consanguinity_flag:
             filter_values_2 = [
                 "male_partner",
@@ -240,6 +216,9 @@ class AutosomalRecessiveFormatter(EmbryoTableFormatter):
         summary_embryo_by_region_df: pd.DataFrame,
         human_readable_headings: Dict[str, str],
     ) -> str:
+        """
+        Formats the summary table for autosomal recessive mode of inheritance by region.
+        """
         if self.consanguinity_flag:
             filter_values_1 = [
                 "male_partner",
@@ -262,9 +241,7 @@ class AutosomalRecessiveFormatter(EmbryoTableFormatter):
             filter_column_2="embryo_risk_category",
         )
 
-        summary_embryo_by_region_df = replace_column_names(
-            summary_embryo_by_region_df, human_readable_headings
-        )
+        summary_embryo_by_region_df = replace_column_names(summary_embryo_by_region_df, human_readable_headings)
 
         summary_embryo_by_region_table = self.create_table_html(
             summary_df=summary_embryo_by_region_df,
@@ -277,18 +254,19 @@ class AutosomalRecessiveFormatter(EmbryoTableFormatter):
 
 
 class XLinkedFormatter(EmbryoTableFormatter):
+    """
+    Formats summary tables for X-linked mode of inheritance."""
+
     def embryo_snp_table(
         self,
         embryo_risk_summary_df: pd.DataFrame,
         human_readable_headings: Dict[str, str],
     ) -> str:
-        embryo_risk_summary_df = self.add_total_row_to_df(
-            embryo_risk_summary_df, ["embryo_risk_category"]
-        )
+        """
+        Formats the summary table for X-linked mode of inheritance."""
+        embryo_risk_summary_df = self.add_total_row_to_df(embryo_risk_summary_df, ["embryo_risk_category"])
 
-        embryo_risk_summary_df = replace_column_names(
-            embryo_risk_summary_df, human_readable_headings
-        )
+        embryo_risk_summary_df = replace_column_names(embryo_risk_summary_df, human_readable_headings)
 
         summary_snps_table = self.create_table_html(
             summary_df=embryo_risk_summary_df,
@@ -304,6 +282,9 @@ class XLinkedFormatter(EmbryoTableFormatter):
         summary_embryo_by_region_df: pd.DataFrame,
         human_readable_headings: Dict[str, str],
     ) -> str:
+        """
+        Formats the summary table for X-linked mode of inheritance by region.
+        """
         summary_embryo_by_region_df = self.add_total_row_to_df(
             summary_embryo_by_region_df,
             ["embryo_risk_category", "gene_distance"],
@@ -311,9 +292,7 @@ class XLinkedFormatter(EmbryoTableFormatter):
             filter_column_1="embryo_risk_category",
         )
 
-        summary_embryo_by_region_df = replace_column_names(
-            summary_embryo_by_region_df, human_readable_headings
-        )
+        summary_embryo_by_region_df = replace_column_names(summary_embryo_by_region_df, human_readable_headings)
 
         summary_embryo_by_region_table = self.create_table_html(
             summary_df=summary_embryo_by_region_df,
@@ -326,24 +305,20 @@ class XLinkedFormatter(EmbryoTableFormatter):
 
 
 def format_tables_for_html_report(self):
-    # Format summary tables for display in HTML report
-    SummaryFormatterClass = self.get_embryo_summary_formatter(
-        self.family_data.mode_of_inheritance
-    )
+    """Format summary tables for display in HTML report"""
+    SummaryFormatterClass = self.get_embryo_summary_formatter(self.family_data.mode_of_inheritance)
     summary_formatter_instance = SummaryFormatterClass()
 
     summary_formatter_instance.set_consanguinity_flag(self.family_data.consanguineous)
 
-    if self.family_data.trio_only == False and self.family_data.embryo_ids:
+    if self.family_data.trio_only is False and self.family_data.embryo_ids:
         summary_snps_table = summary_formatter_instance.embryo_snp_table(
             self.embryo_risk_summary_df,
             self.human_readable_headings,
         )
-        summary_embryo_by_region_table = (
-            summary_formatter_instance.embryo_snp_table_by_region(
-                self.embryo_risk_summary_by_region_df,
-                self.human_readable_headings,
-            )
+        summary_embryo_by_region_table = summary_formatter_instance.embryo_snp_table_by_region(
+            self.embryo_risk_summary_by_region_df,
+            self.human_readable_headings,
         )
     else:
         summary_snps_table = ""
@@ -353,15 +328,17 @@ def format_tables_for_html_report(self):
 
 
 class SNPAnalysis:
-    family_data: FamilyData
-    snp_data_df: pd.DataFrame
     """
     Pipeline for SNP Analysis using family data and external files.
     """
 
+    family_data: FamilyData
+    snp_data_df: pd.DataFrame
+
     def __init__(self, family_data: FamilyData, snp_data_df: pd.DataFrame):
         """
-        Initializes the SNPAnalysisPipeline with a FamilyData object and a dataframe produced from a ChAS csv output file.
+        Initializes the SNPAnalysisPipeline with a FamilyData object and a dataframe produced from a ChAS csv output
+        file.
 
         :param family_data: A FamilyData object containing relevant genetic and family information.
         :param file_path: Path to an external file for further analysis.
@@ -376,22 +353,16 @@ class SNPAnalysis:
         )
         self.initialize_snp_data(snp_data_df)
         self.calculate_and_set_qc_metrics()
-        if self.family_data.trio_only == False and self.family_data.embryo_ids:
+        if self.family_data.trio_only is False and self.family_data.embryo_ids:
             self.initialize_embryos_dict()
-            self.embryo_summary_df = SNPAnalysis.collate_embryo_results(
-                self.snp_data.snp_df, self.embryos
-            )
+            self.embryo_summary_df = SNPAnalysis.collate_embryo_results(self.snp_data.snp_df, self.embryos)
             # Create summary embryo results table across all embryos
-            self.embryo_risk_summary_df = self.summarise_embryo_results(
-                self.embryos, "risk_summary_df"
-            )
+            self.embryo_risk_summary_df = self.summarise_embryo_results(self.embryos, "risk_summary_df")
             self.embryo_risk_summary_by_region_df = self.summarise_embryo_results(
                 self.embryos, "risk_summary_per_region_df"
             )
 
-            self.pytest_format_embryo_df = self.summarise_embryo_results(
-                self.embryos, "risk_summary_for_testing_df"
-            )
+            self.pytest_format_embryo_df = self.summarise_embryo_results(self.embryos, "risk_summary_for_testing_df")
 
         (
             self.summary_snps_table,
@@ -402,9 +373,7 @@ class SNPAnalysis:
     def create_embryo_sex_lookup(self) -> None:
         """Creates a lookup dictionary for embryo sex based on provided family data."""
         if self.family_data.embryo_sex and self.family_data.embryo_ids:
-            self.embryo_sex_lookup = dict(
-                zip(self.family_data.embryo_ids, self.family_data.embryo_sex)
-            )
+            self.embryo_sex_lookup = dict(zip(self.family_data.embryo_ids, self.family_data.embryo_sex))
         else:
             self.embryo_sex_lookup = {}
 
@@ -426,26 +395,26 @@ class SNPAnalysis:
         """
         Adds a 'filter_out_nocalls' column in snp_data DataFrame.
 
-        This method creates a new column 'filter_out_nocalls' in the snp_data DataFrame. If the male partner, female partner, or reference
-        has "NoCall" for a probeset then this probeset is marked as False in the 'filter_out_nocalls' column. For the x-linked conditions,
-        NoCalls in male partner data are not considered, while for the autosomal and recessive cases, NoCalls in any of the male partner,
+        This method creates a new column 'filter_out_nocalls' in the snp_data DataFrame. If the male partner, female
+        partner, or reference has "NoCall" for a probeset then this probeset is marked as False in the
+        'filter_out_nocalls' column. For the x-linked conditions, NoCalls in male partner data are not considered,
+        while for the autosomal and recessive cases, NoCalls in any of the male partner,
         female partner or reference data are considered.
 
-        The 'filter_out_nocalls' column can be used later for filtering out these probesets. If a probeset has 'False' in this column, it
-        should be filtered out, while if it has 'True', it should be retained.
+        The 'filter_out_nocalls' column can be used later for filtering out these probesets. If a probeset has 'False'
+        in this column, it should be filtered out, while if it has 'True', it should be retained.
 
         Note:
             This method does not return anything. It modifies the snp_data DataFrame in-place.
         """
-        # TODO Check the logic in this function
         if self.family_data.mode_of_inheritance == InheritanceMode.X_LINKED:
-            # For x-link cases we do not care if the male sample is a NoCall as only female or reference NoCalls should be filtered out
-            self.snp_data_df["filter_out_nocalls"] = (
-                self.snp_data_df[self.family_data.female_partner] != "NoCall"
-            ) | (self.snp_data_df[self.family_data.reference] != "NoCall")
+            # For x-link cases we do not care if the male sample is a NoCall as only female or reference NoCalls should
+            # be filtered out
+            self.snp_data_df["filter_out_nocalls"] = (self.snp_data_df[self.family_data.female_partner] != "NoCall") | (
+                self.snp_data_df[self.family_data.reference] != "NoCall"
+            )
         else:
-            # TODO Check the logic in this function
-            # For autosomal and recessive cases all NoCalls should be filtered out
+            # For autosomal dominant and autosomal recessive cases all NoCalls should be filtered out
             self.snp_data_df["filter_out_nocalls"] = (
                 (self.snp_data_df[self.family_data.male_partner] != "NoCall")
                 & (self.snp_data_df[self.family_data.female_partner] != "NoCall")
@@ -457,8 +426,8 @@ class SNPAnalysis:
         Calculates QC metrics based on the number of NoCalls per sample (measure of DNA quality)
         and also the percentage of NoCalls per sample.
 
-        This method calculates QC metrics based on the number of NoCalls per sample which can be used as a metric of DNA quality,
-        and also calculates the percentage of NoCalls per sample.
+        This method calculates QC metrics based on the number of NoCalls per sample which can be used as a metric of
+        DNA quality, and also calculates the percentage of NoCalls per sample.
 
         Returns:
             A DataFrame containing the calculated QC metrics.
@@ -471,12 +440,7 @@ class SNPAnalysis:
         ]
 
         qc_metrics = (
-            pd.DataFrame(
-                {
-                    sample: self.snp_data.snp_df[sample].value_counts()
-                    for sample in samples
-                }
-            )
+            pd.DataFrame({sample: self.snp_data.snp_df[sample].value_counts() for sample in samples})
             .reindex(["AA", "BB", "AB", "NoCall"])
             .fillna(0)
             .astype(int)
@@ -511,21 +475,18 @@ class SNPAnalysis:
             )
         )
 
-        qc_metrics = (
-            qc_metrics.style.format(precision=1)
-            .concat(summary_styler)
-            .concat(percentage_styler)
-        )
+        qc_metrics = qc_metrics.style.format(precision=1).concat(summary_styler).concat(percentage_styler)
 
         return qc_metrics
 
     def add_embryo(self, embryo_id):
+        """
+        Adds an embryo to the embryos dictionary.
+        """
         embryo_category_df = self.snp_data.snp_df.copy()
 
         # Remove current embryo_id from list of embryo IDs to create a list of irrelevant columns for this embryo
-        irrelevant_columns = list(
-            filter(lambda x: x != embryo_id, self.family_data.embryo_ids)
-        )
+        irrelevant_columns = list(filter(lambda x: x != embryo_id, self.family_data.embryo_ids))
 
         # Remove irrelevant columns from embryo_category_df
         embryo_category_df.drop(columns=irrelevant_columns, inplace=True)
@@ -547,9 +508,7 @@ class SNPAnalysis:
         :param embryos: Dictionary with embryo data
         :return: Updated DataFrame
         """
-        embryo_results_df = snp_data_df[
-            ["probeset_id", "rsID", "Position", "gene_distance", "snp_position"]
-        ].copy()
+        embryo_results_df = snp_data_df[["probeset_id", "rsID", "Position", "gene_distance", "snp_position"]].copy()
 
         # Define the categorical type with specific categories
         cat_type = pd.CategoricalDtype(
@@ -567,16 +526,12 @@ class SNPAnalysis:
 
         for embryo_id, embryo_data in embryos.items():
             # Assign the new column and convert it to the categorical type
-            embryo_results_df[embryo_id] = embryo_data.embryo_category_df[
-                "embryo_risk_category"
-            ].astype(cat_type)
+            embryo_results_df[embryo_id] = embryo_data.embryo_category_df["embryo_risk_category"].astype(cat_type)
 
         return embryo_results_df
 
     @staticmethod
-    def summarise_embryo_results(
-        embryos: Dict[str, EmbryoData], attribute_name: str
-    ) -> pd.DataFrame:
+    def summarise_embryo_results(embryos: Dict[str, EmbryoData], attribute_name: str) -> pd.DataFrame:
         """
         Summarise embryo results for each embryo in embryo_ids
         """
@@ -586,10 +541,7 @@ class SNPAnalysis:
             embryo_data = embryos[embryo_id]
 
             # Check if the specified attribute exists in the EmbryoData object
-            if (
-                hasattr(embryo_data, attribute_name)
-                and getattr(embryo_data, attribute_name) is not None
-            ):
+            if hasattr(embryo_data, attribute_name) and getattr(embryo_data, attribute_name) is not None:
                 df_list.append(getattr(embryo_data, attribute_name))
 
         # Initialize merged_df as None
@@ -610,7 +562,7 @@ class SNPAnalysis:
         return merged_df
 
     def collate_figures(self, embryos: Dict[str, EmbryoData]) -> Dict[str, str]:
-        # Reiterates over all the EmbryoData objects and collates the figures
+        """Reiterates over all the EmbryoData objects and collates the figures"""
         figures_dict = {}
         for embryo_id, embryo_data in embryos.items():
             embryo_data.results_plot
@@ -618,8 +570,9 @@ class SNPAnalysis:
         return figures_dict
 
     def get_qc_metrics(self, format="dataframe"):
-        # If user wants the data in HTML format
-        # TODO Maybe delete this method, standardise return type
+        """
+        Retrieve the QC metrics.
+        """
         if format == "html":
             return self.qc_metrics.to_html(index=False)
         return self.qc_metrics
@@ -647,13 +600,17 @@ class SNPAnalysis:
         index=False,
         classes="table table-striped",
     ):
+        """
+        Return an HTML table from a DataFrame.
+        """
         table = produce_html_table(summary_df, table_name, classes, index)
         return table
 
     @staticmethod
     def get_embryo_summary_formatter(mode_of_inheritance: InheritanceMode):
         """
-        Formats summary reports for display in the HTML report.  Different modes of inheritance require different formatting.
+        Formats summary reports for display in the HTML report.  Different modes of inheritance require different
+        formatting.
         """
         formatter = {
             InheritanceMode.AUTOSOMAL_DOMINANT: AutosomalDominantFormatter,
@@ -663,6 +620,9 @@ class SNPAnalysis:
         return formatter.get(mode_of_inheritance, None)
 
     def initialise_report_data(self):
+        """
+        Initialize the report data for the HTML report.
+        """
         self.report_data = ReportData(
             header_html=dict2html(self.family_data.report_header_info),
             mode_of_inheritance=str(self.family_data.mode_of_inheritance.value),
@@ -670,11 +630,13 @@ class SNPAnalysis:
             chromosome=self.family_data.chr.value.upper(),  # corrected typo here
             gene_start=f"{int(self.family_data.gene_start):,}",
             gene_end=f"{int(self.family_data.gene_end):,}",
-            genome_build=config.genome_build,
-            basher_version=config.basher_version,
-            input_file=self.family_data.input_ChAS_filepath.name
-            if isinstance(self.family_data.input_ChAS_filepath, Path)
-            else self.family_data.input_ChAS_filepath,
+            genome_build=config.GENOME_BUILD,
+            basher_version=config.BASHER_VERSION,
+            input_file=(
+                self.family_data.input_ChAS_filepath.name
+                if isinstance(self.family_data.input_ChAS_filepath, Path)
+                else self.family_data.input_ChAS_filepath
+            ),
             male_partner=self.family_data.male_partner,
             male_partner_status=self.family_data.male_partner_status.value,
             female_partner=self.family_data.female_partner,
@@ -697,24 +659,29 @@ class SNPAnalysis:
             summary_embryo_table=self.summary_snps_table,
             summary_embryo_by_region_table=self.summary_embryo_by_region_table,
             # If self.family_data.trio_only is True, assign an empty string, else assign the variable
-            html_text_for_plots=""
-            if self.family_data.trio_only
-            else format_plot_html_str(
-                generate_plots(self.collate_figures(self.embryos), static_plots=False),
-                add_dropdown_selection=False,
+            html_text_for_plots=(
+                ""
+                if self.family_data.trio_only
+                else format_plot_html_str(
+                    generate_plots(self.collate_figures(self.embryos), static_plots=False),
+                    add_dropdown_selection=False,
+                )
             ),
             # If self.family_data.trio_only is True, assign an empty string, else assign the variable
-            pdf_text_for_plots=""
-            if self.family_data.trio_only
-            else format_plot_html_str(
-                generate_plots(self.collate_figures(self.embryos), static_plots=True),
-                add_dropdown_selection=True,
+            pdf_text_for_plots=(
+                ""
+                if self.family_data.trio_only
+                else format_plot_html_str(
+                    generate_plots(self.collate_figures(self.embryos), static_plots=True),
+                    add_dropdown_selection=True,
+                )
             ),
             text_for_plots="",  # Dynamically updated when rendered selecting either html or pdf
-            warning=""
-            if config.released_to_production
-            else f"<h3 style='color:red'> This is a pre-release version of the BASHer tool. Please contact the BASHer team if you have any questions.</h3>",
-            consanguinity_flag="non-consanguineous"
-            if self.family_data.consanguineous == False
-            else "consanguineous",
+            warning=(
+                ""
+                if config.RELEASED_TO_PRODUCTION
+                else "<h3 style='color:red'> This is a pre-release version of the BASHer tool. \
+                    Please contact the BASHer team if you have any questions.</h3>"
+            ),
+            consanguinity_flag="non-consanguineous" if self.family_data.consanguineous is False else "consanguineous",
         )
