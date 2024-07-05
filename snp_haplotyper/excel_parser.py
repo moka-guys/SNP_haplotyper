@@ -213,6 +213,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
             # Process cell locations in the format data_entry!$B$31 or data_entry!$F$22:$L$22 (merged cells)
             cell_location = dn.attr_text.split(":")[0].split("!")[1].replace("$", "")
             cell_value = str(data_entry_sheet[cell_location].value).strip()
+            # print(cell_location, cell_value)
             argument_dict[input_name] = cell_value
 
     biopsy_number = argument_dict["biopsy_number"]
@@ -355,6 +356,8 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
         .replace("excel_test_Autosomal_Dominant_", "")
         .replace("excel_test_Autosomal_Recessive_", "")
         .replace("excel_test_X_linked_", "")
+        .replace("_v2", "")
+        .replace("_v3", "")
     )
 
     allowable_values = {
@@ -550,7 +553,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     args.gene_end = gene_end
     args.chr = chr
     args.flanking_region_size = flanking_region_size
-    args.consanguineous = True if consanguineous == "yes" else False
+    args.consanguineous = True if consanguineous.lower() == "yes" else False
 
     # If analysis is being done for embryos add that data as well
     if trio_only is False:
