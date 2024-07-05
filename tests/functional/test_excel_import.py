@@ -51,7 +51,7 @@ def setup_test_data_from_excel(split_by_embryo=False, version=1):
     else:
         raise ValueError(f"Unsupported version: {version}")
 
-    excel_files = [f for f in os.listdir(excel_folder_path) if f.endswith(".xlsx")]
+    excel_files = [f for f in os.listdir(excel_folder_path) if f.endswith((".xlsx", ".xlsm"))]
 
     if version < 3:
         # remove the excel files that have XL in the name as they do not contain the data we need (reference_sex)
@@ -61,7 +61,11 @@ def setup_test_data_from_excel(split_by_embryo=False, version=1):
     # file paths for each run
     run_data_dict = {}
     for excel_file in excel_files:
-        run_name = re.sub(r"_v\d+\.xlsx$", "", excel_file.replace("excel_test_", "")).replace(".xlsx", "")
+        run_name = (
+            re.sub(r"_v\d+\.(xlsx|xlsm)$", "", excel_file.replace("excel_test_", ""))
+            .replace(".xlsx", "")
+            .replace(".xlsm", "")
+        )
         if split_by_embryo == False:
             run_data_dict[run_name] = Namespace(
                 input_spreadsheet=os.path.join(
@@ -102,7 +106,7 @@ def test_informative_snps_excel_v1(name, snp_validation_data):
     Raises:
     AssertionError: If the actual output does not match the expected output.
     """
-    test_args = setup_test_data_from_excel()
+    test_args = setup_test_data_from_excel(split_by_embryo=False, version=1)
     basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(test_args[name])
 
     (
@@ -150,7 +154,7 @@ def test_informative_snps_excel_v2(name, snp_validation_data):
     Raises:
     AssertionError: If the actual output does not match the expected output.
     """
-    test_args = setup_test_data_from_excel()
+    test_args = setup_test_data_from_excel(split_by_embryo=False, version=2)
     basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(test_args[name])
 
     (
@@ -198,7 +202,7 @@ def test_informative_snps_excel_v3(name, snp_validation_data):
     Raises:
     AssertionError: If the actual output does not match the expected output.
     """
-    test_args = setup_test_data_from_excel(False, version=3)
+    test_args = setup_test_data_from_excel(split_by_embryo=False, version=3)
     basher_input_namespace, error_dictionary, input_ok_flag = excel_parser_main(test_args[name])
 
     (
@@ -247,9 +251,9 @@ def test_embryo_categorization_excel_v1(name, embryo_validation_data):
     Raises:
     AssertionError: If the actual output does not match the expected output.
     """
-    test_args = setup_test_data_from_excel()
+    test_args = setup_test_data_from_excel(split_by_embryo=True, version=1)
     sample_id, embryo_id = name.rsplit("_", 1)
-    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[sample_id])
+    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[name])
 
     (
         mode_of_inheritance,
@@ -297,9 +301,9 @@ def test_embryo_categorization_excel_v2(name, embryo_validation_data):
     Raises:
     AssertionError: If the actual output does not match the expected output.
     """
-    test_args = setup_test_data_from_excel()
+    test_args = setup_test_data_from_excel(split_by_embryo=True, version=2)
     sample_id, embryo_id = name.rsplit("_", 1)
-    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[sample_id])
+    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[name])
 
     (
         mode_of_inheritance,
@@ -347,9 +351,9 @@ def test_embryo_categorization_excel_v3(name, embryo_validation_data):
     Raises:
     AssertionError: If the actual output does not match the expected output.
     """
-    test_args = setup_test_data_from_excel(True, version=3)
+    test_args = setup_test_data_from_excel(split_by_embryo=True, version=3)
     sample_id, embryo_id = name.rsplit("_", 1)
-    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[sample_id])
+    (basher_input_namespace, error_dictionary, input_ok_flag) = excel_parser_main(test_args[name])
 
     (
         mode_of_inheritance,
