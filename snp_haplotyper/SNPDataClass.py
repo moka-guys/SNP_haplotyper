@@ -354,7 +354,7 @@ class SNPData:
                 # Filter out SNPs outside ROI and reset index
                 self.outside_roi = self.snp_df[self.snp_df["snp_position"] == "outside_ROI"].reset_index(drop=True)
                 # Filter in SNPs inside ROI and reset index
-                self.snp_df = self.snp_df[self.snp_df["snp_position"] != "outside_ROI"].reset_index(drop=True)
+                self.snp_df = self.snp_df[self.snp_df["snp_position"].notnull()].reset_index(drop=True)
             else:
                 print("Error: 'snp_position' column not found in snp_df.")
         else:

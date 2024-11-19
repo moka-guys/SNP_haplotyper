@@ -564,7 +564,7 @@ class AR_RefAffectedConsangLookup(BaseLookup):
         AA,               BB,               AB,                 uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 6
         AA,               AB,               AA,                 low_risk,             uninformative,        uninformative,        male_partner       # Comment for row 7
         AA,               AB,               BB,                 uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 8
-        AA,               AB,               AB,                 uninformative,        high_risk,            low_risk,             both_partners      # Comment for row 9
+        AA,               AB,               AB,                 high_or_low,          high_risk,            low_risk,             both_partners      # Comment for row 9
         BB,               AA,               AA,                 uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 10
         BB,               AA,               BB,                 uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 11
         BB,               AA,               AB,                 uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 12
@@ -573,7 +573,7 @@ class AR_RefAffectedConsangLookup(BaseLookup):
         BB,               BB,               AB,                 low_risk,             uninformative,        uninformative,        female_partner     # Comment for row 15
         BB,               AB,               AA,                 uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 16
         BB,               AB,               BB,                 low_risk,             uninformative,        uninformative,        male_partner       # Comment for row 17
-        BB,               AB,               AB,                 uninformative,        low_risk,             high_risk,            both_partners      # Comment for row 18
+        BB,               AB,               AB,                 high_or_low,          low_risk,             high_risk,            both_partners      # Comment for row 18
         AB,               AA,               AA,                 uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 19
         AB,               AA,               BB,                 uninformative,        uninformative,        uninformative,        unassigned         # Comment for row 20
         AB,               AA,               AB,                 high_risk,            uninformative,        uninformative,        female_partner     # Comment for row 21

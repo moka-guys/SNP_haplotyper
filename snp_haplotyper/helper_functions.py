@@ -309,6 +309,7 @@ def set_risk_category_dtype(df: pd.DataFrame) -> pd.DataFrame:
         "miscall",
         "NoCall",
         "NoCall_in_trio",
+        "high_or_low"
     ]
 
     # Iterate through each column and check if it starts with "snp_risk_category"

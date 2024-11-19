@@ -163,6 +163,10 @@ class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
             & (self.embryo_category_df["snp_inherited_from"] == "both_partners")
             & ((self.embryo_category_df[self.embryo_id] == "BB"))
             & consanguineous,
+            (self.embryo_category_df["snp_risk_category_AB"] == "high_or_low")
+            & (self.embryo_category_df["snp_inherited_from"] == "both_partners")
+            & ((self.embryo_category_df[self.embryo_id] == "AB"))
+            & consanguineous,
             # NoCall
             (self.embryo_category_df["snp_risk_category_AB"] != "uninformative")
             & (self.embryo_category_df["snp_risk_category_AB"] == "NoCall"),
@@ -176,6 +180,7 @@ class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
             "high_risk",
             "low_risk",
             "low_risk",
+            "high/low_risk",
             "NoCall",
         ]
         self.embryo_category_df[embryo_risk_col] = np.select(conditions, values, default="uninformative")
@@ -184,6 +189,7 @@ class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
             categories=[
                 "high_risk",
                 "low_risk",
+                "high/low_risk",
                 "uninformative",
                 "ADO",
                 "miscall",
@@ -765,22 +771,44 @@ class EmbryoData:
         )
 
         # Define the categorical type with specific categories
-        cat_type = pd.CategoricalDtype(
-            categories=[
-                "high_risk",
-                "low_risk",
-                "uninformative",
-                "ADO",
-                "miscall",
-                "NoCall",
-                "NoCall_in_trio",
-            ],
-            ordered=True,
-        )
+        if self.consanguineous:
+            cat_type = pd.CategoricalDtype(
+                categories=[
+                    "high_risk",
+                    "low_risk",
+                    "high/low_risk",
+                    "uninformative",
+                    "ADO",
+                    "miscall",
+                    "NoCall",
+                    "NoCall_in_trio",
+                ],
+                ordered=True,
+            )
+        else:
+            cat_type = pd.CategoricalDtype(
+                categories=[
+                    "high_risk",
+                    "low_risk",
+                    "uninformative",
+                    "ADO",
+                    "miscall",
+                    "NoCall",
+                    "NoCall_in_trio",
+                ],
+                ordered=True,
+            )
 
         self.embryo_category_df["embryo_risk_category"] = self.embryo_category_df["embryo_risk_category"].astype(
             cat_type
         )
+        # since rows with high/low risk are to be counted for both low and high risk,
+        # these rows need to be duplicated
+        if "high/low_risk" in list(self.embryo_category_df["embryo_risk_category"].unique()):
+            rows_to_duplicate = self.embryo_category_df[self.embryo_category_df["embryo_risk_category"] == "high/low_risk"]
+            rows_to_duplicate["embryo_risk_category"] = "low_risk"
+            self.embryo_category_df["embryo_risk_category"] = self.embryo_category_df["embryo_risk_category"].replace({"high/low_risk": "high_risk"})
+            self.embryo_category_df = pd.concat([self.embryo_category_df, rows_to_duplicate], ignore_index=True)
 
         summarizer_class = get_embryo_risk_summariser(self.mode_of_inheritance)
 
