@@ -5,6 +5,7 @@ This Module performs the SNP anaylsis and formatting of outputs
 import logging
 import os
 import sys
+import math
 from abc import ABC
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Dict, List, Optional
 
 import config
 import pandas as pd
+from itertools import islice
 from EmbryoDataClass import EmbryoData
 from EnumDataClasses import InheritanceMode
 
@@ -23,6 +25,7 @@ from helper_functions import (
     generate_plots,
     produce_html_table,
     replace_column_names,
+    plot_html_by_chunks
 )
 from pandas.io.formats.style import Styler
 from ReportDataClass import ReportData
@@ -335,7 +338,7 @@ class SNPAnalysis:
     family_data: FamilyData
     snp_data_df: pd.DataFrame
 
-    def __init__(self, family_data: FamilyData, snp_data_df: pd.DataFrame):
+    def __init__(self, family_data: FamilyData, snp_data_df: pd.DataFrame, args):
         """
         Initializes the SNPAnalysisPipeline with a FamilyData object and a dataframe produced from a ChAS csv output
         file.
@@ -343,6 +346,10 @@ class SNPAnalysis:
         :param family_data: A FamilyData object containing relevant genetic and family information.
         :param file_path: Path to an external file for further analysis.
         """
+
+        sample_cols = [col for col in snp_data_df.columns if 'rhchp' in col]
+        self.num_embryo = len(sample_cols) - 3  # 3 less due to mother, fater and ref
+        total_sheet = math.ceil(self.num_embryo/10)
         self.family_data = family_data
         self.create_embryo_sex_lookup()
         self.human_readable_headings = create_human_readable_heading(
@@ -369,6 +376,15 @@ class SNPAnalysis:
             self.summary_embryo_by_region_table,
         ) = format_tables_for_html_report(self)
         self.initialise_report_data()
+        # if there are more than 10 embryos, need to write the plots into
+        # multiple html sheets(each sheet has upto 10 plots)
+        if self.num_embryo > 10 and not self.family_data.trio_only:
+            n = 1
+            for chunk in self.chunking_embryos(self.embryos, 10):
+                figures_dict = self.collate_figures(chunk)
+                plots_as_html = generate_plots(figures_dict, static_plots=True)
+                plot_html_by_chunks(plots_as_html, n, args.output_folder, args.output_prefix, total_sheet)
+                n = n+1
 
     def create_embryo_sex_lookup(self) -> None:
         """Creates a lookup dictionary for embryo sex based on provided family data."""
@@ -561,6 +577,12 @@ class SNPAnalysis:
             return pd.DataFrame()
         return merged_df
 
+    def chunking_embryos(self, iterable: Dict[str, EmbryoData], size: int):
+        """iterate the dict of embryos and chunk into size of 10"""
+        it = iter(iterable.items())
+        for first in it:
+            yield dict([first] + list(islice(it, size - 1)))
+
     def collate_figures(self, embryos: Dict[str, EmbryoData]) -> Dict[str, str]:
         """Reiterates over all the EmbryoData objects and collates the figures"""
         figures_dict = {}
@@ -661,7 +683,7 @@ class SNPAnalysis:
             # If self.family_data.trio_only is True, assign an empty string, else assign the variable
             html_text_for_plots=(
                 ""
-                if self.family_data.trio_only
+                if self.family_data.trio_only or self.num_embryo > 10
                 else format_plot_html_str(
                     generate_plots(self.collate_figures(self.embryos), static_plots=False),
                     add_dropdown_selection=False,
@@ -673,7 +695,7 @@ class SNPAnalysis:
                 if self.family_data.trio_only
                 else format_plot_html_str(
                     generate_plots(self.collate_figures(self.embryos), static_plots=True),
-                    add_dropdown_selection=True,
+                    add_dropdown_selection=False,
                 )
             ),
             text_for_plots="",  # Dynamically updated when rendered selecting either html or pdf

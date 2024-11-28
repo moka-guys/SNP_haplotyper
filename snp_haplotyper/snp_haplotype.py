@@ -296,7 +296,7 @@ def main(args):
         )
 
     # Instantiate SNPAnalysis object
-    snp_pipeline = SNPAnalysis(create_family_data_from_args(args), import_haplotype_data(args.input_file))
+    snp_pipeline = SNPAnalysis(create_family_data_from_args(args), import_haplotype_data(args.input_file), args)
 
     logger.info("SNP Analysis complete - getting ready to prepare report.")
 
