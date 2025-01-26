@@ -355,7 +355,7 @@ def get_clean_filename(path):
     return parts[-1]
 
 
-def plot_html_by_chunks(plots_as_html: Dict[str, str], n: int, output_folder: str, output_prefix: str, total_sheet: int):
+def plot_html_by_chunks(plots_as_html: Dict[str, str], n: int, output_folder: str, output_prefix: str, total_sheet: int, timestr: str, command_line: bool):
     div_list = []
     for plot_id, plot_html in plots_as_html.items():
         div = plot_html
@@ -375,7 +375,14 @@ def plot_html_by_chunks(plots_as_html: Dict[str, str], n: int, output_folder: st
         </head>
         </html>
         """
-    with open(os.path.join(output_folder, output_prefix + f"_plot_sheet{n}of{total_sheet}" + ".html"), "w") as file:
-        file.write(html_header)
-        div = f"<div>\n{plot_html}\n</div>"
-        file.write(final_html)
+    if command_line:
+        with open(os.path.join(output_folder, output_prefix + f"_{timestr}_plot_sheet{n}of{total_sheet}" + ".html"), "w") as file:
+            file.write(html_header)
+            div = f"<div>\n{plot_html}\n</div>"
+            file.write(final_html)
+    else:
+        upload_folder_path = os.environ["UPLOAD_FOLDER"]
+        with open(os.path.join(upload_folder_path, output_prefix + f"_{timestr}_plot_sheet{n}of{total_sheet}" + ".html"), "w") as file:
+            file.write(html_header)
+            div = f"<div>\n{plot_html}\n</div>"
+            file.write(final_html)

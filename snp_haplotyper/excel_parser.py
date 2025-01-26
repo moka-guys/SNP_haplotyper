@@ -122,7 +122,7 @@ def load_workbook_range(range_string, worksheet):
     return df
 
 
-def parse_excel_input(input_spreadsheet, snp_array_file=None):
+def parse_excel_input(input_spreadsheet, app_timestr, snp_array_file=None):
     """
     Imports the following defined cells/ranges from the provided excel file:
         biopsy_number
@@ -554,6 +554,9 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     args.chr = chr
     args.flanking_region_size = flanking_region_size
     args.consanguineous = True if consanguineous.lower() == "yes" else False
+    args.command_line = False
+    args.num_embryo = len(args.embryo_ids)
+    args.timestr = app_timestr
 
     # If analysis is being done for embryos add that data as well
     if trio_only is False:
@@ -587,13 +590,13 @@ def main(excel_parser_args):
     # If the user has specified the run_basher flag, then parse the excel input and run snp_haplotyper
     if excel_parser_args.run_basher:
         if excel_parser_args.snp_array_file is None:
-            excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
+            excel_import = parse_excel_input(excel_parser_args.input_spreadsheet, excel_parser_args.timestr)
         else:
-            excel_import = parse_excel_input(excel_parser_args.input_spreadsheet, excel_parser_args.snp_array_file)
+            excel_import = parse_excel_input(excel_parser_args.input_spreadsheet, excel_parser_args.timestr, excel_parser_args.snp_array_file)
         snp_haplotype.main(excel_import)
     # If the user has not specified the run_basher flag, then just parse the excel input
     else:
-        excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
+        excel_import = parse_excel_input(excel_parser_args.input_spreadsheet, excel_parser_args.timestr)
         return excel_import
 
 

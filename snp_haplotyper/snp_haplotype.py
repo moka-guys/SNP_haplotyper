@@ -158,6 +158,14 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "-cl",
+    "--command_line",
+    action=argparse.BooleanOptionalAction,
+    default=False,
+    help="Flag to indicate that the app is run by command line",
+)
+
+parser.add_argument(
     "-r",
     "--reference",
     type=str,
@@ -296,7 +304,13 @@ def main(args):
         )
 
     # Instantiate SNPAnalysis object
-    snp_pipeline = SNPAnalysis(create_family_data_from_args(args), import_haplotype_data(args.input_file), args)
+    if args.command_line:
+        timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
+        print("using local time str", timestr)
+    else:
+        timestr = args.timestr
+        print("using app timestr", timestr)
+    snp_pipeline = SNPAnalysis(create_family_data_from_args(args), import_haplotype_data(args.input_file), args, timestr)
 
     logger.info("SNP Analysis complete - getting ready to prepare report.")
 
@@ -307,22 +321,22 @@ def main(args):
 
     # Save HTML report to file in output folder, including timestamp in filename
 
-    timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
-    output_dir = args.output_folder
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    if args.command_line:
+        output_dir = args.output_folder
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
 
-    with open(
-        os.path.join(output_dir, args.output_prefix + "_" + timestr + ".html"),
-        "w",
-    ) as f:
-        f.write(html_string)
+        with open(
+            os.path.join(output_dir, args.output_prefix + "_" + timestr + ".html"),
+            "w",
+        ) as f:
+            f.write(html_string)
 
-    # Convert HTML report to PDF
-    pdfkit.from_string(
-        pdf_string,
-        os.path.join(args.output_folder, args.output_prefix + "_" + timestr + ".pdf"),
-    )
+        # Convert HTML report to PDF
+        pdfkit.from_string(
+            pdf_string,
+            os.path.join(args.output_folder, args.output_prefix + "_" + timestr + ".pdf"),
+        )
 
     return (
         args.mode_of_inheritance,

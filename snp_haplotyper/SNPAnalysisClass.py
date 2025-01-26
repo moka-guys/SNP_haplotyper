@@ -338,7 +338,7 @@ class SNPAnalysis:
     family_data: FamilyData
     snp_data_df: pd.DataFrame
 
-    def __init__(self, family_data: FamilyData, snp_data_df: pd.DataFrame, args):
+    def __init__(self, family_data: FamilyData, snp_data_df: pd.DataFrame, args, timestr):
         """
         Initializes the SNPAnalysisPipeline with a FamilyData object and a dataframe produced from a ChAS csv output
         file.
@@ -348,7 +348,12 @@ class SNPAnalysis:
         """
 
         sample_cols = [col for col in snp_data_df.columns if 'rhchp' in col]
-        self.num_embryo = len(sample_cols) - 3  # 3 less due to mother, fater and ref
+        if args.command_line:
+            self.num_embryo = len(sample_cols) - 3  # 3 less due to mother, fater and ref
+            print("number of embryo processing:", self.num_embryo)
+        else:
+            self.num_embryo = args.num_embryo
+            print("number of embryo processing:", self.num_embryo)
         total_sheet = math.ceil(self.num_embryo/10)
         self.family_data = family_data
         self.create_embryo_sex_lookup()
@@ -383,7 +388,8 @@ class SNPAnalysis:
             for chunk in self.chunking_embryos(self.embryos, 10):
                 figures_dict = self.collate_figures(chunk)
                 plots_as_html = generate_plots(figures_dict, static_plots=True)
-                plot_html_by_chunks(plots_as_html, n, args.output_folder, args.output_prefix, total_sheet)
+                plot_html_by_chunks(plots_as_html, n, args.output_folder,
+                                    args.output_prefix, total_sheet, timestr, args.command_line)
                 n = n+1
 
     def create_embryo_sex_lookup(self) -> None:

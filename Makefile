@@ -8,14 +8,13 @@ DIR := $(shell pwd)
 
 # build tags
 IMG           := $(REGISTRY)/$(APP)
-IMG_VERSIONED := $(IMG):$(VERSION)
+IMG_VERSIONED := $(IMG):$(VERSION)_rc1.1
 IMG_LATEST    := $(IMG):latest
 
 .PHONY: push build tag
 
 push: build tag
 	docker push $(IMG_VERSIONED)
-	docker push $(IMG_LATEST)
 
 build:
 	docker buildx build --build-arg IMG_VERSIONED=$(IMG_VERSIONED) --platform linux/amd64 -t $(IMG_VERSIONED) . || \
