@@ -113,8 +113,8 @@ def check_input(input_namespace, input_file):
         input_ok_flag = False
 
     # Check if flanking_region_size is "2mb" or "3mb"
-    if input_namespace.flanking_region_size.value not in [2, 3]:
-        logger.error("Invalid flanking_region_size in mb: must be either  2 or 3.")
+    if input_namespace.flanking_region_size not in list(range(2, 6)):
+        logger.error("Invalid flanking_region_size in mb: must be between 2 to 5 and integer.")
         input_ok_flag = False
 
     # Check if gene_symbol is a non-empty string

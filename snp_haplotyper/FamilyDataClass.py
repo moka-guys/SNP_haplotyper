@@ -84,7 +84,7 @@ class FamilyData(BaseModel):
     gene_start: int
     gene_end: int
     chr: Chromosome
-    flanking_region_size: FlankingRegions
+    flanking_region_size: int
     trio_only: bool
     CHaS_input_fields: List[str] = []
     report_header_info: Dict[str, str] = {}

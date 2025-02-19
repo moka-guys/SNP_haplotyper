@@ -331,6 +331,7 @@ def form(basher_state="initial"):
 
             # Convert HTML report to PDF
             try:
+                print('Converting html to pdf')
                 path_to_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
                 config = pdfkit.configuration(wkhtmltopdf=path_to_wkhtmltopdf)
                 pdfkit.from_string(

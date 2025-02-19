@@ -244,10 +244,8 @@ parser.add_argument(
 
 parser.add_argument(
     "--flanking_region_size",
-    type=flanking_region_size_type,
-    nargs="?",
-    choices=list(FlankingRegions),
-    default=FlankingRegions.FLANK_2MB,
+    type=int,
+    default=2,
     help="Size of the flanking region either side of the gene in Mb",
 )
 
