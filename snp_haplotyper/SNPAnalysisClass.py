@@ -346,7 +346,7 @@ class SNPAnalysis:
         :param family_data: A FamilyData object containing relevant genetic and family information.
         :param file_path: Path to an external file for further analysis.
         """
-
+        self.denovo = args.denovo       
         sample_cols = [col for col in snp_data_df.columns if 'rhchp' in col]
         if args.command_line:
             self.num_embryo = len(sample_cols) - 3  # 3 less due to mother, fater and ref
@@ -651,6 +651,33 @@ class SNPAnalysis:
         """
         Initialize the report data for the HTML report.
         """
+        # rename for denovo pre-cases
+        if self.denovo == "Yes" and self.family_data.trio_only is True:
+            df_reset = self.snp_data.informative_snps_summary.reset_index()
+            if (self.family_data.mode_of_inheritance.value == "autosomal_recessive" or
+               self.family_data.mode_of_inheritance.value == "x_linked"):                
+                df_reset["snp_risk_category_summary"] = df_reset["snp_risk_category_summary"].replace("high_risk",
+                                                                                                      "hap1")
+                df_reset["snp_risk_category_summary"] = df_reset["snp_risk_category_summary"].replace("low_risk",
+                                                                                                      "hap2")
+                df_reset["snp_risk_category_summary"] = df_reset["snp_risk_category_summary"].replace("high_or_low_risk",
+                                                                                                      "hap1_or_hap2")
+            elif self.family_data.mode_of_inheritance.value == "autosomal_dominant":
+                df_reset["level_0"] = df_reset["level_0"].replace("high_risk", "hap1")
+                df_reset["level_0"] = df_reset["level_0"].replace("low_risk", "hap2")
+                df_reset["level_0"] = df_reset["level_0"].replace("high_or_low_risk", "hap1_or_hap2")
+            if self.family_data.mode_of_inheritance.value == "x_linked":
+                self.snp_data.informative_snps_summary = df_reset.set_index(["snp_risk_category_summary",
+                                                                             "gene_distance"])
+            elif self.family_data.mode_of_inheritance.value == "autosomal_recessive":
+                self.snp_data.informative_snps_summary = df_reset.set_index(["snp_inherited_from",
+                                                                             "snp_risk_category_summary",
+                                                                             "gene_distance"])
+            elif self.family_data.mode_of_inheritance.value == "autosomal_dominant":
+                df_reset = df_reset.rename(columns={"level_0": "snp_risk_category_summary"})
+                df_reset = df_reset.rename(columns={"level_1": "gene_distance"})
+                self.snp_data.informative_snps_summary = df_reset.set_index(["snp_risk_category_summary",
+                                                                             "gene_distance"])
         self.report_data = ReportData(
             header_html=dict2html(self.family_data.report_header_info),
             mode_of_inheritance=str(self.family_data.mode_of_inheritance.value),

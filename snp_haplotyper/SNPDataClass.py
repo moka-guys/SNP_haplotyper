@@ -144,6 +144,7 @@ class SNPData:
         self.summary_logic = SummaryFactory.create_summary(
             self.family_data.mode_of_inheritance, self.family_data.flanking_region_size
         )
+        # self.snp_df.to_csv("info_snp_summary_col.csv", index=False)
         self.informative_snps_summary = self.group_informative_snps_by_region()
         self.summarise_test_data()
 
@@ -763,7 +764,7 @@ class XLinkedSummary(BaseSummary):
         ]
 
         snp_count_female_AB_total = summarised_snps_by_region["snp_count_female_AB"].sum()
-        snp_count_male_AA_and_BB_total = (
+        snp_count_male_AA_and_BB_total = int(
             summarised_snps_by_region["snp_count_male_AA_and_BB"].sum() / 2
         )  # Each SNP will be counted twice as it is present in both AA and BB but can
         # can only be one or the other

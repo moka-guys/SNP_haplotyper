@@ -556,6 +556,7 @@ def parse_excel_input(input_spreadsheet, app_timestr, snp_array_file=None):
     args.command_line = False
     args.num_embryo = len(args.embryo_ids)
     args.timestr = app_timestr
+    args.denovo = de_novo
 
     # If analysis is being done for embryos add that data as well
     if trio_only is False:

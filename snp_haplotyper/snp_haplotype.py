@@ -267,6 +267,12 @@ parser.add_argument(
     "Hospital No, and Biopsy No.",
 )
 
+parser.add_argument(
+    "--denovo",
+    default="No",
+    help="if the case is denovo or not",
+)
+
 
 def main(args):
     """
