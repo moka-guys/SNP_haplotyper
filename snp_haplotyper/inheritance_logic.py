@@ -269,9 +269,10 @@ class XLinkedLogic(InheritanceLogic):
 
     def select_lookup_df(self):
         lookup_df = pd.DataFrame()
-        if self.reference_sex == Sex.MALE:
+        if (self.reference_sex == Sex.MALE) or \
+           (self.reference_sex == Sex.FEMALE and self.reference_relationship == Relationship.GRANDPARENT):
             lookup_df = XL_RefMaleLookup().get_dataframe()
-        elif self.reference_sex == Sex.FEMALE:
+        elif self.reference_sex == Sex.FEMALE and self.reference_relationship == Relationship.CHILD:
             lookup_df = XL_RefFemaleLookup().get_dataframe()
         elif self.reference_sex == Sex.UNKNOWN:
             print("X-Linked References must be sexed")

@@ -346,7 +346,7 @@ class SNPAnalysis:
         :param family_data: A FamilyData object containing relevant genetic and family information.
         :param file_path: Path to an external file for further analysis.
         """
-        self.denovo = args.denovo       
+        self.denovo = args.denovo
         sample_cols = [col for col in snp_data_df.columns if 'rhchp' in col]
         if args.command_line:
             self.num_embryo = len(sample_cols) - 3  # 3 less due to mother, fater and ref
