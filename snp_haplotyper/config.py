@@ -31,3 +31,4 @@ INPUT_FOLDER = "/home/graeme/Desktop/SNP_haplotyper/"
 
 # File containing details of the probesets on the array (currently Thermo Fisher Scientific HT-CMA_96.r3 SNP array)
 PROBESETS_MAPPING_FILE = "../test_data/AffyID2rsid.txt"
+FIGURE_NUM = 5

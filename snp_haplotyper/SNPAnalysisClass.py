@@ -354,7 +354,7 @@ class SNPAnalysis:
         else:
             self.num_embryo = args.num_embryo
             print("number of embryo processing:", self.num_embryo)
-        total_sheet = math.ceil(self.num_embryo/10)
+        total_sheet = math.ceil(self.num_embryo/config.FIGURE_NUM)
         self.family_data = family_data
         self.create_embryo_sex_lookup()
         self.human_readable_headings = create_human_readable_heading(
@@ -381,13 +381,13 @@ class SNPAnalysis:
             self.summary_embryo_by_region_table,
         ) = format_tables_for_html_report(self)
         self.initialise_report_data()
-        # if there are more than 10 embryos, need to write the plots into
-        # multiple html sheets(each sheet has upto 10 plots)
-        if self.num_embryo > 10 and not self.family_data.trio_only:
+        # if there are more than config.FIGURE_NUM embryos, need to write the plots into
+        # multiple html sheets(each sheet has upto config.FIGURE_NUM plots)
+        if self.num_embryo > config.FIGURE_NUM and not self.family_data.trio_only:
             n = 1
-            for chunk in self.chunking_embryos(self.embryos, 10):
+            for chunk in self.chunking_embryos(self.embryos, config.FIGURE_NUM):
                 figures_dict = self.collate_figures(chunk)
-                plots_as_html = generate_plots(figures_dict, static_plots=True)
+                plots_as_html = generate_plots(figures_dict, static_plots=False)
                 plot_html_by_chunks(plots_as_html, n, args.output_folder,
                                     args.output_prefix, total_sheet, timestr, args.command_line)
                 n = n+1
@@ -584,7 +584,7 @@ class SNPAnalysis:
         return merged_df
 
     def chunking_embryos(self, iterable: Dict[str, EmbryoData], size: int):
-        """iterate the dict of embryos and chunk into size of 10"""
+        """iterate the dict of embryos and chunk into size of config.FIGURE_NUM"""
         it = iter(iterable.items())
         for first in it:
             yield dict([first] + list(islice(it, size - 1)))
@@ -716,7 +716,7 @@ class SNPAnalysis:
             # If self.family_data.trio_only is True, assign an empty string, else assign the variable
             html_text_for_plots=(
                 ""
-                if self.family_data.trio_only or self.num_embryo > 10
+                if self.family_data.trio_only or self.num_embryo > config.FIGURE_NUM
                 else format_plot_html_str(
                     generate_plots(self.collate_figures(self.embryos), static_plots=False),
                     add_dropdown_selection=False,

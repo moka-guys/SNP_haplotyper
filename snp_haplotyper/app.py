@@ -22,6 +22,7 @@ from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 from werkzeug.utils import secure_filename
 from wtforms import FileField, MultipleFileField, SubmitField, ValidationError
+import config
 
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logger = logging.getLogger("BASHer_logger")
@@ -447,7 +448,7 @@ def download():
     pdf_file_name = f'{session["report_name"]}.pdf'
 
     # Create a temporary directory
-    num_page = math.ceil(session["num_embryo"]/10)
+    num_page = math.ceil(session["num_embryo"]/config.FIGURE_NUM)
     file_path = os.path.join(app.config['UPLOAD_FOLDER'])
     session['file_path'] = file_path
     sample_id = session["report_name"].rsplit("_", 1)[0]
@@ -457,7 +458,7 @@ def download():
         with zipfile.ZipFile(zip_path, "w") as zipObj:
             zipObj.write(f'{session["report_path"]}.html', html_file_name)
             zipObj.write(f'{session["report_path"]}.pdf', pdf_file_name)
-            if session["num_embryo"] > 10:
+            if session["num_embryo"] > config.FIGURE_NUM:
                 for i in range(1, num_page+1):
                     extra_html = f'{session["file_path"]}/{sample_id}_{session["timestr"]}_plot_sheet{i}of{num_page}.html'
                     zipObj.write(extra_html, f"{sample_id}_{session['timestr']}_plot_sheet{i}of{num_page}.html")
@@ -467,7 +468,7 @@ def download():
         # Delete the html and pdf reports
         os.remove(f'{session["report_path"]}.html')
         os.remove(f'{session["report_path"]}.pdf')
-        if session["num_embryo"] > 10:
+        if session["num_embryo"] > config.FIGURE_NUM:
             for i in range(1, num_page+1):
                 os.remove(f'{session["file_path"]}/{sample_id}_{session["timestr"]}_plot_sheet{i}of{num_page}.html')
 

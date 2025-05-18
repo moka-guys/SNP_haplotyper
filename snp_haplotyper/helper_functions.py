@@ -361,9 +361,9 @@ def plot_html_by_chunks(plots_as_html: Dict[str, str], n: int, output_folder: st
         div = plot_html
         div_list.append(div)
         # Combine all the divs into a single HTML string
-        all_divs = "\n".join(div_list)
-        final_html = all_divs
-        html_header = """
+    all_divs = "\n".join(div_list)
+    final_html = all_divs
+    html_header = """
         <!DOCTYPE html>
         <html>
         <head>
@@ -378,11 +378,9 @@ def plot_html_by_chunks(plots_as_html: Dict[str, str], n: int, output_folder: st
     if command_line:
         with open(os.path.join(output_folder, output_prefix + f"_{timestr}_plot_sheet{n}of{total_sheet}" + ".html"), "w") as file:
             file.write(html_header)
-            div = f"<div>\n{plot_html}\n</div>"
             file.write(final_html)
     else:
         upload_folder_path = os.environ["UPLOAD_FOLDER"]
         with open(os.path.join(upload_folder_path, output_prefix + f"_{timestr}_plot_sheet{n}of{total_sheet}" + ".html"), "w") as file:
             file.write(html_header)
-            div = f"<div>\n{plot_html}\n</div>"
             file.write(final_html)
