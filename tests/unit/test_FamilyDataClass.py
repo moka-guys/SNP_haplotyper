@@ -23,6 +23,7 @@ def valid_family_data():
         "reference": "reference_sample",
         "reference_status": Status.UNAFFECTED,
         "reference_relationship": Relationship.GRANDPARENT,
+        "reference_sex": Sex.MALE,
         "embryo_ids": ["embryo1.rhchp", "embryo2.rhchp"],
         "embryo_sex": [Sex.MALE, Sex.FEMALE],
         "gene_symbol": "ABCD",

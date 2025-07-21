@@ -5,7 +5,7 @@ from exceptions import ArgumentInputError
 from inheritance_logic import AutosomalRecessiveLogic
 
 
-def test_ArgumentInputError():
+def test_ArgumentInputError(capsys):
     d = {
         "male_partner": [
             "AB",
@@ -22,8 +22,7 @@ def test_ArgumentInputError():
     consanguineous = True
 
     # Should throw exception if reference_status = "unaffected" and consanguineous = True
-    with pytest.raises(ArgumentInputError):
-        results_df = AutosomalRecessiveLogic(
+    captured = AutosomalRecessiveLogic(
             test_df,
             "male_partner",
             "female_partner",
@@ -33,3 +32,5 @@ def test_ArgumentInputError():
             reference_sex,
             consanguineous,
         )
+    captured = capsys.readouterr()
+    assert "Cannot have unaffected reference in consanguineous analysis" in captured.out

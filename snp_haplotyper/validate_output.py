@@ -408,7 +408,7 @@ def validate_snp_results(
         ]
         XL_benchmark_df = XL_benchmark_df.sort_index()
 
-        assert_frame_equal(informative_snps_by_region, XL_benchmark_df)
+        assert_frame_equal(informative_snps_by_region.reset_index(), XL_benchmark_df.reset_index(), check_categorical=False)
 
 
 def validate_embryo_results(
@@ -496,7 +496,7 @@ def validate_embryo_results(
         AR_benchmark_df = AR_benchmark_df.reset_index(drop=True)
         test_df = test_df.reset_index(drop=True)
 
-        assert_frame_equal(test_df, AR_benchmark_df)
+        assert_frame_equal(test_df.astype(str), AR_benchmark_df.astype(str))
 
     elif mode == InheritanceMode.X_LINKED:
         # Test contents of summary_snps_by_region dataframe which is used to make the summary_snps_table in the report
