@@ -169,7 +169,7 @@ class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
             & consanguineous,
             # NoCall
             (self.embryo_category_df["snp_risk_category_AB"] != "uninformative")
-            & (self.embryo_category_df["snp_risk_category_AB"] == "NoCall"),
+            & (self.embryo_category_df[self.embryo_id] == "NoCall"),
         ]
         values = [
             "high_risk",

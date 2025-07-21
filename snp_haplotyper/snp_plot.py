@@ -58,6 +58,7 @@ def plot_results(
             "low_risk": -2,
             "NoCall": -1,
             "uninformative": 0,
+            "NoCall_in_trio": 1.5,
             "miscall": 1,
             "ADO": 1,
         }

@@ -27,6 +27,7 @@ class InheritanceLogic(ABC):
         self.reference_sex = reference_sex
         self.consanguineous = consanguineous
         self.lookup_df: pd.DataFrame = self.select_lookup_df()
+        self.copy_lookupdf = self.lookup_df.copy()
         self.add_nocall_lookup()
         self.merge_dataframes()
 
@@ -81,7 +82,7 @@ class InheritanceLogic(ABC):
             nocall_lookup_df["snp_inherited_from"] = nocall_lookup_df[
                 "snp_inherited_from"
             ].str.strip()  # Remove whitespace from snp_inherited_from column due to Comments
-            self.lookup_df = pd.concat([self.lookup_df, nocall_lookup_df])
+            self.lookup_df = pd.concat([self.copy_lookupdf, nocall_lookup_df])
         except Exception as e:
             # Handle any exceptions that might occur while reading the CSV data
             raise ValueError(f"Error reading NoCalldata: {e}")
