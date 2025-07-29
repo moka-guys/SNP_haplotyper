@@ -496,6 +496,7 @@ def detect_miscall_or_ado(
     reference_haplotype: str,
     embryo_haplotype: str,  # TODO  add embryo sex - MALE, FEMALE, OR UNKNOWN
     mode_of_inheritance: InheritanceMode,
+    embryo_sex: Sex
 ):
     """QC identify miscalls or ADOs (Allele Drop Outs)
     Takes the haplotypes for the male partner, female partner and embryo and calculates whether
@@ -595,10 +596,24 @@ def detect_miscall_or_ado(
             result = "miscall" if embryo_haplotype != "AA" else "uninformative"
         case ["BB", "BB", _, _, _]:
             result = "miscall" if embryo_haplotype != "BB" else "uninformative"
+        case ["AA", "BB", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = "miscall" if embryo_haplotype != "BB" else "uninformative"  # for xlinked male embryo
         case ["AA", "BB", _, _, _]:
             result = "ADO" if embryo_haplotype != "AB" else "uninformative"
+        case ["BB", "AA", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = "miscall" if embryo_haplotype != "AA" else "uninformative"  # for xlinked male embryo
         case ["BB", "AA", _, _, _]:
             result = "ADO" if embryo_haplotype != "AB" else "uninformative"
+        case ["AA", "AB", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = (
+                "miscall"
+                if embryo_haplotype
+                not in [
+                    "AA",
+                    "BB",
+                ]
+                else "uninformative"
+            )  # for xlinked male embryo
         case ["AA", "AB", _, _, _]:
             result = (
                 "ADO"
@@ -609,6 +624,15 @@ def detect_miscall_or_ado(
                 ]
                 else "uninformative"
             )
+        case ["AB", "AA", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = (
+                "miscall"
+                if embryo_haplotype
+                not in [
+                    "AA",
+                ]
+                else "uninformative"
+            )  # for xlinked male embryo
         case ["AB", "AA", _, _, _]:
             result = (
                 "ADO"
@@ -619,6 +643,16 @@ def detect_miscall_or_ado(
                 ]
                 else "uninformative"
             )
+        case ["BB", "AB", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = (
+                "miscall"
+                if embryo_haplotype
+                not in [
+                    "AA",
+                    "BB",
+                ]
+                else "uninformative"
+            )  # xlined male embryo
         case ["BB", "AB", _, _, _]:
             result = (
                 "ADO"
@@ -629,6 +663,15 @@ def detect_miscall_or_ado(
                 ]
                 else "uninformative"
             )
+        case ["AB", "BB", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = (
+                "miscall"
+                if embryo_haplotype
+                not in [
+                    "BB",
+                ]
+                else "uninformative"
+            )  # for xlinked male embryo
         case ["AB", "BB", _, _, _]:
             result = (
                 "ADO"
@@ -639,6 +682,17 @@ def detect_miscall_or_ado(
                 ]
                 else "uninformative"
             )
+
+        case ["AB", "AB", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = (
+                "miscall"
+                if embryo_haplotype
+                not in [
+                    "AA",
+                    "BB",
+                ]
+                else "uninformative"
+            )  # for male xlinked embryo
         case ["AB", "AB", _, _, _]:
             result = (
                 "uninformative"
@@ -665,6 +719,7 @@ def update_embryo_risk_column(
     reference_col: str,
     embryo_col: str,
     mode_of_inheritance: InheritanceMode,
+    embryo_sex: Sex,
 ):
     """
     Update the risk column in the DataFrame with miscalls and ADOs information.
@@ -674,7 +729,10 @@ def update_embryo_risk_column(
     - risk_col_name (str): The column name to update
     - male_partner_col (str): The column name for male partner data
     - female_partner_col (str): The column name for female partner data
+    - reference_col (str): The column name for the reference data
     - embryo_col (str): The column name for embryo data
+    - mode_of_inheritance (InheritanceMode): MOI
+    - embryo_sex (Sex): sex of embryo
 
     Returns:
     - pd.DataFrame: Updated DataFrame with modified risk column
@@ -689,6 +747,7 @@ def update_embryo_risk_column(
                 row[reference_col],
                 row[embryo_col],
                 mode_of_inheritance,
+                embryo_sex
             )
         ),
         axis=1,
@@ -768,6 +827,7 @@ class EmbryoData:
             self.reference,
             self.embryo_id,
             self.mode_of_inheritance,
+            self.embryo_sex
         )
 
         # Define the categorical type with specific categories
