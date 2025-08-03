@@ -133,6 +133,7 @@ class AutosomalDominantFormatter(EmbryoTableFormatter):
         embryo_risk_summary_df = self.add_total_row_to_df(embryo_risk_summary_df, ["embryo_risk_category"])
 
         embryo_risk_summary_df = replace_column_names(embryo_risk_summary_df, human_readable_headings)
+        embryo_risk_summary_df = embryo_risk_summary_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
 
         summary_snps_table = self.create_table_html(
             summary_df=embryo_risk_summary_df,
@@ -158,6 +159,7 @@ class AutosomalDominantFormatter(EmbryoTableFormatter):
         )
 
         summary_embryo_by_region_df = replace_column_names(summary_embryo_by_region_df, human_readable_headings)
+        summary_embryo_by_region_df = summary_embryo_by_region_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
 
         summary_embryo_by_region_table = self.create_table_html(
             summary_df=summary_embryo_by_region_df,
@@ -182,28 +184,46 @@ class AutosomalRecessiveFormatter(EmbryoTableFormatter):
         """
         Formats the summary table for autosomal recessive mode of inheritance."""
         if self.consanguinity_flag:
-            filter_values_2 = [
+            partners = [
                 "male_partner",
                 "both_partners",
                 "female_partner",
             ]
         else:
-            filter_values_2 = [
+            partners = [
                 "male_partner",
                 "female_partner",
             ]
+        embryo_col = summary_snps_df.columns[2:].tolist()
+        summary_snps_df["snp_inherited_from"] = summary_snps_df["snp_inherited_from"].astype("object")
+        summary_snps_df["embryo_risk_category"] = summary_snps_df["embryo_risk_category"].astype("object")
+        sum_high_low = summary_snps_df[
+            (summary_snps_df["snp_inherited_from"].isin(partners)) &
+            (summary_snps_df["embryo_risk_category"].isin(["high_risk", "low_risk"]))
+            ].groupby(["snp_inherited_from", "embryo_risk_category"])[embryo_col].sum()
 
-        # Adding a total row without additional filtering
-        summary_snps_df = self.add_total_row_to_df(
-            summary_snps_df,
-            index_columns=["snp_inherited_from", "embryo_risk_category"],
-            filter_values_1=["low_risk", "high_risk"],
-            filter_column_1="embryo_risk_category",
-            filter_values_2=filter_values_2,
-            filter_column_2="snp_inherited_from",
-        )
+        sum_others = summary_snps_df[
+            summary_snps_df["embryo_risk_category"].isin(["miscall", "ADO",
+                                                          "NoCall", "NoCall_in_trio",
+                                                          "uninformative", "NoCall_in_both"])
+                            ].groupby("embryo_risk_category")[embryo_col].sum()
 
-        summary_snps_df = replace_column_names(summary_snps_df, human_readable_headings)
+        # Set index to MultiIndex
+        sum_others.index = pd.MultiIndex.from_tuples(
+                [("ALL", subcat) for subcat in sum_others.index],
+                names=["snp_inherited_from", "embryo_risk_category"]
+                )
+
+        # Combine both results
+        df_concat = pd.concat([sum_high_low, sum_others]).sort_index()
+        totals = df_concat[embryo_col].sum()
+        total_row = pd.DataFrame(
+                [totals],
+                index=pd.MultiIndex.from_tuples([("Sum", "Total")],
+                                                names=["snp_inherited_from", "embryo_risk_category"])
+                )
+        summary_snps_df = pd.concat([df_concat, total_row])
+        summary_snps_df = summary_snps_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
 
         summary_snps_table = self.create_table_html(
             summary_df=summary_snps_df,
@@ -245,7 +265,7 @@ class AutosomalRecessiveFormatter(EmbryoTableFormatter):
         )
 
         summary_embryo_by_region_df = replace_column_names(summary_embryo_by_region_df, human_readable_headings)
-
+        summary_embryo_by_region_df = summary_embryo_by_region_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
         summary_embryo_by_region_table = self.create_table_html(
             summary_df=summary_embryo_by_region_df,
             table_identifier="risk_summary_per_region_table",
@@ -270,7 +290,7 @@ class XLinkedFormatter(EmbryoTableFormatter):
         embryo_risk_summary_df = self.add_total_row_to_df(embryo_risk_summary_df, ["embryo_risk_category"])
 
         embryo_risk_summary_df = replace_column_names(embryo_risk_summary_df, human_readable_headings)
-
+        embryo_risk_summary_df = embryo_risk_summary_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
         summary_snps_table = self.create_table_html(
             summary_df=embryo_risk_summary_df,
             table_identifier="summary_embryo_table",
@@ -296,6 +316,7 @@ class XLinkedFormatter(EmbryoTableFormatter):
         )
 
         summary_embryo_by_region_df = replace_column_names(summary_embryo_by_region_df, human_readable_headings)
+        summary_embryo_by_region_df = summary_embryo_by_region_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
 
         summary_embryo_by_region_table = self.create_table_html(
             summary_df=summary_embryo_by_region_df,
@@ -567,8 +588,13 @@ class SNPAnalysis:
                 df_list.append(getattr(embryo_data, attribute_name))
 
         # Initialize merged_df as None
-        merged_df = None
-
+        data = {
+            "embryo_risk_category": ["high_risk", "low_risk",
+                                     "miscall", "ADO", "NoCall",
+                                     "NoCall_in_trio", "uninformative",
+                                     "NoCall_in_both"],
+                }
+        merged_df = pd.DataFrame(data)
         # Iterate through the list of DataFrames and merge them one by one
         for df in df_list:
             if merged_df is None:
@@ -576,7 +602,7 @@ class SNPAnalysis:
                 merged_df = df
             else:
                 # Merge the current DataFrame with the existing merged_df
-                merged_df = merged_df.merge(df)
+                merged_df = merged_df.merge(df, how="outer")
 
         if merged_df is None:
             # If merged_df is still None, return an empty DataFrame

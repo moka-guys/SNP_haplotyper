@@ -61,6 +61,7 @@ def plot_results(
             "NoCall_in_trio": 1.5,
             "miscall": 1,
             "ADO": 1,
+            "NoCall_in_both": -1.5
         }
     )
 
@@ -98,6 +99,7 @@ def plot_results(
             "miscall": 1,
             "ADO": 1,
             "uninformative": 1,
+            "NoCall_in_both": 4
         }
     )
 
@@ -122,6 +124,7 @@ def plot_results(
                 "NoCall",
                 "NoCall_in_trio",
                 "uniformative",
+                "NoCall_in_both"
             ],
             "snp_inherited_from": ["male_partner", "uninformative", "female_partner"],
         },
