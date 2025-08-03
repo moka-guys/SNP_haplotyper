@@ -1,6 +1,6 @@
 import pandas as pd
 from EmbryoDataClass import update_embryo_risk_column
-from EnumDataClasses import InheritanceMode
+from EnumDataClasses import InheritanceMode, Sex
 import pytest
 
 
@@ -21,6 +21,7 @@ def test_ado_or_miscall_AD_logic():
         reference_col="reference",
         embryo_col="embryo",
         mode_of_inheritance=InheritanceMode.AUTOSOMAL_DOMINANT,
+        embryo_sex=Sex.FEMALE
     )
     assert AD_basher_results["calculated_result"].equals(
         AD_basher_results["AD_expected_result"]
@@ -40,6 +41,7 @@ def test_ado_or_miscall_AR_logic():
         reference_col="reference",
         embryo_col="embryo",
         mode_of_inheritance=InheritanceMode.AUTOSOMAL_RECESSIVE,
+        embryo_sex=Sex.FEMALE
     )
     assert AR_basher_results["calculated_result"].equals(
         AR_basher_results["AR_expected_result"]
@@ -58,6 +60,7 @@ def test_nocall_reference_AD_logic():
         reference_col="reference",
         embryo_col="embryo",
         mode_of_inheritance=InheritanceMode.AUTOSOMAL_DOMINANT,
+        embryo_sex=Sex.FEMALE
     )
     assert AD_basher_results["calculated_result"].equals(
         AD_basher_results["AD_expected_result"]
@@ -76,6 +79,7 @@ def test_nocall_reference_AR_logic():
         reference_col="reference",
         embryo_col="embryo",
         mode_of_inheritance=InheritanceMode.AUTOSOMAL_RECESSIVE,
+        embryo_sex=Sex.FEMALE
     )
     assert AR_basher_results["calculated_result"].equals(
         AR_basher_results["AR_expected_result"]
