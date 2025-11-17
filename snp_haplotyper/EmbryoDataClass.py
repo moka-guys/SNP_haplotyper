@@ -673,15 +673,8 @@ def detect_miscall_or_ado(
                 ]
                 else "uninformative"
             )
-        case ["AB", "AA", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
-            result = (
-                "miscall"
-                if embryo_haplotype
-                not in [
-                    "AA",
-                ]
-                else "uninformative"
-            )  # for xlinked male embryo
+        case ["AB", "AA", _, _, InheritanceMode.X_LINKED]:
+            result = "uninformative"  # uninformative for both male and female embryo in xlinked
         case ["AB", "AA", _, _, _]:
             result = (
                 "ADO"
@@ -712,15 +705,9 @@ def detect_miscall_or_ado(
                 ]
                 else "uninformative"
             )
-        case ["AB", "BB", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
-            result = (
-                "miscall"
-                if embryo_haplotype
-                not in [
-                    "BB",
-                ]
-                else "uninformative"
-            )  # for xlinked male embryo
+        case ["AB", "BB", _, _, InheritanceMode.X_LINKED]:
+            result = "uninformative"  # uninformative for both male and female embryo in xlinked
+
         case ["AB", "BB", _, _, _]:
             result = (
                 "ADO"
@@ -732,16 +719,8 @@ def detect_miscall_or_ado(
                 else "uninformative"
             )
 
-        case ["AB", "AB", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
-            result = (
-                "miscall"
-                if embryo_haplotype
-                not in [
-                    "AA",
-                    "BB",
-                ]
-                else "uninformative"
-            )  # for male xlinked embryo
+        case ["AB", "AB", _, _, InheritanceMode.X_LINKED]:
+            result = "uninformative"  # uninformative for both male and female embryo in xlinked
         case ["AB", "AB", _, _, _]:
             result = (
                 "uninformative"

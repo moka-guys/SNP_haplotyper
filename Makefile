@@ -8,7 +8,7 @@ DIR := $(shell pwd)
 
 # build tags
 IMG           := $(REGISTRY)/$(APP)
-IMG_VERSIONED := $(IMG):$(VERSION)_rc1.11
+IMG_VERSIONED := $(IMG):$(VERSION)_rc1.12
 IMG_LATEST    := $(IMG):latest
 
 .PHONY: push build tag
