@@ -209,6 +209,8 @@ def parse_excel_input(input_spreadsheet, app_timestr, snp_array_file=None):
             # Import excel ranges
             df = load_workbook_range(dn.attr_text.split("!")[1].replace("$", ""), data_entry_sheet)
             argument_dict[input_name] = df.dropna(how="all")  # Remove empty rows
+        elif input_name in ["_xleta.SUM"]:
+            pass
         else:
             # Process cell locations in the format data_entry!$B$31 or data_entry!$F$22:$L$22 (merged cells)
             cell_location = dn.attr_text.split(":")[0].split("!")[1].replace("$", "")
