@@ -21,7 +21,7 @@ Clone the github repo and run docker-compose file
 ```
 docker-compose up -d
 ```
-This should load the web app in `ttp://127.0.0.1:5000/basher`. 
+This should load the web app in `http://127.0.0.1:5000/basher`. 
 
 ### Run web-app on GSTT server
 

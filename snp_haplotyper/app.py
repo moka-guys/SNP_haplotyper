@@ -36,7 +36,8 @@ app = Flask(__name__)
 
 # Define the folder where uploaded files will be stored. The folder location is retrieved from an environment variable
 app.config["UPLOAD_FOLDER"] = os.environ["UPLOAD_FOLDER"]
-app.config["SECRET_KEY"] = "catchmeifyoucan"
+app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
+print("SECRET KEY IS", app.config["SECRET_KEY"])
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_PERMANENT"] = (
     True  # Set the session lifetime. If True, the session is permanent until the browser is closed.
