@@ -194,3 +194,7 @@ test_data/*.json
 # Include these files in the repo, even though the folder is blocked above
 !test_data/embryo_validation_data.json
 !test_data/informative_snp_validation.json
+
+# output folders
+logs/
+uploads/
