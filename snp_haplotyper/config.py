@@ -8,7 +8,7 @@ Module contains configuration settings for the SNP haplotyper program.
 GENOME_BUILD = "GRCh38"
 
 # Current version of BASHer used to generate the report
-BASHER_VERSION = "2.0.1"
+BASHER_VERSION = "2.1.0"
 
 # These flags can be used to prevent the program from running certain parts of the analysis
 # for example, if you have validated specific modes of inheritance, you can set the flags
