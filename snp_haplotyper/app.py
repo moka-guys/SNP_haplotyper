@@ -8,6 +8,7 @@ import tempfile
 import zipfile
 from datetime import datetime
 from io import BytesIO
+import math
 
 import merge_array_files
 import pdfkit
@@ -21,6 +22,7 @@ from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 from werkzeug.utils import secure_filename
 from wtforms import FileField, MultipleFileField, SubmitField, ValidationError
+import config
 
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logger = logging.getLogger("BASHer_logger")
@@ -34,7 +36,8 @@ app = Flask(__name__)
 
 # Define the folder where uploaded files will be stored. The folder location is retrieved from an environment variable
 app.config["UPLOAD_FOLDER"] = os.environ["UPLOAD_FOLDER"]
-app.config["SECRET_KEY"] = "catchmeifyoucan"
+app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
+print("SECRET KEY IS", app.config["SECRET_KEY"])
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_PERMANENT"] = (
     True  # Set the session lifetime. If True, the session is permanent until the browser is closed.
@@ -73,12 +76,12 @@ class BasherForm(FlaskForm):
     submit = SubmitField("Run BASHer")
 
 
-def call_excel_parser(sample_sheet, snp_array_file):
+def call_excel_parser(sample_sheet, snp_array_file, app_timestr):
     """
     This function calls the excel parser function to parse the input sheet and return the parsed data.
     """
     # Get contents of parsed input sheet
-    basher_input_namespace, error_dictionary, input_ok_flag = parse_excel_input(sample_sheet, snp_array_file)
+    basher_input_namespace, error_dictionary, input_ok_flag = parse_excel_input(sample_sheet, app_timestr, snp_array_file)
 
     return [basher_input_namespace, error_dictionary, input_ok_flag]
 
@@ -300,8 +303,10 @@ def form(basher_state="initial"):
         input_file_tmp_path = os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"], input_file_basename)
 
         basher_input_namespace, input_errors, input_ok_flag = call_excel_parser(
-            input_sheet_tmp_path, input_file_tmp_path
+            input_sheet_tmp_path, input_file_tmp_path, session["timestr"]
         )
+        num_embryo = len(basher_input_namespace.embryo_ids)
+        session["num_embryo"] = num_embryo
 
         if input_ok_flag is False:
             return render_template(
@@ -327,10 +332,16 @@ def form(basher_state="initial"):
             logger.info(f"Saved HTML report for {sample_id} at {session['report_path']}.html")
 
             # Convert HTML report to PDF
-            pdfkit.from_string(
-                pdf_report,
-                f'{session["report_path"]}.pdf',
-            )
+            try:
+                print('Converting html to pdf')
+                path_to_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
+                config = pdfkit.configuration(wkhtmltopdf=path_to_wkhtmltopdf)
+                pdfkit.from_string(
+                    pdf_report,
+                    f'{session["report_path"]}.pdf', configuration=config
+                )
+            except IOError as e:
+                print("ERROR", e)
             logger.info(f"Saved PDF report for {sample_id}")
 
             return render_template(
@@ -438,18 +449,29 @@ def download():
     pdf_file_name = f'{session["report_name"]}.pdf'
 
     # Create a temporary directory
+    num_page = math.ceil(session["num_embryo"]/config.FIGURE_NUM)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'])
+    session['file_path'] = file_path
+    sample_id = session["report_name"].rsplit("_", 1)[0]
     with tempfile.TemporaryDirectory() as tempdir:
         # Create a zip file with the html and pdf reports
         zip_path = os.path.join(tempdir, f'{session["report_name"]}.zip')
         with zipfile.ZipFile(zip_path, "w") as zipObj:
             zipObj.write(f'{session["report_path"]}.html', html_file_name)
             zipObj.write(f'{session["report_path"]}.pdf', pdf_file_name)
+            if session["num_embryo"] > config.FIGURE_NUM:
+                for i in range(1, num_page+1):
+                    extra_html = f'{session["file_path"]}/{sample_id}_{session["timestr"]}_plot_sheet{i}of{num_page}.html'
+                    zipObj.write(extra_html, f"{sample_id}_{session['timestr']}_plot_sheet{i}of{num_page}.html")
 
         logger.info(f"Saved zipped reports to {zip_path}")
 
         # Delete the html and pdf reports
         os.remove(f'{session["report_path"]}.html')
         os.remove(f'{session["report_path"]}.pdf')
+        if session["num_embryo"] > config.FIGURE_NUM:
+            for i in range(1, num_page+1):
+                os.remove(f'{session["file_path"]}/{sample_id}_{session["timestr"]}_plot_sheet{i}of{num_page}.html')
 
         logger.info(f"Attempting to download {zip_path}")
 

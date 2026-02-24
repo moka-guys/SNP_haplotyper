@@ -5,16 +5,15 @@
 This script filters and classifies SNPs.
 
 ## What are typical use cases for this script?
-
+Autosomal dominant, Autosomal recessive, X-linked
 
 ## What inputs are required for this software to run?
-
+SNP array file and sample sheet
 
 ## How does this script work?
-
+It evaluates the risk haplotypes associated with genetic conditions and assesses risk embryo.
 
 ## Known Limitations of this Software
-
 
 ### Sex checking of embryos
 
@@ -26,7 +25,7 @@ If there has been a sample mixup and one of the trio is not related to the teste
 
 ### Recombination
 
-Recombination events can affect the diagnosis.  Single recombination events occur at 
+Recombination events can affect the diagnosis.
 
 ### Consanguinity
 
@@ -34,4 +33,4 @@ Consanguineous AR cases are dealt with using a slightly modified version of the 
 
 ### Telomeric & Centromeric Regions
 
-Genes are flanked with a 2mb window, for some genes in telomeric regions (FHSD1 - D4Z4 repeat, PKD1) this may mean that the window extends beyond the start/end of the chromosome. The plots produced by BASHer in these regions may look as though they have no informative SNPs over part of the window.
+Genes are flanked upto a 5mb window, for some genes in telomeric regions (FHSD1 - D4Z4 repeat, PKD1) this may mean that the window extends beyond the start/end of the chromosome. The plots produced by BASHer in these regions may look as though they have no informative SNPs over part of the window.

@@ -15,7 +15,6 @@ IMG_LATEST    := $(IMG):latest
 
 push: build tag
 	docker push $(IMG_VERSIONED)
-	docker push $(IMG_LATEST)
 
 build:
 	docker buildx build --build-arg IMG_VERSIONED=$(IMG_VERSIONED) --platform linux/amd64 -t $(IMG_VERSIONED) . || \

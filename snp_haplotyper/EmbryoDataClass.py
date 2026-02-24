@@ -91,8 +91,9 @@ class AutosomalDominantCategorizer(EmbryoAlleleCategorizer):
             & (self.embryo_category_df[self.embryo_id] == "AB"),
             (self.embryo_category_df["snp_risk_category_AB"] != "uninformative")
             & (self.embryo_category_df[self.embryo_id] == "NoCall"),
+            (self.embryo_category_df["snp_risk_category_AB"] == "NoCall_in_trio"),
         ]
-        values = ["high_risk", "low_risk", "NoCall"]
+        values = ["high_risk", "low_risk", "NoCall", "NoCall_in_trio"]
 
         self.embryo_category_df[embryo_risk_col] = np.select(conditions, values, default="uninformative")
         self.embryo_category_df[embryo_risk_col] = pd.Categorical(
@@ -163,9 +164,14 @@ class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
             & (self.embryo_category_df["snp_inherited_from"] == "both_partners")
             & ((self.embryo_category_df[self.embryo_id] == "BB"))
             & consanguineous,
+            (self.embryo_category_df["snp_risk_category_AB"] == "high_or_low")
+            & (self.embryo_category_df["snp_inherited_from"] == "both_partners")
+            & ((self.embryo_category_df[self.embryo_id] == "AB"))
+            & consanguineous,
             # NoCall
             (self.embryo_category_df["snp_risk_category_AB"] != "uninformative")
-            & (self.embryo_category_df["snp_risk_category_AB"] == "NoCall"),
+            & (self.embryo_category_df[self.embryo_id] == "NoCall"),
+            (self.embryo_category_df["snp_risk_category_AB"] == "NoCall_in_trio")
         ]
         values = [
             "high_risk",
@@ -176,7 +182,9 @@ class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
             "high_risk",
             "low_risk",
             "low_risk",
+            "high/low_risk",
             "NoCall",
+            "NoCall_in_trio"
         ]
         self.embryo_category_df[embryo_risk_col] = np.select(conditions, values, default="uninformative")
         self.embryo_category_df[embryo_risk_col] = pd.Categorical(
@@ -184,6 +192,7 @@ class AutosomalRecessiveCategorizer(EmbryoAlleleCategorizer):
             categories=[
                 "high_risk",
                 "low_risk",
+                "high/low_risk",
                 "uninformative",
                 "ADO",
                 "miscall",
@@ -341,6 +350,21 @@ class AutosomalDominantRiskSummariser(EmbryoRiskSummariser):
         Returns:
         - pd.DataFrame: Filtered DataFrame containing only "high_risk" and "low_risk" categories
         """
+        embryo_category_df["embryo_risk_category"] = embryo_category_df["embryo_risk_category"].astype("category")
+        embryo_category_df["embryo_risk_category"] = pd.Categorical(
+            embryo_category_df["embryo_risk_category"],
+            categories=[
+                "high_risk",
+                "low_risk",
+                "uninformative",
+                "ADO",
+                "miscall",
+                "NoCall",
+                "NoCall_in_trio",
+                "NoCall_in_both"
+            ],
+            ordered=True,
+        )
 
         # Group by embryo_risk_category and snp_position and count occurrences
         grouped_df = (
@@ -405,6 +429,22 @@ class AutosomalRecessiveRiskSummariser(EmbryoRiskSummariser):
         """
 
         # Group by embryo_risk_category and snp_position and count occurrences
+
+        embryo_category_df["embryo_risk_category"] = embryo_category_df["embryo_risk_category"].astype("category")
+        embryo_category_df["embryo_risk_category"] = pd.Categorical(
+            embryo_category_df["embryo_risk_category"],
+            categories=[
+                "high_risk",
+                "low_risk",
+                "uninformative",
+                "ADO",
+                "miscall",
+                "NoCall",
+                "NoCall_in_trio",
+                "NoCall_in_both"
+            ],
+            ordered=True,
+        )
         grouped_df = (
             embryo_category_df.groupby(
                 [
@@ -461,6 +501,21 @@ class XLinkedRiskSummariser(EmbryoRiskSummariser):
         - pd.DataFrame: Filtered DataFrame containing only "high_risk" and "low_risk" categories
         """
 
+        embryo_category_df["embryo_risk_category"] = embryo_category_df["embryo_risk_category"].astype("category")
+        embryo_category_df["embryo_risk_category"] = pd.Categorical(
+            embryo_category_df["embryo_risk_category"],
+            categories=[
+                "high_risk",
+                "low_risk",
+                "uninformative",
+                "ADO",
+                "miscall",
+                "NoCall",
+                "NoCall_in_trio",
+                "NoCall_in_both"
+            ],
+            ordered=True,
+        )
         # Group by embryo_risk_category and snp_position and count occurrences
         grouped_df = (
             embryo_category_df.groupby(["embryo_risk_category", "snp_position"]).size().reset_index(name=embryo_id)
@@ -490,6 +545,7 @@ def detect_miscall_or_ado(
     reference_haplotype: str,
     embryo_haplotype: str,  # TODO  add embryo sex - MALE, FEMALE, OR UNKNOWN
     mode_of_inheritance: InheritanceMode,
+    embryo_sex: Sex
 ):
     """QC identify miscalls or ADOs (Allele Drop Outs)
     Takes the haplotypes for the male partner, female partner and embryo and calculates whether
@@ -589,10 +645,24 @@ def detect_miscall_or_ado(
             result = "miscall" if embryo_haplotype != "AA" else "uninformative"
         case ["BB", "BB", _, _, _]:
             result = "miscall" if embryo_haplotype != "BB" else "uninformative"
+        case ["AA", "BB", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = "miscall" if embryo_haplotype != "BB" else "uninformative"  # for xlinked male embryo
         case ["AA", "BB", _, _, _]:
             result = "ADO" if embryo_haplotype != "AB" else "uninformative"
+        case ["BB", "AA", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = "miscall" if embryo_haplotype != "AA" else "uninformative"  # for xlinked male embryo
         case ["BB", "AA", _, _, _]:
             result = "ADO" if embryo_haplotype != "AB" else "uninformative"
+        case ["AA", "AB", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = (
+                "miscall"
+                if embryo_haplotype
+                not in [
+                    "AA",
+                    "BB",
+                ]
+                else "uninformative"
+            )  # for xlinked male embryo
         case ["AA", "AB", _, _, _]:
             result = (
                 "ADO"
@@ -603,6 +673,8 @@ def detect_miscall_or_ado(
                 ]
                 else "uninformative"
             )
+        case ["AB", "AA", _, _, InheritanceMode.X_LINKED]:
+            result = "uninformative"  # uninformative for both male and female embryo in xlinked
         case ["AB", "AA", _, _, _]:
             result = (
                 "ADO"
@@ -613,6 +685,16 @@ def detect_miscall_or_ado(
                 ]
                 else "uninformative"
             )
+        case ["BB", "AB", _, _, InheritanceMode.X_LINKED] if embryo_sex == Sex.MALE:
+            result = (
+                "miscall"
+                if embryo_haplotype
+                not in [
+                    "AA",
+                    "BB",
+                ]
+                else "uninformative"
+            )  # xlined male embryo
         case ["BB", "AB", _, _, _]:
             result = (
                 "ADO"
@@ -623,6 +705,9 @@ def detect_miscall_or_ado(
                 ]
                 else "uninformative"
             )
+        case ["AB", "BB", _, _, InheritanceMode.X_LINKED]:
+            result = "uninformative"  # uninformative for both male and female embryo in xlinked
+
         case ["AB", "BB", _, _, _]:
             result = (
                 "ADO"
@@ -633,6 +718,9 @@ def detect_miscall_or_ado(
                 ]
                 else "uninformative"
             )
+
+        case ["AB", "AB", _, _, InheritanceMode.X_LINKED]:
+            result = "uninformative"  # uninformative for both male and female embryo in xlinked
         case ["AB", "AB", _, _, _]:
             result = (
                 "uninformative"
@@ -659,6 +747,7 @@ def update_embryo_risk_column(
     reference_col: str,
     embryo_col: str,
     mode_of_inheritance: InheritanceMode,
+    embryo_sex: Sex,
 ):
     """
     Update the risk column in the DataFrame with miscalls and ADOs information.
@@ -668,7 +757,10 @@ def update_embryo_risk_column(
     - risk_col_name (str): The column name to update
     - male_partner_col (str): The column name for male partner data
     - female_partner_col (str): The column name for female partner data
+    - reference_col (str): The column name for the reference data
     - embryo_col (str): The column name for embryo data
+    - mode_of_inheritance (InheritanceMode): MOI
+    - embryo_sex (Sex): sex of embryo
 
     Returns:
     - pd.DataFrame: Updated DataFrame with modified risk column
@@ -683,6 +775,7 @@ def update_embryo_risk_column(
                 row[reference_col],
                 row[embryo_col],
                 mode_of_inheritance,
+                embryo_sex
             )
         ),
         axis=1,
@@ -762,25 +855,48 @@ class EmbryoData:
             self.reference,
             self.embryo_id,
             self.mode_of_inheritance,
+            self.embryo_sex
         )
 
         # Define the categorical type with specific categories
-        cat_type = pd.CategoricalDtype(
-            categories=[
-                "high_risk",
-                "low_risk",
-                "uninformative",
-                "ADO",
-                "miscall",
-                "NoCall",
-                "NoCall_in_trio",
-            ],
-            ordered=True,
-        )
+        if self.consanguineous:
+            cat_type = pd.CategoricalDtype(
+                categories=[
+                    "high_risk",
+                    "low_risk",
+                    "high/low_risk",
+                    "uninformative",
+                    "ADO",
+                    "miscall",
+                    "NoCall",
+                    "NoCall_in_trio",
+                ],
+                ordered=True,
+            )
+        else:
+            cat_type = pd.CategoricalDtype(
+                categories=[
+                    "high_risk",
+                    "low_risk",
+                    "uninformative",
+                    "ADO",
+                    "miscall",
+                    "NoCall",
+                    "NoCall_in_trio",
+                ],
+                ordered=True,
+            )
 
         self.embryo_category_df["embryo_risk_category"] = self.embryo_category_df["embryo_risk_category"].astype(
             cat_type
         )
+        # since rows with high/low risk are to be counted for both low and high risk,
+        # these rows need to be duplicated
+        if "high/low_risk" in list(self.embryo_category_df["embryo_risk_category"].unique()):
+            rows_to_duplicate = self.embryo_category_df[self.embryo_category_df["embryo_risk_category"] == "high/low_risk"]
+            rows_to_duplicate["embryo_risk_category"] = "low_risk"
+            self.embryo_category_df["embryo_risk_category"] = self.embryo_category_df["embryo_risk_category"].replace({"high/low_risk": "high_risk"})
+            self.embryo_category_df = pd.concat([self.embryo_category_df, rows_to_duplicate], ignore_index=True)
 
         summarizer_class = get_embryo_risk_summariser(self.mode_of_inheritance)
 
@@ -788,6 +904,14 @@ class EmbryoData:
             self.embryo_id,
             self.embryo_category_df,
         )
+
+        # differentiate between nocall in embryo and no call in both
+        self.embryo_category_df = differentiate_nocall(
+                                    self.embryo_category_df,
+                                    "embryo_risk_category",
+                                    "snp_risk_category_AB",
+                                    self.embryo_id,
+                                )
 
         self.risk_summary_df = summariser_instance.risk_summary(self.embryo_id, self.embryo_category_df)
         self.risk_summary_per_region_df = summariser_instance.risk_summary_per_region(
@@ -819,3 +943,60 @@ class EmbryoData:
         Returns the DataFrame used for testing benchmarks.
         """
         return self.risk_summary_for_testing_df
+
+
+def differentiate_nocall(
+        df: pd.DataFrame,
+        risk_col_name: str,
+        snp_col_name: str,
+        embryo_col: str) -> pd.DataFrame:
+    """
+    Differentiate between "NoCall in embryo (i.e. NoCall)" and "NoCall in both (trio+embryo)"
+    Args:
+        df (dataframe)
+        risk_col_name (string)
+        snp_col_name (string)
+        embryo_col (string)
+    Returns:
+        df (dataframe)
+    """
+    df[risk_col_name] = df.apply(
+        lambda row: (
+            row[risk_col_name]
+            if row[risk_col_name] != "NoCall"
+            else check_nocall(
+                row[snp_col_name],
+                row[embryo_col],
+                )
+                ),
+        axis=1,
+            )
+    return df
+
+
+def check_nocall(
+            trio_snp: str,
+            embryo_haplotype: str
+            ) -> str:
+    """
+    NoCall in "embryo_risk_category" col covers two conditions:
+    1. NoCall in Embryo 2. NoCall in Embryo + NoCall_in_trio.
+    This function is to differentiate between condition 1 and 2.
+    For conditon 1, it keeps as "NoCall". Condition 2 is recategorised as "NoCall_in_both"
+    Args:
+        trio_snp (string): "NoCall_in_trio" or else
+        embryo_haplotype (string): Either "AA", "BB", "AB", or "NoCall"
+    Returns:
+        string: "NoCall" or "NoCall_in_both"
+    """
+    alleles = [
+        trio_snp,
+        embryo_haplotype,
+        ]
+
+    match alleles:
+        case ["NoCall_in_trio", "NoCall"]:
+            result = "NoCall_in_both"
+        case [_, "NoCall"]:
+            result = "NoCall"
+    return result

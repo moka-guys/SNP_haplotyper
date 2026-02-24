@@ -58,8 +58,10 @@ def plot_results(
             "low_risk": -2,
             "NoCall": -1,
             "uninformative": 0,
+            "NoCall_in_trio": 1.5,
             "miscall": 1,
             "ADO": 1,
+            "NoCall_in_both": -1.5
         }
     )
 
@@ -97,6 +99,7 @@ def plot_results(
             "miscall": 1,
             "ADO": 1,
             "uninformative": 1,
+            "NoCall_in_both": 4
         }
     )
 
@@ -120,7 +123,8 @@ def plot_results(
                 "ADO",
                 "NoCall",
                 "NoCall_in_trio",
-                "uniformative",
+                "uninformative",
+                "NoCall_in_both"
             ],
             "snp_inherited_from": ["male_partner", "uninformative", "female_partner"],
         },
@@ -276,6 +280,19 @@ def plot_results(
             summary_df.at[("low_risk", "downstream", "female_partner"), embryo_id],
             bp_flanking_region_size,
         )
+        if consanguineous:
+            add_snp_count_annotation(  # both partner plot
+                2,
+                "High_risk count both_partners",
+                "Low_risk count both_partners",
+                summary_df.at[("high_risk", "upstream", "both_partners"), embryo_id],
+                summary_df.at[("high_risk", "within_gene", "both_partners"), embryo_id],
+                summary_df.at[("high_risk", "downstream", "both_partners"), embryo_id],
+                summary_df.at[("low_risk", "upstream", "both_partners"), embryo_id],
+                summary_df.at[("low_risk", "within_gene", "both_partners"), embryo_id],
+                summary_df.at[("low_risk", "downstream", "both_partners"), embryo_id],
+                bp_flanking_region_size,
+            )
 
     fig.update_yaxes(range=[-4, 4], showticklabels=False, automargin=True)
     fig.update_layout(
@@ -283,5 +300,7 @@ def plot_results(
         width=1700,
         title_text=f"Results for {embryo_id} (Embryo: {embryo_sex})",
     )
+    if mode_of_inheritance == InheritanceMode.AUTOSOMAL_RECESSIVE:
+        fig.for_each_annotation(lambda a: a.update(text="" if a.text == "uninformative" else a.text))
 
     return fig

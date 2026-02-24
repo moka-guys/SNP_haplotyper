@@ -5,6 +5,7 @@ This Module performs the SNP anaylsis and formatting of outputs
 import logging
 import os
 import sys
+import math
 from abc import ABC
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Dict, List, Optional
 
 import config
 import pandas as pd
+from itertools import islice
 from EmbryoDataClass import EmbryoData
 from EnumDataClasses import InheritanceMode
 
@@ -23,6 +25,7 @@ from helper_functions import (
     generate_plots,
     produce_html_table,
     replace_column_names,
+    plot_html_by_chunks
 )
 from pandas.io.formats.style import Styler
 from ReportDataClass import ReportData
@@ -130,6 +133,7 @@ class AutosomalDominantFormatter(EmbryoTableFormatter):
         embryo_risk_summary_df = self.add_total_row_to_df(embryo_risk_summary_df, ["embryo_risk_category"])
 
         embryo_risk_summary_df = replace_column_names(embryo_risk_summary_df, human_readable_headings)
+        embryo_risk_summary_df = embryo_risk_summary_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
 
         summary_snps_table = self.create_table_html(
             summary_df=embryo_risk_summary_df,
@@ -155,6 +159,7 @@ class AutosomalDominantFormatter(EmbryoTableFormatter):
         )
 
         summary_embryo_by_region_df = replace_column_names(summary_embryo_by_region_df, human_readable_headings)
+        summary_embryo_by_region_df = summary_embryo_by_region_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
 
         summary_embryo_by_region_table = self.create_table_html(
             summary_df=summary_embryo_by_region_df,
@@ -179,28 +184,46 @@ class AutosomalRecessiveFormatter(EmbryoTableFormatter):
         """
         Formats the summary table for autosomal recessive mode of inheritance."""
         if self.consanguinity_flag:
-            filter_values_2 = [
+            partners = [
                 "male_partner",
                 "both_partners",
                 "female_partner",
             ]
         else:
-            filter_values_2 = [
+            partners = [
                 "male_partner",
                 "female_partner",
             ]
+        embryo_col = summary_snps_df.columns[2:].tolist()
+        summary_snps_df["snp_inherited_from"] = summary_snps_df["snp_inherited_from"].astype("object")
+        summary_snps_df["embryo_risk_category"] = summary_snps_df["embryo_risk_category"].astype("object")
+        sum_high_low = summary_snps_df[
+            (summary_snps_df["snp_inherited_from"].isin(partners)) &
+            (summary_snps_df["embryo_risk_category"].isin(["high_risk", "low_risk"]))
+            ].groupby(["snp_inherited_from", "embryo_risk_category"])[embryo_col].sum()
 
-        # Adding a total row without additional filtering
-        summary_snps_df = self.add_total_row_to_df(
-            summary_snps_df,
-            index_columns=["snp_inherited_from", "embryo_risk_category"],
-            filter_values_1=["low_risk", "high_risk"],
-            filter_column_1="embryo_risk_category",
-            filter_values_2=filter_values_2,
-            filter_column_2="snp_inherited_from",
-        )
+        sum_others = summary_snps_df[
+            summary_snps_df["embryo_risk_category"].isin(["miscall", "ADO",
+                                                          "NoCall", "NoCall_in_trio",
+                                                          "uninformative", "NoCall_in_both"])
+                            ].groupby("embryo_risk_category")[embryo_col].sum()
 
-        summary_snps_df = replace_column_names(summary_snps_df, human_readable_headings)
+        # Set index to MultiIndex
+        sum_others.index = pd.MultiIndex.from_tuples(
+                [("ALL", subcat) for subcat in sum_others.index],
+                names=["snp_inherited_from", "embryo_risk_category"]
+                )
+
+        # Combine both results
+        df_concat = pd.concat([sum_high_low, sum_others]).sort_index()
+        totals = df_concat[embryo_col].sum()
+        total_row = pd.DataFrame(
+                [totals],
+                index=pd.MultiIndex.from_tuples([("Sum", "Total")],
+                                                names=["snp_inherited_from", "embryo_risk_category"])
+                )
+        summary_snps_df = pd.concat([df_concat, total_row])
+        summary_snps_df = summary_snps_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
 
         summary_snps_table = self.create_table_html(
             summary_df=summary_snps_df,
@@ -242,7 +265,7 @@ class AutosomalRecessiveFormatter(EmbryoTableFormatter):
         )
 
         summary_embryo_by_region_df = replace_column_names(summary_embryo_by_region_df, human_readable_headings)
-
+        summary_embryo_by_region_df = summary_embryo_by_region_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
         summary_embryo_by_region_table = self.create_table_html(
             summary_df=summary_embryo_by_region_df,
             table_identifier="risk_summary_per_region_table",
@@ -267,7 +290,7 @@ class XLinkedFormatter(EmbryoTableFormatter):
         embryo_risk_summary_df = self.add_total_row_to_df(embryo_risk_summary_df, ["embryo_risk_category"])
 
         embryo_risk_summary_df = replace_column_names(embryo_risk_summary_df, human_readable_headings)
-
+        embryo_risk_summary_df = embryo_risk_summary_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
         summary_snps_table = self.create_table_html(
             summary_df=embryo_risk_summary_df,
             table_identifier="summary_embryo_table",
@@ -293,6 +316,7 @@ class XLinkedFormatter(EmbryoTableFormatter):
         )
 
         summary_embryo_by_region_df = replace_column_names(summary_embryo_by_region_df, human_readable_headings)
+        summary_embryo_by_region_df = summary_embryo_by_region_df.apply(pd.to_numeric, errors='coerce').astype('Int64')
 
         summary_embryo_by_region_table = self.create_table_html(
             summary_df=summary_embryo_by_region_df,
@@ -335,7 +359,7 @@ class SNPAnalysis:
     family_data: FamilyData
     snp_data_df: pd.DataFrame
 
-    def __init__(self, family_data: FamilyData, snp_data_df: pd.DataFrame):
+    def __init__(self, family_data: FamilyData, snp_data_df: pd.DataFrame, args, timestr):
         """
         Initializes the SNPAnalysisPipeline with a FamilyData object and a dataframe produced from a ChAS csv output
         file.
@@ -343,6 +367,15 @@ class SNPAnalysis:
         :param family_data: A FamilyData object containing relevant genetic and family information.
         :param file_path: Path to an external file for further analysis.
         """
+        self.denovo = args.denovo
+        sample_cols = [col for col in snp_data_df.columns if 'rhchp' in col]
+        if args.command_line:
+            self.num_embryo = len(sample_cols) - 3  # 3 less due to mother, fater and ref
+            print("number of embryo processing:", self.num_embryo)
+        else:
+            self.num_embryo = args.num_embryo
+            print("number of embryo processing:", self.num_embryo)
+        total_sheet = math.ceil(self.num_embryo/config.FIGURE_NUM)
         self.family_data = family_data
         self.create_embryo_sex_lookup()
         self.human_readable_headings = create_human_readable_heading(
@@ -369,6 +402,16 @@ class SNPAnalysis:
             self.summary_embryo_by_region_table,
         ) = format_tables_for_html_report(self)
         self.initialise_report_data()
+        # if there are more than config.FIGURE_NUM embryos, need to write the plots into
+        # multiple html sheets(each sheet has upto config.FIGURE_NUM plots)
+        if self.num_embryo > config.FIGURE_NUM and not self.family_data.trio_only:
+            n = 1
+            for chunk in self.chunking_embryos(self.embryos, config.FIGURE_NUM):
+                figures_dict = self.collate_figures(chunk)
+                plots_as_html = generate_plots(figures_dict, static_plots=False)
+                plot_html_by_chunks(plots_as_html, n, args.output_folder,
+                                    args.output_prefix, total_sheet, timestr, args.command_line)
+                n = n+1
 
     def create_embryo_sex_lookup(self) -> None:
         """Creates a lookup dictionary for embryo sex based on provided family data."""
@@ -545,8 +588,13 @@ class SNPAnalysis:
                 df_list.append(getattr(embryo_data, attribute_name))
 
         # Initialize merged_df as None
-        merged_df = None
-
+        data = {
+            "embryo_risk_category": ["high_risk", "low_risk",
+                                     "miscall", "ADO", "NoCall",
+                                     "NoCall_in_trio", "uninformative",
+                                     "NoCall_in_both"],
+                }
+        merged_df = pd.DataFrame(data)
         # Iterate through the list of DataFrames and merge them one by one
         for df in df_list:
             if merged_df is None:
@@ -554,12 +602,18 @@ class SNPAnalysis:
                 merged_df = df
             else:
                 # Merge the current DataFrame with the existing merged_df
-                merged_df = merged_df.merge(df)
+                merged_df = merged_df.merge(df, how="outer")
 
         if merged_df is None:
             # If merged_df is still None, return an empty DataFrame
             return pd.DataFrame()
         return merged_df
+
+    def chunking_embryos(self, iterable: Dict[str, EmbryoData], size: int):
+        """iterate the dict of embryos and chunk into size of config.FIGURE_NUM"""
+        it = iter(iterable.items())
+        for first in it:
+            yield dict([first] + list(islice(it, size - 1)))
 
     def collate_figures(self, embryos: Dict[str, EmbryoData]) -> Dict[str, str]:
         """Reiterates over all the EmbryoData objects and collates the figures"""
@@ -623,6 +677,33 @@ class SNPAnalysis:
         """
         Initialize the report data for the HTML report.
         """
+        # rename for denovo pre-cases
+        if self.denovo == "Yes" and self.family_data.trio_only is True:
+            df_reset = self.snp_data.informative_snps_summary.reset_index()
+            if (self.family_data.mode_of_inheritance.value == "autosomal_recessive" or
+               self.family_data.mode_of_inheritance.value == "x_linked"):                
+                df_reset["snp_risk_category_summary"] = df_reset["snp_risk_category_summary"].replace("high_risk",
+                                                                                                      "hap1")
+                df_reset["snp_risk_category_summary"] = df_reset["snp_risk_category_summary"].replace("low_risk",
+                                                                                                      "hap2")
+                df_reset["snp_risk_category_summary"] = df_reset["snp_risk_category_summary"].replace("high_or_low_risk",
+                                                                                                      "hap1_or_hap2")
+            elif self.family_data.mode_of_inheritance.value == "autosomal_dominant":
+                df_reset["level_0"] = df_reset["level_0"].replace("high_risk", "hap1")
+                df_reset["level_0"] = df_reset["level_0"].replace("low_risk", "hap2")
+                df_reset["level_0"] = df_reset["level_0"].replace("high_or_low_risk", "hap1_or_hap2")
+            if self.family_data.mode_of_inheritance.value == "x_linked":
+                self.snp_data.informative_snps_summary = df_reset.set_index(["snp_risk_category_summary",
+                                                                             "gene_distance"])
+            elif self.family_data.mode_of_inheritance.value == "autosomal_recessive":
+                self.snp_data.informative_snps_summary = df_reset.set_index(["snp_inherited_from",
+                                                                             "snp_risk_category_summary",
+                                                                             "gene_distance"])
+            elif self.family_data.mode_of_inheritance.value == "autosomal_dominant":
+                df_reset = df_reset.rename(columns={"level_0": "snp_risk_category_summary"})
+                df_reset = df_reset.rename(columns={"level_1": "gene_distance"})
+                self.snp_data.informative_snps_summary = df_reset.set_index(["snp_risk_category_summary",
+                                                                             "gene_distance"])
         self.report_data = ReportData(
             header_html=dict2html(self.family_data.report_header_info),
             mode_of_inheritance=str(self.family_data.mode_of_inheritance.value),
@@ -661,7 +742,7 @@ class SNPAnalysis:
             # If self.family_data.trio_only is True, assign an empty string, else assign the variable
             html_text_for_plots=(
                 ""
-                if self.family_data.trio_only
+                if self.family_data.trio_only or self.num_embryo > config.FIGURE_NUM
                 else format_plot_html_str(
                     generate_plots(self.collate_figures(self.embryos), static_plots=False),
                     add_dropdown_selection=False,
@@ -673,7 +754,7 @@ class SNPAnalysis:
                 if self.family_data.trio_only
                 else format_plot_html_str(
                     generate_plots(self.collate_figures(self.embryos), static_plots=True),
-                    add_dropdown_selection=True,
+                    add_dropdown_selection=False,
                 )
             ),
             text_for_plots="",  # Dynamically updated when rendered selecting either html or pdf

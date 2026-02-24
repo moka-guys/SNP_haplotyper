@@ -3,6 +3,7 @@ This module contains helper functions for the SNP haplotyper package.
 """
 
 import re
+import os
 from typing import Dict, List
 
 import pandas as pd
@@ -257,7 +258,9 @@ def format_plot_html_str(plots_as_html: Dict[str, str], add_dropdown_selection=F
             dropdown.addEventListener("change", function() {
                 var plots = document.getElementsByClassName("plot-container");
                 for (var i = 0; i < plots.length; i++) {
-                    plots[i].style.display = 'none'; // Hide all plots
+                    if (plots[i].className == "plot-container"){
+                        plots[i].style.display = 'none'; // Hide all plots
+                        }
                 }
 
                 var selectedValue = dropdown.options[dropdown.selectedIndex].value;
@@ -309,6 +312,7 @@ def set_risk_category_dtype(df: pd.DataFrame) -> pd.DataFrame:
         "miscall",
         "NoCall",
         "NoCall_in_trio",
+        "high_or_low"
     ]
 
     # Iterate through each column and check if it starts with "snp_risk_category"
@@ -349,3 +353,34 @@ def get_clean_filename(path):
     parts = re.split(r"[\\/]", path)
     # Return the last element
     return parts[-1]
+
+
+def plot_html_by_chunks(plots_as_html: Dict[str, str], n: int, output_folder: str, output_prefix: str, total_sheet: int, timestr: str, command_line: bool):
+    div_list = []
+    for plot_id, plot_html in plots_as_html.items():
+        div = plot_html
+        div_list.append(div)
+        # Combine all the divs into a single HTML string
+    all_divs = "\n".join(div_list)
+    final_html = all_divs
+    html_header = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta charset="utf-8" />
+        <title></title>
+        <!-- Plotly library -->
+        <script src="https://cdn.plot.ly/plotly-2.26.0.min.js" charset="utf-8"></script>
+
+        </head>
+        </html>
+        """
+    if command_line:
+        with open(os.path.join(output_folder, output_prefix + f"_{timestr}_plot_sheet{n}of{total_sheet}" + ".html"), "w") as file:
+            file.write(html_header)
+            file.write(final_html)
+    else:
+        upload_folder_path = os.environ["UPLOAD_FOLDER"]
+        with open(os.path.join(upload_folder_path, output_prefix + f"_{timestr}_plot_sheet{n}of{total_sheet}" + ".html"), "w") as file:
+            file.write(html_header)
+            file.write(final_html)

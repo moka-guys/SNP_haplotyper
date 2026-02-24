@@ -6,7 +6,9 @@ import pytest
 import json
 from validate_output import validate_snp_results, validate_embryo_results
 from EnumDataClasses import InheritanceMode, Relationship, Status, FlankingRegions
+from datetime import datetime
 
+timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
 
 def setup_test_data(split_by_embryo=False):
     # Import launch.json and parse the file for the correct parameters for each of the samples
@@ -86,6 +88,9 @@ def setup_test_data(split_by_embryo=False):
                 testing=True,
                 trio_only=True,
                 header_info=arg_dictionary["header_info"],
+                command_line=True,
+                denovo="No",
+                timestr=timestr
             )
         else:
             # Ensure that embryo_ids are a list even if only a single embryo is present
@@ -129,6 +134,9 @@ def setup_test_data(split_by_embryo=False):
                 testing=True,
                 trio_only=False,
                 header_info=arg_dictionary["header_info"],
+                command_line=True,
+                denovo="No",
+                timestr=timestr
             )
 
         run_data_dictionary[run_name] = args

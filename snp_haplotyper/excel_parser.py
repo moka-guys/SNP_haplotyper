@@ -122,7 +122,7 @@ def load_workbook_range(range_string, worksheet):
     return df
 
 
-def parse_excel_input(input_spreadsheet, snp_array_file=None):
+def parse_excel_input(input_spreadsheet, app_timestr, snp_array_file=None):
     """
     Imports the following defined cells/ranges from the provided excel file:
         biopsy_number
@@ -209,6 +209,8 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
             # Import excel ranges
             df = load_workbook_range(dn.attr_text.split("!")[1].replace("$", ""), data_entry_sheet)
             argument_dict[input_name] = df.dropna(how="all")  # Remove empty rows
+        elif input_name in ["_xleta.SUM"]:
+            pass
         else:
             # Process cell locations in the format data_entry!$B$31 or data_entry!$F$22:$L$22 (merged cells)
             cell_location = dn.attr_text.split(":")[0].split("!")[1].replace("$", "")
@@ -224,8 +226,8 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     disease_omim = argument_dict["disease_omim"]
     exclusion = argument_dict["exclusion"]
     female_partner_hosp_num = argument_dict["female_partner_hosp_num"]
-    # flanking_region_size = argument_dict["flanking_region_size"]
-    flanking_region_size = FlankingRegions.FLANK_2MB
+    flanking_region_size = argument_dict["flanking_region_size"]
+    #flanking_region_size = flanking_region_size_type(flanking_region_size)
     gene_symbol = argument_dict["gene"]
     gene_end = int(argument_dict["gene_end"])
     gene_omim = argument_dict["gene_omim"]
@@ -443,8 +445,7 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     excel_import["embryo_data"] = embryo_data_df
     excel_import["exclusion"] = exclusion
     excel_import["female_partner_hosp_num"] = female_partner_hosp_num
-    # excel_import["flanking_region_size"] = flanking_region_size
-    excel_import["flanking_region_size"] = FlankingRegions.FLANK_2MB
+    excel_import["flanking_region_size"] = flanking_region_size
     excel_import["gene"] = gene_symbol
     excel_import["gene_end"] = gene_end
     excel_import["gene_omim"] = gene_omim
@@ -552,8 +553,12 @@ def parse_excel_input(input_spreadsheet, snp_array_file=None):
     args.gene_start = gene_start
     args.gene_end = gene_end
     args.chr = chr
-    args.flanking_region_size = flanking_region_size
+    args.flanking_region_size = int(flanking_region_size)
     args.consanguineous = True if consanguineous.lower() == "yes" else False
+    args.command_line = False
+    args.num_embryo = len(args.embryo_ids)
+    args.timestr = app_timestr
+    args.denovo = de_novo
 
     # If analysis is being done for embryos add that data as well
     if trio_only is False:
@@ -587,13 +592,13 @@ def main(excel_parser_args):
     # If the user has specified the run_basher flag, then parse the excel input and run snp_haplotyper
     if excel_parser_args.run_basher:
         if excel_parser_args.snp_array_file is None:
-            excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
+            excel_import = parse_excel_input(excel_parser_args.input_spreadsheet, excel_parser_args.timestr)
         else:
-            excel_import = parse_excel_input(excel_parser_args.input_spreadsheet, excel_parser_args.snp_array_file)
+            excel_import = parse_excel_input(excel_parser_args.input_spreadsheet, excel_parser_args.timestr, excel_parser_args.snp_array_file)
         snp_haplotype.main(excel_import)
     # If the user has not specified the run_basher flag, then just parse the excel input
     else:
-        excel_import = parse_excel_input(excel_parser_args.input_spreadsheet)
+        excel_import = parse_excel_input(excel_parser_args.input_spreadsheet, excel_parser_args.timestr)
         return excel_import
 
 

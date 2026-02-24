@@ -158,6 +158,14 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "-cl",
+    "--command_line",
+    action=argparse.BooleanOptionalAction,
+    default=False,
+    help="Flag to indicate that the app is run by command line",
+)
+
+parser.add_argument(
     "-r",
     "--reference",
     type=str,
@@ -236,10 +244,8 @@ parser.add_argument(
 
 parser.add_argument(
     "--flanking_region_size",
-    type=flanking_region_size_type,
-    nargs="?",
-    choices=list(FlankingRegions),
-    default=FlankingRegions.FLANK_2MB,
+    type=int,
+    default=2,
     help="Size of the flanking region either side of the gene in Mb",
 )
 
@@ -259,6 +265,12 @@ parser.add_argument(
     " separated by ';', "
     "for example 'PRU=1234;Hospital No=1234;Biopsy No=111' will produce 3 fields in the header with the titles PRU,"
     "Hospital No, and Biopsy No.",
+)
+
+parser.add_argument(
+    "--denovo",
+    default="No",
+    help="if the case is denovo or not",
 )
 
 
@@ -296,7 +308,13 @@ def main(args):
         )
 
     # Instantiate SNPAnalysis object
-    snp_pipeline = SNPAnalysis(create_family_data_from_args(args), import_haplotype_data(args.input_file))
+    if args.command_line:
+        timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
+        print("using local time str", timestr)
+    else:
+        timestr = args.timestr
+        print("using app timestr", timestr)
+    snp_pipeline = SNPAnalysis(create_family_data_from_args(args), import_haplotype_data(args.input_file), args, timestr)
 
     logger.info("SNP Analysis complete - getting ready to prepare report.")
 
@@ -307,22 +325,22 @@ def main(args):
 
     # Save HTML report to file in output folder, including timestamp in filename
 
-    timestr = datetime.now().strftime("%Y%m%d-%H%M%S")
-    output_dir = args.output_folder
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    if args.command_line:
+        output_dir = args.output_folder
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
 
-    with open(
-        os.path.join(output_dir, args.output_prefix + "_" + timestr + ".html"),
-        "w",
-    ) as f:
-        f.write(html_string)
+        with open(
+            os.path.join(output_dir, args.output_prefix + "_" + timestr + ".html"),
+            "w",
+        ) as f:
+            f.write(html_string)
 
-    # Convert HTML report to PDF
-    pdfkit.from_string(
-        pdf_string,
-        os.path.join(args.output_folder, args.output_prefix + "_" + timestr + ".pdf"),
-    )
+        # Convert HTML report to PDF
+        pdfkit.from_string(
+            pdf_string,
+            os.path.join(args.output_folder, args.output_prefix + "_" + timestr + ".pdf"),
+        )
 
     return (
         args.mode_of_inheritance,
