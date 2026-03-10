@@ -8,8 +8,31 @@
     "python.analysis.extraPaths": [
         "./snp_haplotyper"
     ],
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter"
+    "editor.formatOnSaveMode": "file",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
     },
-    "python.formatting.provider": "none"
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+    },
+    "isort.args": [
+        "--profile",
+        "black"
+    ],
+    "flake8.args": [
+        "--max-line-length=120"
+    ],
+    "pylint.args": [
+        "--max-line-length=120"
+    ],
+    "black-formatter.args": [
+        "--line-length",
+        "120"
+    ],
+    "python.analysis.typeCheckingMode": "basic"
 }

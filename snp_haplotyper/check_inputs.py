@@ -1,5 +1,6 @@
 import logging
-import re
+
+from EnumDataClasses import InheritanceMode, Sex, Status
 
 
 # Custom error handler which saves errors to a dictionary for feedback to user
@@ -15,9 +16,6 @@ class DictErrorHandler(logging.Handler):
                 self.error_dict[error_msg] = 0
             self.error_dict[error_msg] += 1
 
-
-# TODO I originally had this script called using os - I now have it imported as a module  - so this code is not used to set the error_dict which is now done in app.py
-# I'll keep this code for present as I need to check what the commandline version uses.  Remove as appropriate.
 
 # Create an error dictionary
 error_dict = {}
@@ -53,18 +51,20 @@ def check_input(input_namespace, input_file):
     #    column_names = f.readline().strip().split("\t")
 
     if input_namespace.mode_of_inheritance not in [
-        "autosomal_dominant",
-        "autosomal_recessive",
-        "x_linked",
+        InheritanceMode.AUTOSOMAL_DOMINANT,
+        InheritanceMode.AUTOSOMAL_RECESSIVE,
+        InheritanceMode.X_LINKED,
     ]:
-        logger.error(
-            f"Invalid Mode of Inheritance {input_namespace.mode_of_inheritance} entered as argument, should be 'Autosomal Dominant', 'Autosomal Recessive', or 'X_Linked'"
+        error_msg = (
+            "Invalid Mode of Inheritance %s entered as argument, should be 'Autosomal Dominant', "
+            "'Autosomal Recessive', or 'X-Linked'" % input_namespace.mode_of_inheritance
         )
+        logger.error(error_msg)
         input_ok_flag = False
 
     if input_namespace.chr not in [
-        "x",
-        "y",
+        "X",
+        "Y",
         "1",
         "2",
         "3",
@@ -89,15 +89,17 @@ def check_input(input_namespace, input_file):
         "22",
     ]:
         logger.error(
-            f"Invalid Chromosome '{input_namespace.chr}' entered as an argument - must be one of 1-22, X, or Y."
+            "Invalid Chromosome '%s' entered as an argument - must be one of 1-22, X, or Y.", input_namespace.chr
         )
         input_ok_flag = False
 
     if input_namespace.mode_of_inheritance == "x_linked":
         if input_namespace.chr != "x":
-            logger.error(
-                f"Invalid Chromosome '{input_namespace.chr}' entered as an argument - must be x for X-Linked inheritance."
+            error_msg = (
+                "Invalid Chromosome '%s' entered as an argument - must be x for X-Linked inheritance."
+                % input_namespace.chr
             )
+            logger.error(error_msg)
             input_ok_flag = False
 
     # Check if consanguineous is boolean
@@ -111,8 +113,8 @@ def check_input(input_namespace, input_file):
         input_ok_flag = False
 
     # Check if flanking_region_size is "2mb" or "3mb"
-    if input_namespace.flanking_region_size not in ["2mb", "3mb"]:
-        logger.error("Invalid flanking_region_size: must be either '2mb' or '3mb'.")
+    if input_namespace.flanking_region_size not in list(range(2, 6)):
+        logger.error("Invalid flanking_region_size in mb: must be between 2 to 5 and integer.")
         input_ok_flag = False
 
     # Check if gene_symbol is a non-empty string
@@ -124,36 +126,12 @@ def check_input(input_namespace, input_file):
     if not input_namespace.input_file or input_namespace.input_file.strip() == "":
         logger.error("Invalid input_file: must be a non-empty string.")
         input_ok_flag = False
-    elif not (
-        input_namespace.input_file.endswith(".csv")
-        or input_namespace.input_file.endswith(".txt")
-    ):
-        logger.error(
-            "Invalid input_file: must have a file extension of '.csv' or '.txt'."
-        )
-        input_ok_flag = False
-
-    # Check if ref_relationship is a non-empty string
-    if (
-        not input_namespace.reference_relationship
-        or input_namespace.reference_relationship.strip() == ""
-    ):
-        logger.error("Invalid reference_relationship: must be a non-empty string.")
-        input_ok_flag = False
-
-    # Check if reference_status is a non-empty string
-    if (
-        not input_namespace.reference_status
-        or input_namespace.reference_status.strip() == ""
-    ):
-        logger.error("Invalid reference_status: must be a non-empty string.")
+    elif not (input_namespace.input_file.endswith(".csv") or input_namespace.input_file.endswith(".txt")):
+        logger.error("Invalid input_file: must have a file extension of '.csv' or '.txt'.")
         input_ok_flag = False
 
     # Sanity check on genomic coordinates
-    if (
-        not isinstance(input_namespace.gene_start, int)
-        or input_namespace.gene_start < 0
-    ):
+    if not isinstance(input_namespace.gene_start, int) or input_namespace.gene_start < 0:
         logger.error("Gene_start must be a non-negative integer.")
         input_ok_flag = False
 
@@ -163,7 +141,10 @@ def check_input(input_namespace, input_file):
 
     if input_namespace.gene_start > input_namespace.gene_end:
         logger.error(
-            f"Gene: {input_namespace.gene} gene_start {input_namespace.gene_start} is greater than gene_end '{input_namespace.gene_end}'"
+            "Gene: %s gene_start %s is greater than gene_end '%s'",
+            input_namespace.gene,
+            input_namespace.gene_start,
+            input_namespace.gene_end,
         )
         input_ok_flag = False
 
@@ -177,55 +158,28 @@ def check_input(input_namespace, input_file):
     for sex in input_namespace.embryo_sex:
         if sex.lower() not in allowed_embryo_sex_values:
             logger.error(
-                f"Invalid value '{sex}' in embryo_sex list. Allowed values are 'male', 'female', and 'unknown'."
+                "Invalid value '%s' in embryo_sex list. Allowed values are 'male', 'female', and 'unknown'.", sex
             )
             input_ok_flag = False
 
     allowable_values = {
-        "x_linked": {
-            "reference_sex": {"female", "male"},
-            "reference_status": {"carrier", "affected", "unaffected"},
-            "reference_relationship": {
-                "father",
-                "mother",
-                "son",
-                "daughter",
-                "child",
-                "embryo",
-                "prenatal",
-            },
+        InheritanceMode.X_LINKED: {
+            "reference_sex": {Sex.FEMALE, Sex.MALE},
+            "reference_status": {Status.CARRIER, Status.AFFECTED, Status.UNAFFECTED},
         },
-        "autosomal_dominant": {
-            "reference_sex": {"male", "female", "unknown"},
-            "reference_status": {"affected", "unaffected"},
-            "reference_relationship": {
-                "grandparent",
-                "father",
-                "mother",
-                "son",
-                "daughter",
-                "child",
-                "embryo",
-                "prenatal",
-                "both",
-            },
+        InheritanceMode.AUTOSOMAL_DOMINANT: {
+            "reference_sex": {Sex.FEMALE, Sex.MALE, Sex.UNKNOWN},
+            "reference_status": {Status.AFFECTED, Status.UNAFFECTED},
         },
-        "autosomal_recessive": {
-            "reference_sex": {"male", "female", "unknown"},
-            "reference_status": {"affected", "unaffected"},
-            "reference_relationship": {
-                "son",
-                "daughter",
-                "child",
-                "embryo",
-                "prenatal",
-            },
+        InheritanceMode.AUTOSOMAL_RECESSIVE: {
+            "reference_sex": {Sex.FEMALE, Sex.MALE, Sex.UNKNOWN},
+            "reference_status": {Status.AFFECTED, Status.UNAFFECTED},
         },
     }
 
     # Check if reference_status is an allowable value based on the mode_of_inheritance
     if (
-        input_namespace.reference_status.lower()
+        input_namespace.reference_status
         not in allowable_values[input_namespace.mode_of_inheritance]["reference_status"]
     ):
         logger.error(
@@ -233,63 +187,45 @@ def check_input(input_namespace, input_file):
         )
         input_ok_flag = False
 
-    # Check if reference_relationship is an allowable value based on the mode_of_inheritance
-    if (
-        input_namespace.reference_relationship.lower()
-        not in allowable_values[input_namespace.mode_of_inheritance][
-            "reference_relationship"
-        ]
-    ):
-        logger.error(
-            f"Invalid reference_relationship '{input_namespace.reference_relationship}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'"
-        )
-        input_ok_flag = False
-
     # Define a dictionary with the allowable partner statuses for each mode of inheritance
     allowable_partner_statuses = {
-        "x_linked": {
-            "male_partner_status": ["unaffected"],
-            "female_partner_status": ["carrier"],
+        InheritanceMode.X_LINKED: {
+            "male_partner_status": [Status.UNAFFECTED],
+            "female_partner_status": [Status.CARRIER],
         },
-        "autosomal_dominant": {
-            "male_partner_status": ["affected", "unaffected"],
-            "female_partner_status": ["affected", "unaffected"],
+        InheritanceMode.AUTOSOMAL_DOMINANT: {
+            "male_partner_status": [Status.AFFECTED, Status.UNAFFECTED],
+            "female_partner_status": [Status.AFFECTED, Status.UNAFFECTED],
         },
-        "autosomal_recessive": {
-            "male_partner_status": ["carrier"],
-            "female_partner_status": ["carrier"],
+        InheritanceMode.AUTOSOMAL_RECESSIVE: {
+            "male_partner_status": [Status.CARRIER],
+            "female_partner_status": [Status.CARRIER],
         },
     }
 
     # Get the allowable statuses for the current mode of inheritance
-    allowable_statuses = allowable_partner_statuses.get(
-        input_namespace.mode_of_inheritance, {}
-    )
+    allowable_statuses = allowable_partner_statuses.get(input_namespace.mode_of_inheritance, {})
 
     # Check if the male_partner_status is allowable for the current mode of inheritance
-    if input_namespace.male_partner_status not in allowable_statuses.get(
-        "male_partner_status", []
-    ):
+    if input_namespace.male_partner_status not in allowable_statuses.get("male_partner_status", []):
         raise ValueError(
-            f"Invalid male_partner_status '{input_namespace.male_partner_status}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'."
+            f"Invalid male_partner_status '{input_namespace.male_partner_status}' "
+            f"for mode_of_inheritance '{input_namespace.mode_of_inheritance}'."
         )
 
     # Check if the female_partner_status is allowable for the current mode of inheritance
-    if input_namespace.female_partner_status not in allowable_statuses.get(
-        "female_partner_status", []
-    ):
+    if input_namespace.female_partner_status not in allowable_statuses.get("female_partner_status", []):
         raise ValueError(
-            f"Invalid female_partner_status '{input_namespace.female_partner_status}' for mode_of_inheritance '{input_namespace.mode_of_inheritance}'."
+            f"Invalid female_partner_status '{input_namespace.female_partner_status}' "
+            f"for mode_of_inheritance '{input_namespace.mode_of_inheritance}'."
         )
 
     # Check if both partners are "unaffected" in autosomal_dominant cases
     if (
-        input_namespace.mode_of_inheritance == "autosomal_dominant"
-        and input_namespace.male_partner_status == "unaffected_partner"
-        and input_namespace.female_partner_status == "unaffected_partner"
+        input_namespace.mode_of_inheritance == InheritanceMode.AUTOSOMAL_DOMINANT
+        and input_namespace.male_partner_status == Status.UNAFFECTED
+        and input_namespace.female_partner_status == Status.UNAFFECTED
     ):
-        raise ValueError(
-            "In autosomal_dominant cases, both partners cannot be 'unaffected'."
-        )
+        raise ValueError("In autosomal_dominant cases, both partners cannot be 'unaffected'.")
 
     return error_dict, input_ok_flag

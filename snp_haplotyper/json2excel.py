@@ -1,13 +1,11 @@
 import argparse
-from openpyxl import load_workbook
-from openpyxl.utils import get_column_interval
-import pandas as pd
 import json
 
+import pandas as pd
+from openpyxl import load_workbook
+
 # Import command line arguments
-parser = argparse.ArgumentParser(
-    description="Populate excel spreadsheet template with test data from JSON file"
-)
+parser = argparse.ArgumentParser(description="Populate excel spreadsheet template with test data from JSON file")
 
 # Template file for creating excel file
 parser.add_argument(
@@ -49,16 +47,13 @@ def defined_name_to_cell_location(workbook):
 
 
 def read_launch_json(json_file_path):
-
     with open(json_file_path, "r") as j:
         launch_contents = json.loads(j.read())
 
     run_data_df = pd.json_normalize(launch_contents["configurations"])
 
     # Run configurations are filtered by the "purpose" field to exclude configurations that are not intended for testing
-    run_data_df = run_data_df[
-        run_data_df["purpose"].str.contains("debug-test", regex=False)
-    ]
+    run_data_df = run_data_df[run_data_df["purpose"].str.contains("debug-test", regex=False)]
 
     # The name and args columns are zipped into a dictionary for iterating over
     run_data_dict = dict(zip(run_data_df["name"], run_data_df["args"]))
@@ -163,24 +158,22 @@ def write_data_to_excel(run_data_dict, template_file_path):
     # Iterate over the run_data_dict and write the data to the excel file
     for run_dict in run_data_dict:
         argument_dict = run_data_dict[run_dict]
-        data_entry_sheet[
-            "B9"
-        ] = "12345"  # data_entry_sheet["biopsy_number"] = "12345" - not recognizing key for some reason
+        data_entry_sheet["B9"] = (
+            "12345"  # data_entry_sheet["biopsy_number"] = "12345" - not recognizing key for some reason
+        )
         data_entry_sheet[cell_lookup["chromosome"]].value = argument_dict["chr"]
-        data_entry_sheet[cell_lookup["consanguineous"]].value = argument_dict[
-            "consanguineous"
-        ]
+        data_entry_sheet[cell_lookup["consanguineous"]].value = argument_dict["consanguineous"]
         data_entry_sheet[cell_lookup["female_partner_hosp_num"]].value = "12345"
         data_entry_sheet[cell_lookup["gene"]].value = argument_dict["gene_symbol"]
         data_entry_sheet[cell_lookup["gene_end"]].value = argument_dict["gene_end"]
         data_entry_sheet[cell_lookup["gene_start"]].value = argument_dict["gene_start"]
         data_entry_sheet[cell_lookup["input_file"]].value = argument_dict["input_file"]
-        data_entry_sheet[cell_lookup["mode_of_inheritance"]].value = argument_dict[
-            "mode_of_inheritance"
-        ]
-        data_entry_sheet[
-            cell_lookup["paste_gene"]
-        ].value = f'{argument_dict["chr"]}:{argument_dict["gene_start"]}-{argument_dict["gene_end"]}'  # genomic range in format chr3:100000-200000 used to populate other fields
+        data_entry_sheet[cell_lookup["mode_of_inheritance"]].value = argument_dict["mode_of_inheritance"]
+        # genomic range in format chr3:100000-200000 used to populate other fields
+        data_entry_sheet[cell_lookup["paste_gene"]].value = (
+            f'{argument_dict["chr"]}:{argument_dict["gene_start"]}-{argument_dict["gene_end"]}'
+        )
+
         data_entry_sheet[cell_lookup["pgd_worksheet"]].value = "12345"
         data_entry_sheet[cell_lookup["pru"]].value = "123456"
         data_entry_sheet["M8"].value = argument_dict["reference"]

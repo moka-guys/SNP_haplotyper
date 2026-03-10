@@ -1,10 +1,14 @@
 # pull official base image
-FROM python:3.10.6-slim-buster
+FROM python:3.10.6-slim
 
 # set working directory
 WORKDIR /usr/local/basher/snp_haplotyper
 
+# Accept the commit hash as a build argument
+ARG IMG_VERSIONED
+
 # set environment variables
+ENV IMG_VERSIONED ${IMG_VERSIONED}
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 #ENV FLASK_DEBUG 1
@@ -19,7 +23,7 @@ ENV SESSION_FILE_DIR /var/local/basher/flask_sessions
 # add and install requirements
 COPY ./requirements.txt .
 RUN pip3 install -r requirements.txt
-USER 0 
+USER 0
 RUN mkdir -p /var/local/basher/logs/
 RUN mkdir -p /var/local/basher/uploads/
 RUN mkdir -p /var/local/basher/flask_sessions/
@@ -32,7 +36,7 @@ RUN apt-get update && apt-get install -y wkhtmltopdf
 
 # add app
 COPY ["snp_haplotyper", "requirements.txt", "tests", "wsgi.py", \
-    "pytest.ini", ".coverage", "docs", "gunicorn.conf.py", "./"]
+    "pytest.ini", "docs", "gunicorn.conf.py", "./"]
 
 COPY ["test_data/AffyID2rsid.txt", "../test_data/AffyID2rsid.txt"]
 

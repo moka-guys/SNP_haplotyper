@@ -1,42 +1,30 @@
-from argparse import Namespace
-from datetime import datetime
-from excel_parser import parse_excel_input
-from flask import (
-    Flask,
-    render_template,
-    Response,
-    send_file,
-    jsonify,
-    request,
-    session,
-    Blueprint,
-)
-from flask_wtf import FlaskForm
-from flask_session import Session
-from flask_cors import CORS, cross_origin
-from io import BytesIO
-import merge_array_files
-import os
-from openpyxl import load_workbook
-from openpyxl.utils.exceptions import InvalidFileException
-import pdfkit
-import time
-import random
-import snp_haplotype
-import tempfile
-from wtforms import (
-    FileField,
-    SubmitField,
-    MultipleFileField,
-    ValidationError,
-)
-from werkzeug.utils import secure_filename
-import zipfile
-
+"""
+This module contains the django application for the BASHer tool.
+"""
 
 import logging
+import os
+import tempfile
+import zipfile
+from datetime import datetime
+from io import BytesIO
+import math
 
-log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+import merge_array_files
+import pdfkit
+import snp_haplotype
+from excel_parser import parse_excel_input
+from flask import Blueprint, Flask, render_template, request, send_file, session
+from flask_cors import CORS, cross_origin
+from flask_session import Session
+from flask_wtf import FlaskForm
+from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
+from werkzeug.utils import secure_filename
+from wtforms import FileField, MultipleFileField, SubmitField, ValidationError
+import config
+
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logger = logging.getLogger("BASHer_logger")
 
 # To override the default severity of logging
@@ -48,11 +36,11 @@ app = Flask(__name__)
 
 # Define the folder where uploaded files will be stored. The folder location is retrieved from an environment variable
 app.config["UPLOAD_FOLDER"] = os.environ["UPLOAD_FOLDER"]
-app.config["SECRET_KEY"] = "catchmeifyoucan"
+app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 app.config["SESSION_TYPE"] = "filesystem"
-app.config[
-    "SESSION_PERMANENT"
-] = True  # Set the session lifetime. If True, the session is permanent until the browser is closed.
+app.config["SESSION_PERMANENT"] = (
+    True  # Set the session lifetime. If True, the session is permanent until the browser is closed.
+)
 app.config["SESSION_FILE_DIR"] = os.environ[
     "SESSION_FILE_DIR"
 ]  # Define the directory where session files will be stored.
@@ -62,45 +50,51 @@ app.config["UPLOAD_EXTENSIONS"] = [
     ".xlsm",
     ".xlsx",
 ]  # List of acceptable upload file extensions
-app.config["MAX_CONTENT_LENGTH"] = (
-    2 * 1024 * 1024
-)  # Set the maximum size of uploaded files to 2MB
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # Set the maximum size of uploaded files to 2MB
 app.config["APPLICATION_ROOT"] = "/basher"  # Set the root URL of the application
 app.config["WTF_CSRF_ENABLED"] = True
 
 app.config.from_object(__name__)
 
-# Create a Blueprint object named "basher" that represents the "basher" component of the application. The URL prefix "/basher" is added to all routes defined in this blueprint.
+IMG_VERSIONED = os.getenv("IMG_VERSIONED", "N/A")  # Get the version of the application for display in reports
+
+# Create a Blueprint object named "basher" that represents the "basher" component of the application.
+# The URL prefix "/basher" is added to all routes defined in this blueprint.
 basher_bp = Blueprint("basher", __name__, url_prefix="/basher")
 Session(app)
-CORS(
-    app, supports_credentials=True
-)  # Enable handling of cross-origin requests - required to run react components
+CORS(app, supports_credentials=True)  # Enable handling of cross-origin requests - required to run react components
 
 
 class BasherForm(FlaskForm):
+    """
+    This class defines the form fields for the BASHer application.
+    """
+
     sample_sheet = FileField("Upload Sample Sheet:")
     snp_array_files = MultipleFileField("Upload one or more SNP files:")
     submit = SubmitField("Run BASHer")
 
 
-def call_excel_parser(sample_sheet, snp_array_file):
+def call_excel_parser(sample_sheet, snp_array_file, app_timestr):
+    """
+    This function calls the excel parser function to parse the input sheet and return the parsed data.
+    """
     # Get contents of parsed input sheet
-    basher_input_namespace, error_dictionary, input_ok_flag = parse_excel_input(
-        sample_sheet, snp_array_file
-    )
+    basher_input_namespace, error_dictionary, input_ok_flag = parse_excel_input(sample_sheet, app_timestr, snp_array_file)
 
     return [basher_input_namespace, error_dictionary, input_ok_flag]
 
 
 def call_basher(basher_input_namespace):
+    """
+    This function calls the snp_haplotype function to run the BASHer analysis.
+    """
     (
         mode_of_inheritance,
         sample_id,
         number_snps_imported,
         summary_snps_by_region,
         informative_snps_by_region,
-        embryo_count_data_df,
         html_string,
         pdf_string,
     ) = snp_haplotype.main(basher_input_namespace)
@@ -109,6 +103,10 @@ def call_basher(basher_input_namespace):
 
 
 class ChangeForm(FlaskForm):
+    """
+    This class defines the form fields for the BASHer application.
+    """
+
     sample_sheet = FileField(
         "Sample Sheet:",
         validators=[],
@@ -123,17 +121,17 @@ class ChangeForm(FlaskForm):
     )
     submit = SubmitField("Run BASHer")
 
-    def validate_sample_sheet(form, field):
+    def validate_sample_sheet(self, field):
+        """
+        Validate the sample sheet uploaded by the user.
+        """
         allowed_extensions = ["xlsm", "xlsx"]
         file = field.data
         if not file:
             raise ValidationError("No sample sheet provided.")
         if not file.filename:
             raise ValidationError("No sample sheet selected.")
-        if not (
-            "." in file.filename
-            and file.filename.rsplit(".", 1)[1].lower() in allowed_extensions
-        ):
+        if not ("." in file.filename and file.filename.rsplit(".", 1)[1].lower() in allowed_extensions):
             raise ValidationError(
                 f"Invalid file type for sample sheet '{file.filename}'. Allowed types are: xlsm, xlsx"
             )
@@ -146,9 +144,7 @@ class ChangeForm(FlaskForm):
             workbook = load_workbook(file_content, read_only=True)
             sample_sheet_readable = True
         except (InvalidFileException, zipfile.BadZipFile):
-            raise ValidationError(
-                f"The sample sheet, {file.filename}, is password protected or corrupted."
-            )
+            raise ValidationError(f"The sample sheet, {file.filename}, is password protected or corrupted.")
             sample_sheet_readable = False
             # Check if the file is password protected
 
@@ -196,19 +192,20 @@ class ChangeForm(FlaskForm):
             defined_names = workbook.defined_names.definedName
             defined_names_list = [name.name for name in defined_names]
             # Check if required defined names exist and collect missing ones
-            missing_names = [
-                name
-                for name in required_defined_names
-                if name not in defined_names_list
-            ]
+            missing_names = [name for name in required_defined_names if name not in defined_names_list]
 
             # Raise error if sample sheet is missing defined names
             if missing_names != []:
                 raise ValidationError(
-                    f'Defined names missing from the Excel file: {", ".join(missing_names)}. Please check the template file.'
+                    "Defined names missing from the Excel file: "
+                    + ", ".join(missing_names)
+                    + ". Please check the template file."
                 )
 
-    def validate_snp_array_files(form, field):
+    def validate_snp_array_files(self, field):
+        """
+        Validate the SNP array files uploaded by the user.
+        """
         allowed_extensions = ["txt", "csv"]
         files = field.data
         if not files:
@@ -216,10 +213,7 @@ class ChangeForm(FlaskForm):
         for file in files:
             if not file.filename:
                 raise ValidationError("No snp array file selected.")
-            if not (
-                "." in file.filename
-                and file.filename.rsplit(".", 1)[1].lower() in allowed_extensions
-            ):
+            if not ("." in file.filename and file.filename.rsplit(".", 1)[1].lower() in allowed_extensions):
                 raise ValidationError(
                     f"Invalid file type for SNP array file '{file.filename}'. Allowed types are: txt, csv"
                 )
@@ -233,9 +227,10 @@ def form(basher_state="initial"):
 
     For GET requests, it just returns the main page with an empty form.
 
-    For POST requests, which are initiated by the button in the HTML form, it processes the uploaded files, performs validation,
-    initiates the required logging, manages the session state, calls other functions to parse Excel data and execute 'basher'
-    operations, and finally renders the updated page, either with the result of the operation or with the validation errors.
+    For POST requests, which are initiated by the button in the HTML form, it processes the uploaded files, performs
+    validation, initiates the required logging, manages the session state, calls other functions to parse Excel data
+    and execute 'basher' operations, and finally renders the updated page, either with the result of the operation
+    or with the validation errors.
 
     Parameters:
     basher_state (str): The initial state of the basher process. Defaults to "initial".
@@ -260,8 +255,8 @@ def form(basher_state="initial"):
 
         session["timestr"] = datetime.now().strftime("%Y%m%d-%H%M%S")
         os.mkdir(os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"]))
-        file_handler = logging.FileHandler(f"/var/local/basher/logs/basher_error.log")
-        formatter = logging.Formatter(log_format)
+        file_handler = logging.FileHandler("/var/local/basher/logs_error.log")
+        formatter = logging.Formatter(LOG_FORMAT)
         file_handler.setFormatter(formatter)
 
         # Don't forget to add the file handler
@@ -280,21 +275,12 @@ def form(basher_state="initial"):
             # use removesuffix to remove .txt from the end of the file names in the list
             # and then join them together with a _ to make a new file name
             merged_file_name = (
-                "_".join(
-                    sorted(
-                        [
-                            os.path.splitext(os.path.basename(file_name))[0]
-                            for file_name in input_files
-                        ]
-                    )
-                )
+                "_".join(sorted([os.path.splitext(os.path.basename(file_name))[0] for file_name in input_files]))
                 + "_merged.txt"
             )
             df = merge_array_files.main(input_files)
             df.to_csv(
-                os.path.join(
-                    app.config["UPLOAD_FOLDER"], session["timestr"], merged_file_name
-                ),
+                os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"], merged_file_name),
                 sep="\t",
             )
             input_file = merged_file_name
@@ -302,26 +288,26 @@ def form(basher_state="initial"):
             input_file = input_files[0]
 
         chgDetail["snp_array_files"] = input_file
-        basher_state = "started" # This doesn't refer to the backend starting, rather that the data has been submit and controls the flow in the html
+        # This doesn't refer to the backend starting, rather that the data has
+        # been submit and controls the flow in the html
+        basher_state = "started"
 
         # Get the file names of the uploaded files
         input_sheet_basename = os.path.basename(input_sheet)
         input_file_basename = os.path.basename(input_file)
 
         # Create the paths to the uploaded files
-        input_sheet_tmp_path = os.path.join(
-            app.config["UPLOAD_FOLDER"], session["timestr"], input_sheet_basename
-        )
+        input_sheet_tmp_path = os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"], input_sheet_basename)
 
-        input_file_tmp_path = os.path.join(
-            app.config["UPLOAD_FOLDER"], session["timestr"], input_file_basename
-        )
+        input_file_tmp_path = os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"], input_file_basename)
 
         basher_input_namespace, input_errors, input_ok_flag = call_excel_parser(
-            input_sheet_tmp_path, input_file_tmp_path
+            input_sheet_tmp_path, input_file_tmp_path, session["timestr"]
         )
+        num_embryo = len(basher_input_namespace.embryo_ids)
+        session["num_embryo"] = num_embryo
 
-        if input_ok_flag == False:
+        if input_ok_flag is False:
             return render_template(
                 "index.html",
                 form=chgForm,
@@ -342,15 +328,19 @@ def form(basher_state="initial"):
                 "w",
             ) as f:
                 f.write(html_report)
-            logger.info(
-                f"Saved HTML report for {sample_id} at {session['report_path']}.html"
-            )
+            logger.info(f"Saved HTML report for {sample_id} at {session['report_path']}.html")
 
             # Convert HTML report to PDF
-            pdfkit.from_string(
-                pdf_report,
-                f'{session["report_path"]}.pdf',
-            )
+            try:
+                print('Converting html to pdf')
+                path_to_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
+                config = pdfkit.configuration(wkhtmltopdf=path_to_wkhtmltopdf)
+                pdfkit.from_string(
+                    pdf_report,
+                    f'{session["report_path"]}.pdf', configuration=config
+                )
+            except IOError as e:
+                print("ERROR", e)
             logger.info(f"Saved PDF report for {sample_id}")
 
             return render_template(
@@ -372,7 +362,14 @@ def form(basher_state="initial"):
 
 
 class SampleSheetUpload:
+    """
+    This class handles the uploading of the sample sheet file.
+    """
+
     def upload(self, file):
+        """
+        This function uploads the sample sheet file to the server.
+        """
         file_name = file.filename
         if file_name == "":
             return "NULL"
@@ -397,7 +394,14 @@ class SampleSheetUpload:
 
 
 class SnpArrayUpload:
+    """
+    This class handles the uploading of the SNP array files.
+    """
+
     def upload(self, files):
+        """
+        This function uploads the SNP array files to the server.
+        """
         file_names = []
 
         for file in files:
@@ -433,7 +437,8 @@ def download():
     """
     This function handles both GET and POST requests to the "/download" route of the "basher" blueprint.
 
-    Initiated by a button click in the HTML, it creates a zip file containing the HTML and PDF reports stored in the session.
+    Initiated by a button click in the HTML, it creates a zip file containing the HTML and PDF reports stored in the
+    session.
     The function then removes the original HTML and PDF reports and sends the zip file to the client as a file download.
 
     Returns:
@@ -443,18 +448,29 @@ def download():
     pdf_file_name = f'{session["report_name"]}.pdf'
 
     # Create a temporary directory
+    num_page = math.ceil(session["num_embryo"]/config.FIGURE_NUM)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'])
+    session['file_path'] = file_path
+    sample_id = session["report_name"].rsplit("_", 1)[0]
     with tempfile.TemporaryDirectory() as tempdir:
         # Create a zip file with the html and pdf reports
         zip_path = os.path.join(tempdir, f'{session["report_name"]}.zip')
         with zipfile.ZipFile(zip_path, "w") as zipObj:
             zipObj.write(f'{session["report_path"]}.html', html_file_name)
             zipObj.write(f'{session["report_path"]}.pdf', pdf_file_name)
+            if session["num_embryo"] > config.FIGURE_NUM:
+                for i in range(1, num_page+1):
+                    extra_html = f'{session["file_path"]}/{sample_id}_{session["timestr"]}_plot_sheet{i}of{num_page}.html'
+                    zipObj.write(extra_html, f"{sample_id}_{session['timestr']}_plot_sheet{i}of{num_page}.html")
 
         logger.info(f"Saved zipped reports to {zip_path}")
 
         # Delete the html and pdf reports
         os.remove(f'{session["report_path"]}.html')
         os.remove(f'{session["report_path"]}.pdf')
+        if session["num_embryo"] > config.FIGURE_NUM:
+            for i in range(1, num_page+1):
+                os.remove(f'{session["file_path"]}/{sample_id}_{session["timestr"]}_plot_sheet{i}of{num_page}.html')
 
         logger.info(f"Attempting to download {zip_path}")
 
