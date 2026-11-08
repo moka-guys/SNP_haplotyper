@@ -4,23 +4,25 @@ This module contains the django application for the BASHer tool.
 
 import logging
 import os
+import re
 import tempfile
 import zipfile
 from datetime import datetime
 from io import BytesIO
 import math
-
+import psycopg2
 import merge_array_files
 import pdfkit
 import snp_haplotype
 from excel_parser import parse_excel_input
-from flask import Blueprint, Flask, render_template, request, send_file, session
+from flask import Blueprint, Flask, render_template, request, send_file, session, redirect, url_for
 from flask_cors import CORS, cross_origin
 from flask_session import Session
 from flask_wtf import FlaskForm
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash, generate_password_hash
 from wtforms import FileField, MultipleFileField, SubmitField, ValidationError
 import config
 
@@ -29,7 +31,21 @@ logger = logging.getLogger("BASHer_logger")
 
 # To override the default severity of logging
 logger.setLevel("DEBUG")
+# Configure file logging once when the application starts
+file_handler = logging.FileHandler("/var/local/basher/logs/app_logs.log")
 
+formatter = logging.Formatter(LOG_FORMAT)
+file_handler.setFormatter(formatter)
+file_handler.setLevel(logging.INFO)
+
+if not any(
+    isinstance(h, logging.FileHandler)
+    and h.baseFilename == file_handler.baseFilename
+    for h in logger.handlers
+):
+    logger.addHandler(file_handler)
+else:
+    file_handler.close()
 
 # Create a new Flask web server instance
 app = Flask(__name__)
@@ -57,7 +73,10 @@ app.config["WTF_CSRF_ENABLED"] = True
 app.config.from_object(__name__)
 
 IMG_VERSIONED = os.getenv("IMG_VERSIONED", "N/A")  # Get the version of the application for display in reports
-
+DB_HOST = os.environ["DB_HOST"]
+DB_NAME = os.environ["DB_NAME"]
+DB_USER = os.environ["DB_USER"]
+DB_PASSWORD = os.environ["DB_PASSWORD"]
 # Create a Blueprint object named "basher" that represents the "basher" component of the application.
 # The URL prefix "/basher" is added to all routes defined in this blueprint.
 basher_bp = Blueprint("basher", __name__, url_prefix="/basher")
@@ -219,6 +238,197 @@ class ChangeForm(FlaskForm):
                 )
 
 
+@basher_bp.route("/login", methods=["GET", "POST"])
+def login():
+    """User login function
+    Returns:
+        Response: User log in and go to basher form page.
+    """
+
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST
+        )
+
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT password_hash
+                    FROM app_users
+                    WHERE username = %s AND is_active = TRUE
+                    """,
+                    (username,)
+                )
+                result = cur.fetchone()
+        finally:
+            conn.close()
+
+        if result and check_password_hash(result[0], password):
+            session.clear()
+            session["logged_in"] = True
+            session["username"] = username
+
+            logger.info(f"User logged in: {username}")
+
+            return redirect(url_for("basher.form"))
+
+        return render_template(
+            "login.html",
+            error="Invalid username or password"
+        )
+
+    if session.get("logged_in"):
+        return redirect(url_for("basher.form"))
+
+    return render_template("login.html")
+
+
+@basher_bp.route("/logout", methods=["POST"])
+def logout():
+    """User logout function
+
+    Returns:
+        Response: User log out and return to log in page.
+    """
+    username = session.get("username", "Unknown user")
+
+    session.clear()
+    logger.info(f"User logged out: {username}")
+    return redirect(url_for("basher.login"))
+
+
+@basher_bp.before_request
+def require_login():
+    """Login is required for all basher access"""
+
+    public_endpoints = {"basher.login"}
+
+    if request.endpoint in public_endpoints:
+        return None
+
+    if not session.get("logged_in"):
+        return redirect(url_for("basher.login"))
+
+
+@basher_bp.route('/change_password', methods=['GET', 'POST'])
+@cross_origin(supports_credentials=True)
+def change_password():
+    """Update the password for the current user.
+
+    Returns:
+        Response: Password change page with success or error message.
+    """
+    username = session.get("username")
+
+    if not username:
+        return redirect(url_for("basher.login"))
+    if request.method == "POST":
+
+        current_password = request.form.get("current_password")
+        new_password = request.form.get("new_password")
+        confirm_password = request.form.get("confirm_password")
+
+        if not current_password:
+            return render_template(
+                "change_password.html",
+                error="Please enter your current password."
+            )
+
+        # Check minimum length
+        if not new_password or len(new_password) < 8:
+            return render_template(
+                "change_password.html",
+                error="Password must contain at least 8 characters."
+            )
+
+        # Check at least one uppercase letter
+        if not re.search(r"[A-Z]", new_password):
+            return render_template(
+                "change_password.html",
+                error="Password must contain at least one uppercase letter."
+            )
+
+        # Check at least one special character
+        if not re.search(r"[^A-Za-z0-9]", new_password):
+            return render_template(
+                "change_password.html",
+                error="Password must contain at least one special character."
+            )
+
+        if new_password != confirm_password:
+            return render_template(
+                "change_password.html",
+                error="New passwords do not match."
+            )
+
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST
+        )
+
+        cur = conn.cursor()
+
+        # Get current password hash
+        cur.execute(
+            "SELECT password_hash FROM app_users WHERE username = %s",
+            (username,)
+        )
+
+        result = cur.fetchone()
+
+        if result is None:
+            conn.close()
+            return render_template(
+                "change_password.html",
+                error="User not found."
+            )
+
+        # Verify current password
+        if not check_password_hash(result[0], current_password):
+            conn.close()
+            return render_template(
+                "change_password.html",
+                error="Current password is incorrect."
+            )
+        if check_password_hash(result[0], new_password):
+            conn.close()
+            return render_template(
+                "change_password.html",
+                error="New password must be different from the current password."
+            )
+        # Hash the new password
+        new_hash = generate_password_hash(new_password)
+
+        # Update password
+        cur.execute(
+            """
+            UPDATE app_users
+            SET password_hash = %s
+            WHERE username = %s
+            """,
+            (new_hash, username)
+        )
+
+        conn.commit()
+        conn.close()
+
+        return render_template(
+            "change_password.html",
+            success="Password changed successfully."
+        )
+
+    return render_template("change_password.html")
+
+
 @basher_bp.route("/", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
 def form(basher_state="initial"):
@@ -255,13 +465,6 @@ def form(basher_state="initial"):
 
         session["timestr"] = datetime.now().strftime("%Y%m%d-%H%M%S")
         os.mkdir(os.path.join(app.config["UPLOAD_FOLDER"], session["timestr"]))
-        file_handler = logging.FileHandler("/var/local/basher/logs_error.log")
-        formatter = logging.Formatter(LOG_FORMAT)
-        file_handler.setFormatter(formatter)
-
-        # Don't forget to add the file handler
-        logger.addHandler(file_handler)
-
         # Saved with the session details to avoid duplicate files from other users/sessions
         # temporary files are saved so that they can be passed to the backend.
         sample_sheet = chgForm.sample_sheet.data

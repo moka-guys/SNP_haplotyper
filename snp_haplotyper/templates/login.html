@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BASHer | Login</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 38px 35px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(30, 41, 59, 0.07);
+        }
+
+        .app-header {
+            text-align: center;
+            font-size: 29px;
+            font-weight: 700;
+            color: #243b58;
+            letter-spacing: -0.5px;
+        }
+
+        .version {
+            font-size: 14px;
+            font-weight: normal;
+            color: #94a3b8;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 8px;
+            margin-bottom: 30px;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin-bottom: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 9px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            font-size: 14px;
+            background: #ffffff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input::placeholder {
+            color: #94a3b8;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 13px;
+            margin-top: 6px;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            border-radius: 7px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .login-button:hover {
+            background: #1d4ed8;
+        }
+
+        .login-button:focus-visible {
+            outline: 3px solid #93c5fd;
+            outline-offset: 3px;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 12px;
+            border-radius: 7px;
+            margin-bottom: 22px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 28px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <div class="app-header">
+            BASHer <span class="version">v2.2</span>
+        </div>
+
+        <div class="subtitle">
+            Sign in to your account
+        </div>
+
+        <div class="divider"></div>
+
+        {% if error %}
+        <div class="error-message" role="alert">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="{{ url_for('basher.login') }}" method="POST">
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Enter your username"
+                    autocomplete="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter your password"
+                    autocomplete="current-password" required>
+            </div>
+
+            <button type="submit" class="login-button">
+                Sign In
+            </button>
+
+        </form>
+
+        <div class="footer">
+            &#128274; Secure access to BASHer
+        </div>
+
+    </div>
+
+</body>
+
+</html>
