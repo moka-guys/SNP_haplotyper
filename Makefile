@@ -19,7 +19,6 @@ push: build tag
 build:
 	docker buildx build --build-arg IMG_VERSIONED=$(IMG_VERSIONED) --platform linux/amd64 -t $(IMG_VERSIONED) . || \
 	docker build  --build-arg IMG_VERSIONED=$(IMG_VERSIONED) -t $(IMG_VERSIONED) .
-	docker save $(IMG_VERSIONED) | gzip > $(DIR)/$(REGISTRY)-$(APP):$(VERSION)_$(BUILD).tar.gz
 
 tag:
 	docker tag $(IMG_VERSIONED) $(IMG_LATEST)
