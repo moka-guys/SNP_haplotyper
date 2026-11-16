@@ -1,21 +1,39 @@
-version: '3.8'
+version: "3.9"
 
 services:
+  db:
+    image: postgres:15
+    container_name: basher_postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5430:5432"
+    volumes:
+      - /var/local/basher/basher_db:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d
 
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.testing
+  flask:
+    image: seglh/basher:v2.1.0-dirty_test
+    container_name: basher_flask_app
+    restart: always
+    ports:
+      - "3005:5000"
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      FLASK_ENV: development
+      DB_HOST: ${DB_HOST}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    env_file:
+      - .env
     volumes:
       - .:/BASHer/snp_haplotyper
       - ./logs/:/var/local/basher/logs/
       - ./uploads/:/var/local/basher/uploads/
 
-    ports:
-      - 5000:5000
-      - 5678:5678
-    environment:
-      - FLASK_APP=/BASHer/snp_haplotyper/snp_haplotyper/app.py
-      - FLASK_DEBUG=1
-      - FLASK_ENV=development
-      - PYTHONPATH=/BASHer/snp_haplotyper/snp_haplotyper
+    depends_on:
+      - db

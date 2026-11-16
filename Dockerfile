@@ -1,5 +1,5 @@
 # pull official base image
-FROM python:3.10.6-slim
+FROM python:3.10-slim-bookworm
 
 # set working directory
 WORKDIR /usr/local/basher/snp_haplotyper
